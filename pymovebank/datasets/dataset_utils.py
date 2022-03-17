@@ -14,22 +14,35 @@ __all__ = ["available", "get_path", "install_roads_dataset"]
 
 _module_path = Path(__file__).parent
 
-_large_datasets_paths = [
-    f
-    for f in (_module_path / "large_datasets").iterdir()
-    if not (
-        str(f.name).startswith(".")
-        or str(f.name).startswith("__")
-        or str(f.name) == "temp_downloads"
-    )
-]
-_large_datasets_names = [f.name for f in _large_datasets_paths]
-_small_datasets_paths = [
-    f
-    for f in (_module_path / "small_datasets").iterdir()
-    if not (str(f.name).startswith(".") or str(f.name).startswith("__"))
-]
-_small_datasets_names = [f.name for f in _small_datasets_paths]
+if (_module_path / "large_datasets").exists():
+    _large_datasets_paths = [
+        f
+        for f in (_module_path / "large_datasets").iterdir()
+        if not (
+            str(f.name).startswith(".")
+            or str(f.name).startswith("__")
+            or str(f.name) == "temp_downloads"
+        )
+    ]
+    _large_datasets_names = [f.name for f in _large_datasets_paths]
+
+else:
+    _large_datasets_paths = [None]
+    _large_datasets_names = [None]
+
+
+if (_module_path / "small_datasets").exists():
+    _small_datasets_paths = [
+        f
+        for f in (_module_path / "small_datasets").iterdir()
+        if not (str(f.name).startswith(".") or str(f.name).startswith("__"))
+    ]
+    _small_datasets_names = [f.name for f in _small_datasets_paths]
+
+else:
+    _small_datasets_paths = [None]
+    _small_datasets_names = [None]
+
 _dict_available = dict(zip(_large_datasets_names, _large_datasets_paths)) | dict(
     zip(_small_datasets_names, _small_datasets_paths)
 )
