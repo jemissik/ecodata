@@ -2,10 +2,10 @@
 movebank_credentials.txt
 
 #large datasets
-pymovebank/datasets/large_datasets/
+pymovebank/datasets/large_datasets/*
 
 #small datasets (for now)
-pymovebank/datasets/small_datasets/
+pymovebank/datasets/small_datasets/*
 
 #docs build
 docs/_build/
