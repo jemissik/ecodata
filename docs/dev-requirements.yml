@@ -1,0 +1,14 @@
+name: pmv-dev
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - pip
+  - pip:
+    - conda-merge
+    - black
+    - isort
+    - pytest
+    - pydata_sphinx_theme
+    - sphinx_book_theme
+    - myst-nb

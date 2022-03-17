@@ -1,0 +1,28 @@
+channels:
+- conda-forge
+- defaults
+dependencies:
+- cartopy
+- cfgrib
+- geopandas
+- ipykernel
+- ipython
+- matplotlib
+- pandas
+- pip
+- python=3.9
+- shapely
+- xarray
+- pip:
+  - -e .
+  - black
+  - conda-merge
+  - datasize
+  - isort
+  - myst-nb
+  - pydata_sphinx_theme
+  - pytest
+  - requests
+  - sphinx_book_theme
+  - wget
+name: pmv-dev
