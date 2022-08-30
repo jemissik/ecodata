@@ -13,6 +13,7 @@ dependencies:
 - python=3.9
 - shapely
 - xarray
+- pyinstaller
 - pip:
   - -e .
   - black
@@ -25,4 +26,5 @@ dependencies:
   - requests
   - sphinx_book_theme
   - wget
+  - click
 name: pmv-dev
