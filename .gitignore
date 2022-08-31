@@ -1,3 +1,5 @@
+dist/
+
 # Movebank login credentials
 movebank_credentials.txt
 
@@ -8,6 +10,10 @@ pymovebank/datasets/user_datasets/*
 
 #small datasets (for now)
 pymovebank/datasets/small_datasets/*
+
+# pyinstaller builds
+scripts/build
+scripts/dist
 
 #docs build
 docs/_build/
