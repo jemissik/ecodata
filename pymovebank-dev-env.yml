@@ -11,7 +11,7 @@ dependencies:
 - pandas
 - pip
 - python=3.9
-- shapely
+- shapely<1.8.2
 - xarray
 - pyinstaller
 - pip:
@@ -27,4 +27,5 @@ dependencies:
   - sphinx_book_theme
   - wget
   - click
+  - build
 name: pmv-dev
