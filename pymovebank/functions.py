@@ -6,6 +6,7 @@ import geopandas as gpd
 import pandas as pd
 import xarray as xr
 import matplotlib.pyplot as plt
+from pathlib import Path
 from shapely.geometry import Polygon
 
 import warnings
@@ -94,8 +95,8 @@ def subset_data(
         Whether or not to clip the subsetted data to the specified boundary (i.e., cut off
         intersected features at the boundary edge). By default False.
     outfile : str, optional
-        Path to write the subsetted .shp file, if specified. If no path is specified, the
-        subsetted data won't be written out to a file.
+        Path to write the subsetted .shp file, if specified. Use ``.shp.zip`` as the extension to write a zipped
+        shapefile. If no path is specified, the subsetted data won't be written out to a file.
 
     Returns
     -------
@@ -169,6 +170,8 @@ def subset_data(
 
     # Write new data to file if output path was specified
     if outfile is not None:
+        if Path(outfile).suffix == '.shp':
+            Path(outfile).mkdir(exist_ok=True)
         gdf.to_file(outfile)
 
     return gdf, boundary
