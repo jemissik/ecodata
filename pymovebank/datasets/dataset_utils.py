@@ -14,21 +14,21 @@ __all__ = ["available", "get_path", "install_roads_dataset"]
 
 _module_path = Path(__file__).parent
 
-if (_module_path / "large_datasets").exists():
-    _large_datasets_paths = [
+if (_module_path / "user_datasets").exists():
+    _user_datasets_paths = [
         f
-        for f in (_module_path / "large_datasets").iterdir()
+        for f in (_module_path / "user_datasets").iterdir()
         if not (
             str(f.name).startswith(".")
             or str(f.name).startswith("__")
             or str(f.name) == "temp_downloads"
         )
     ]
-    _large_datasets_names = [f.name for f in _large_datasets_paths]
+    _user_datasets_names = [f.name for f in _user_datasets_paths]
 
 else:
-    _large_datasets_paths = [None]
-    _large_datasets_names = [None]
+    _user_datasets_paths = [None]
+    _user_datasets_names = [None]
 
 
 if (_module_path / "small_datasets").exists():
@@ -43,7 +43,7 @@ else:
     _small_datasets_paths = [None]
     _small_datasets_names = [None]
 
-_dict_available = dict(zip(_large_datasets_names, _large_datasets_paths)) | dict(
+_dict_available = dict(zip(_user_datasets_names, _user_datasets_paths)) | dict(
     zip(_small_datasets_names, _small_datasets_paths)
 )
 available = list(_dict_available.keys())
@@ -71,6 +71,22 @@ def get_path(dataset):
         msg += "Available datasets are {}".format(", ".join(available))
         raise ValueError(msg)
 
+def install_dataset(data_path):
+    """
+    Install a dataset in the pymovebank. This function copies the dataset to the data directory of the installed
+    pymovebank module, so that it will be accessible as a dataset in ``pymovebank.datasets.available``
+
+    Parameters
+    ----------
+    data_path : str
+        Path to the file or directory of the dataset to be installed.
+    """
+
+    user_data_path = Path(data_path)
+    if user_data_path.is_dir():
+        shutil.copytree(user_data_path, (_module_path / "user_datasets" / user_data_path.name))
+    elif user_data_path.is_file():
+        shutil.copy(user_data_path, (_module_path / "user_datasets" / user_data_path.name))
 
 def install_roads_dataset():
     """
@@ -107,7 +123,7 @@ def install_roads_dataset():
             print(
                 "Installing North America roads dataset. It's a large download and will take a few mintues..."
             )
-            install_path = Path(_module_path) / "large_datasets"
+            install_path = Path(_module_path) / "user_datasets"
             install_path.mkdir(exist_ok=True)
 
             # Run wget from temp downloads directory
@@ -119,7 +135,7 @@ def install_roads_dataset():
                 filepath = install_path / Path(filename)
                 print("Installed dataset at: " + str(filepath))
             except BaseException as e:
-                download_path = Path(_module_path) / "large_datasets/temp_downloads"
+                download_path = Path(_module_path) / "user_datasets/temp_downloads"
                 shutil.rmtree(download_path)
                 print(f"\nFailed to download dataset because of {e!r}")
             break
@@ -134,7 +150,7 @@ def _remove_temp_downloads():
     """
     Delete any partially downloaded files from failed attempts to install datasets.
     """
-    download_path = Path(_module_path) / "large_datasets/temp_downloads"
+    download_path = Path(_module_path) / "user_datasets/temp_downloads"
     if os.path.exists(download_path) and os.listdir(download_path):
         print("Found partially downloaded files in pymovebank.datasets.")
         while True:

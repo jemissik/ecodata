@@ -7,6 +7,7 @@ from pymovebank.functions import (
     get_geometry,
     grib2nc,
     subset_data,
+    plot_subset,
     read_track_data,
     bbox2poly,
 )

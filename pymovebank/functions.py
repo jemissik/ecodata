@@ -5,6 +5,7 @@ import fiona
 import geopandas as gpd
 import pandas as pd
 import xarray as xr
+import matplotlib.pyplot as plt
 from shapely.geometry import Polygon
 
 import warnings
@@ -171,6 +172,36 @@ def subset_data(
         gdf.to_file(outfile)
 
     return gdf, boundary
+
+def plot_subset(subset_data, boundary, bounding_geom=None, track_points=None):
+    """
+    Plots the results of the subset_data function.
+
+    Parameters
+    ----------
+    subset_data : geopandas.GeoDataFrame
+        Subset data
+    boundary : geopandas.GeoSeries
+        Subsetting boundary
+    bounding_geom : geopandas.GeoSeries, optional
+        Bounding geometry used for subsetting, by default None
+    track_points : geopandas.GeoDataFrame, optional
+        Track points used for subsetting, by default None
+
+    Returns
+    -------
+    matplotlib.pyplot.figure
+        Figure showing the subset results, along with the bounding geometry or track points provided.
+    """
+    plt.ioff()
+    fig, ax = plt.subplots()
+    boundary.plot(ax=ax, color='c', alpha=0.4)
+    subset_data.plot(ax=ax, color='b', linewidth=0.75)
+    if bounding_geom is not None:
+        bounding_geom.plot(ax=ax, color='r', alpha=0.4)
+    if track_points is not None:
+        track_points.plot(ax = ax, color = 'r', marker='.', alpha = 0.4)
+    return fig
 
 
 def bbox2poly(bbox):
