@@ -1,5 +1,5 @@
-Developing
-==========
+Developer guide
+===============
 
 Installation options
 --------------------
@@ -8,6 +8,7 @@ Installation options
         conda env create --file pymovebank-dev-env.yml
 
 * To do a full install (not editable):
+
   * Create a clean build environment (including only pymovebank's requirements, not pymovebank)::
 
         conda env create --file pymovebank-clean-build-env.yml
