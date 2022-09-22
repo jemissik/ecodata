@@ -201,9 +201,9 @@ def plot_subset(subset_data, boundary, bounding_geom=None, track_points=None):
     boundary.plot(ax=ax, color='c', alpha=0.4)
     subset_data.plot(ax=ax, color='b', linewidth=0.75)
     if bounding_geom is not None:
-        bounding_geom.plot(ax=ax, color='r', alpha=0.4)
+        bounding_geom.to_crs(subset_data.crs).plot(ax=ax, color='r', alpha=0.4)
     if track_points is not None:
-        track_points.plot(ax = ax, color = 'r', marker='.', alpha = 0.4)
+        track_points.to_crs(subset_data.crs).plot(ax = ax, color = 'r', marker='.', alpha = 0.4)
     return fig
 
 
@@ -336,3 +336,16 @@ def get_file_len(filepath):
     with fiona.open(filepath) as f:
         flen = len(f)
     return flen
+
+
+def thin_dataset(dataset, n_thin):
+
+    # Check if input is a dataset or the filepath to the dataset, and load dataset if necessary
+    if isinstance(dataset, str) | isinstance(dataset, Path):
+        ds = xr.load_dataset(dataset)
+    elif isinstance(dataset, xr.Dataset):
+        ds = dataset.copy()
+
+    ds_thinned = ds.thin(n_thin)
+
+    return ds_thinned
