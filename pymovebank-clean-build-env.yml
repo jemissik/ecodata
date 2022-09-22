@@ -16,6 +16,11 @@ dependencies:
 - python=3.9
 - shapely<1.8.2
 - xarray
+- dask
+- netCDF4
+- bottleneck
+- cfgrib
+- rasterio
 - pyinstaller
 - pip:
   - black

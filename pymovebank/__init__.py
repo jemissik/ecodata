@@ -6,6 +6,7 @@ from pymovebank.functions import (
     get_file_len,
     get_geometry,
     grib2nc,
+    geotif2nc,
     subset_data,
     plot_subset,
     read_track_data,

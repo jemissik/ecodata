@@ -5,7 +5,11 @@ channels:
 dependencies:
   - python=3.9
   - xarray
+  - dask
+  - netCDF4
+  - bottleneck
   - cfgrib
+  - rasterio
   - geopandas
   - shapely<1.8.2
   - matplotlib
