@@ -11,4 +11,5 @@ from pymovebank.functions import (
     plot_subset,
     read_track_data,
     bbox2poly,
+    thin_dataset,
 )
