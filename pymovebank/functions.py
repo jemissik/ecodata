@@ -385,7 +385,7 @@ def get_file_len(filepath):
 def thin_dataset(dataset, n_thin):
     """
     Thin a dataset by keeping the n-th value across the specified dimensions. Useful for applications such as plotting
-    wind data where using the original resolution would result in a crowded and unreadable figure. 
+    wind data where using the original resolution would result in a crowded and unreadable figure.
 
     Note: this function is a thin wrapper around xarray.Dataset.thin
 

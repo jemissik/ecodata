@@ -9,7 +9,7 @@ Features
 * File conversions
 
     * convert .grib files to netcdf files
-    * convert a stack of geotiff files to a single netcdf (TODO)
+    * convert a stack of geotiff files to a single netcdf
 
 * Data selection, resampling, and aggregation functions for spatial datasets
 
