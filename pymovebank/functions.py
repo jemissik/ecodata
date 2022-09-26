@@ -382,7 +382,7 @@ def get_file_len(filepath):
     return flen
 
 
-def thin_dataset(dataset, n_thin):
+def thin_dataset(dataset, n_thin, outfile=None):
     """
     Thin a dataset by keeping the n-th value across the specified dimensions. Useful for applications such as plotting
     wind data where using the original resolution would result in a crowded and unreadable figure.
@@ -396,6 +396,9 @@ def thin_dataset(dataset, n_thin):
     n_thin : int or dict
         An integer value for thinning across all dimensions, or a dictionary with keys matching the dimensions of the
         dataset and the values specifying the thinning value for that dimension.
+    outfile : str, optional
+        Path to write the thinned .nc file, if specified. If no path is specified, the thinned dataser won't be written
+        out to a file.
 
     Returns
     -------
@@ -410,5 +413,9 @@ def thin_dataset(dataset, n_thin):
         ds = dataset.copy()
 
     ds_thinned = ds.thin(n_thin)
+
+    # Write thinned dataset to file if output path was specified
+    if outfile is not None:
+        ds_thinned.to_netcdf(outfile)
 
     return ds_thinned
