@@ -106,7 +106,7 @@ def subset_data(
 
 
     If using ``track_points`` or ``bounding_geom``, you can also specify:
-        - Whether the bounding shape should be rectangular or a convex hull (Use
+        - Whether the bounding shape should be rectangular, a convex hull, or an exact geometry (Use
           the ``boundary_type`` argument.)
         - A buffer size around the track points or shape of interest (Use the
           ``buffer`` argument.)
@@ -129,8 +129,8 @@ def subset_data(
         Path to shapefile with bounding geometry.
     boundary_type : str, optional
         Specifies whether the bounding shape should be rectangular (``boundary_type=
-        'rectangular'``) or convex hull(``boundary_type = 'convex_hull'``), by
-        default 'rectangular'
+        'rectangular'``), convex hull(``boundary_type = 'convex_hull'``), or the exact bounding geometry
+        (``boundary_type='mask'``), by default 'rectangular'
     buffer : float, optional
         Buffer size around the track points or bounding geometry, relative to the
         extent of the track points or bounding geometry. By default 0. Note that
