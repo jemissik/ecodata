@@ -5,6 +5,9 @@ channels:
 dependencies:
   - python=3.9
   - xarray
+  - conda-forge::rioxarray
+  - pyviz::hvplot
+  # - pyviz::spatialpandas
   - dask
   - netCDF4
   - bottleneck
@@ -19,6 +22,7 @@ dependencies:
   - ipykernel
   - pip
   - pip:
+    - spatialpandas
     - wget
     - requests
     - datasize

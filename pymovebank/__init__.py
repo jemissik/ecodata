@@ -12,4 +12,5 @@ from pymovebank.functions import (
     read_track_data,
     bbox2poly,
     thin_dataset,
+    select_spatial,
 )

@@ -6,9 +6,11 @@ import fiona
 import geopandas as gpd
 import pandas as pd
 import xarray as xr
+import rioxarray
 import matplotlib.pyplot as plt
 from pathlib import Path
 from shapely.geometry import Polygon
+from pyproj.crs import CRS
 
 import warnings
 
@@ -419,3 +421,55 @@ def thin_dataset(dataset, n_thin, outfile=None):
         ds_thinned.to_netcdf(outfile)
 
     return ds_thinned
+
+
+def select_spatial(ds, boundary, crs=None, **kwargs):
+    """
+    Selects a spatial area from a gridded dataset based on provided bounding geometry.
+
+    .. note::
+        This function is a thin wrapper around `rioxarray's clip function
+        <https://corteva.github.io/rioxarray/latest/examples/clip_geom.html>`_.
+
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Gridded dataset
+    boundary : geopandas.GeoDataFrame
+        Bounding geometry
+    crs : Any, optional
+        CRS of the input gridded dataset. If CRS are not already included in the data file or otherwise specified here,
+        EPSG:4326 will be used. Valid inputs are anything accepted by rasterio.crs.CRS.from_user_input.
+    **kwargs :
+        Additional arguments to be passed to rioxarray.raster_dataset.RasterDataset.clip
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset containing just the spatial area contained in the boundary
+
+
+    .. todo::
+        Test from_disk options for datasets that can't fit in memory
+    """
+
+    ds_subset = ds.copy()
+
+    # Set crs to EPSG:4326 if crs aren't provided
+    if crs is None and (ds.rio.crs is None or not ds.rio.crs.is_epsg_code):
+        ds_subset = ds_subset.rio.write_crs("EPSG:4326")
+    elif crs is not None:
+        ds_subset = ds_subset.rio.write_crs(crs)
+
+    # Transform the boundary to the raster dataset's coordinates if needed
+    ds_crs = CRS.from_user_input(ds_subset.rio.crs)
+    if boundary.crs != ds_crs:
+        boundary_clip = boundary.to_crs(ds_crs).geometry
+    else:
+        boundary_clip = boundary.geometry
+
+    # Clip the dataset
+    ds_subset = ds_subset.rio.clip(boundary_clip, **kwargs)
+
+    return ds_subset
