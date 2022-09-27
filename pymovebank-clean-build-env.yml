@@ -6,7 +6,6 @@ channels:
 - defaults
 dependencies:
 - cartopy
-- cfgrib
 - geopandas
 - ipykernel
 - ipython
@@ -22,7 +21,11 @@ dependencies:
 - cfgrib
 - rasterio
 - pyinstaller
+- conda-forge::rioxarray
+- pyviz::hvplot
+# - pyviz::spatialpandas
 - pip:
+  - spatialpandas
   - black
   - conda-merge
   - datasize

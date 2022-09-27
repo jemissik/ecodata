@@ -6,9 +6,11 @@ import fiona
 import geopandas as gpd
 import pandas as pd
 import xarray as xr
+import rioxarray
 import matplotlib.pyplot as plt
 from pathlib import Path
 from shapely.geometry import Polygon
+from pyproj.crs import CRS
 
 import warnings
 
@@ -106,7 +108,7 @@ def subset_data(
 
 
     If using ``track_points`` or ``bounding_geom``, you can also specify:
-        - Whether the bounding shape should be rectangular or a convex hull (Use
+        - Whether the bounding shape should be rectangular, a convex hull, or an exact geometry (Use
           the ``boundary_type`` argument.)
         - A buffer size around the track points or shape of interest (Use the
           ``buffer`` argument.)
@@ -129,8 +131,8 @@ def subset_data(
         Path to shapefile with bounding geometry.
     boundary_type : str, optional
         Specifies whether the bounding shape should be rectangular (``boundary_type=
-        'rectangular'``) or convex hull(``boundary_type = 'convex_hull'``), by
-        default 'rectangular'
+        'rectangular'``), convex hull(``boundary_type = 'convex_hull'``), or the exact bounding geometry
+        (``boundary_type='mask'``), by default 'rectangular'
     buffer : float, optional
         Buffer size around the track points or bounding geometry, relative to the
         extent of the track points or bounding geometry. By default 0. Note that
@@ -382,7 +384,7 @@ def get_file_len(filepath):
     return flen
 
 
-def thin_dataset(dataset, n_thin):
+def thin_dataset(dataset, n_thin, outfile=None):
     """
     Thin a dataset by keeping the n-th value across the specified dimensions. Useful for applications such as plotting
     wind data where using the original resolution would result in a crowded and unreadable figure.
@@ -396,6 +398,9 @@ def thin_dataset(dataset, n_thin):
     n_thin : int or dict
         An integer value for thinning across all dimensions, or a dictionary with keys matching the dimensions of the
         dataset and the values specifying the thinning value for that dimension.
+    outfile : str, optional
+        Path to write the thinned .nc file, if specified. If no path is specified, the thinned dataser won't be written
+        out to a file.
 
     Returns
     -------
@@ -411,4 +416,60 @@ def thin_dataset(dataset, n_thin):
 
     ds_thinned = ds.thin(n_thin)
 
+    # Write thinned dataset to file if output path was specified
+    if outfile is not None:
+        ds_thinned.to_netcdf(outfile)
+
     return ds_thinned
+
+
+def select_spatial(ds, boundary, crs=None, **kwargs):
+    """
+    Selects a spatial area from a gridded dataset based on provided bounding geometry.
+
+    .. note::
+        This function is a thin wrapper around `rioxarray's clip function
+        <https://corteva.github.io/rioxarray/latest/examples/clip_geom.html>`_.
+
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Gridded dataset
+    boundary : geopandas.GeoDataFrame
+        Bounding geometry
+    crs : Any, optional
+        CRS of the input gridded dataset. If CRS are not already included in the data file or otherwise specified here,
+        EPSG:4326 will be used. Valid inputs are anything accepted by rasterio.crs.CRS.from_user_input.
+    **kwargs :
+        Additional arguments to be passed to rioxarray.raster_dataset.RasterDataset.clip
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset containing just the spatial area contained in the boundary
+
+
+    .. todo::
+        Test from_disk options for datasets that can't fit in memory
+    """
+
+    ds_subset = ds.copy()
+
+    # Set crs to EPSG:4326 if crs aren't provided
+    if crs is None and (ds.rio.crs is None or not ds.rio.crs.is_epsg_code):
+        ds_subset = ds_subset.rio.write_crs("EPSG:4326")
+    elif crs is not None:
+        ds_subset = ds_subset.rio.write_crs(crs)
+
+    # Transform the boundary to the raster dataset's coordinates if needed
+    ds_crs = CRS.from_user_input(ds_subset.rio.crs)
+    if boundary.crs != ds_crs:
+        boundary_clip = boundary.to_crs(ds_crs).geometry
+    else:
+        boundary_clip = boundary.geometry
+
+    # Clip the dataset
+    ds_subset = ds_subset.rio.clip(boundary_clip, **kwargs)
+
+    return ds_subset
