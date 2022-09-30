@@ -132,7 +132,8 @@ def subset_data(
     boundary_type : str, optional
         Specifies whether the bounding shape should be rectangular (``boundary_type=
         'rectangular'``), convex hull(``boundary_type = 'convex_hull'``), or the exact bounding geometry
-        (``boundary_type='mask'``), by default 'rectangular'
+        (``boundary_type='mask'``). ``boundary_type='mask'`` can only be used if ``bounding_geom`` is provided.
+        By default 'rectangular'.
     buffer : float, optional
         Buffer size around the track points or bounding geometry, relative to the
         extent of the track points or bounding geometry. By default 0. Note that
@@ -158,9 +159,13 @@ def subset_data(
     """
 
     # Check that one and only one of the subsetting options was specified
-    assert (
-        sum([item is not None for item in [bbox, track_points, bounding_geom]]) == 1
-    ), "subset_data: Must specify one and only one of the subsetting options bbox, track_points, or bounding_shp "
+    if sum([item is not None for item in [bbox, track_points, bounding_geom]]) != 1:
+        raise TypeError(
+            "subset_data: Must specify one and only one of the subsetting options bbox, track_points, or bounding_shp")
+
+    # Check that if "mask" option was used, then bounding_geom is not None
+    if boundary_type == "mask" and bounding_geom is None:
+        raise TypeError("subset_data: bounding_geom must be provided if boundary_type is mask")
 
     dataset_crs = get_crs(filename)
 
