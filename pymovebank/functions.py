@@ -428,7 +428,7 @@ def thin_dataset(dataset, n_thin, outfile=None):
     return ds_thinned
 
 
-def select_spatial(ds, boundary, crs=None, **kwargs):
+def select_spatial(ds, boundary, invert=False, crs=None, **kwargs):
     """
     Selects a spatial area from a gridded dataset based on provided bounding geometry.
 
@@ -443,6 +443,8 @@ def select_spatial(ds, boundary, crs=None, **kwargs):
         Gridded dataset
     boundary : geopandas.GeoDataFrame
         Bounding geometry
+    invert : bool
+        If True, data that falls within the bounding geometry will be masked rather than selected. By default False.
     crs : Any, optional
         CRS of the input gridded dataset. If CRS are not already included in the data file or otherwise specified here,
         EPSG:4326 will be used. Valid inputs are anything accepted by rasterio.crs.CRS.from_user_input.
@@ -475,6 +477,6 @@ def select_spatial(ds, boundary, crs=None, **kwargs):
         boundary_clip = boundary.geometry
 
     # Clip the dataset
-    ds_subset = ds_subset.rio.clip(boundary_clip, **kwargs)
+    ds_subset = ds_subset.rio.clip(boundary_clip, invert=invert, **kwargs)
 
     return ds_subset
