@@ -132,7 +132,8 @@ def subset_data(
     boundary_type : str, optional
         Specifies whether the bounding shape should be rectangular (``boundary_type=
         'rectangular'``), convex hull(``boundary_type = 'convex_hull'``), or the exact bounding geometry
-        (``boundary_type='mask'``), by default 'rectangular'
+        (``boundary_type='mask'``). ``boundary_type='mask'`` can only be used if ``bounding_geom`` is provided.
+        By default 'rectangular'.
     buffer : float, optional
         Buffer size around the track points or bounding geometry, relative to the
         extent of the track points or bounding geometry. By default 0. Note that
@@ -158,9 +159,13 @@ def subset_data(
     """
 
     # Check that one and only one of the subsetting options was specified
-    assert (
-        sum([item is not None for item in [bbox, track_points, bounding_geom]]) == 1
-    ), "subset_data: Must specify one and only one of the subsetting options bbox, track_points, or bounding_shp "
+    if sum([item is not None for item in [bbox, track_points, bounding_geom]]) != 1:
+        raise TypeError(
+            "subset_data: Must specify one and only one of the subsetting options bbox, track_points, or bounding_shp")
+
+    # Check that if "mask" option was used, then bounding_geom is not None
+    if boundary_type == "mask" and bounding_geom is None:
+        raise TypeError("subset_data: bounding_geom must be provided if boundary_type is mask")
 
     dataset_crs = get_crs(filename)
 
@@ -423,7 +428,7 @@ def thin_dataset(dataset, n_thin, outfile=None):
     return ds_thinned
 
 
-def select_spatial(ds, boundary, crs=None, **kwargs):
+def select_spatial(ds, boundary, invert=False, crs=None, **kwargs):
     """
     Selects a spatial area from a gridded dataset based on provided bounding geometry.
 
@@ -438,6 +443,8 @@ def select_spatial(ds, boundary, crs=None, **kwargs):
         Gridded dataset
     boundary : geopandas.GeoDataFrame
         Bounding geometry
+    invert : bool
+        If True, data that falls within the bounding geometry will be masked rather than selected. By default False.
     crs : Any, optional
         CRS of the input gridded dataset. If CRS are not already included in the data file or otherwise specified here,
         EPSG:4326 will be used. Valid inputs are anything accepted by rasterio.crs.CRS.from_user_input.
@@ -470,6 +477,6 @@ def select_spatial(ds, boundary, crs=None, **kwargs):
         boundary_clip = boundary.geometry
 
     # Clip the dataset
-    ds_subset = ds_subset.rio.clip(boundary_clip, **kwargs)
+    ds_subset = ds_subset.rio.clip(boundary_clip, invert=invert, **kwargs)
 
     return ds_subset
