@@ -13,4 +13,6 @@ from pymovebank.functions import (
     bbox2poly,
     thin_dataset,
     select_spatial,
+    select_time_range,
+    select_time_cond,
 )

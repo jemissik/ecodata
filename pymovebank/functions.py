@@ -6,6 +6,7 @@ import fiona
 import geopandas as gpd
 import pandas as pd
 import xarray as xr
+import numpy as np
 import rioxarray
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -478,5 +479,104 @@ def select_spatial(ds, boundary, invert=False, crs=None, **kwargs):
 
     # Clip the dataset
     ds_subset = ds_subset.rio.clip(boundary_clip, invert=invert, **kwargs)
+
+    return ds_subset
+
+
+def select_time_range(ds, time_var='time', start_time=None, end_time=None):
+    """
+    Create a subset of a dataset based on a time range.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Gridded dataset
+    time_var : str, optional
+        Name of the time coordinate in the dataset. Defaults to 'time' if not specified.
+    start_time : str or same type as the time coordinate in the dataset, optional
+        Start time of the time range for selection. If not provided, the earliest time in the dataset will be used.
+    end_time : str or same type as the time coordinate in the dataset, optional
+        End time of the time range for selection. If not provided, the latest time in the dataset will be used.
+
+    Returns
+    -------
+    xarray.Dataset
+        Subset of the input dataset containing only data within the specified time range.
+    """
+
+    ds_subset = ds.sel({time_var: slice(start_time, end_time)})
+
+    return ds_subset
+
+
+def select_time_cond(ds,
+                     time_var='time',
+                     years=None,
+                     months=None,
+                     daysofyear=None,
+                     hours=None,
+                     year_range = None,
+                     month_range = None,
+                     dayofyear_range = None,
+                     hour_range = None
+                     ):
+    """
+    Create a subset of a dataset including certain years, months, days of year, or hours of day.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Gridded dataset
+    time_var : str, optional
+        Name of the time coordinate in the dataset. Defaults to 'time' if not specified.
+    years : list, optional
+        List of years to be selected, by default None
+    months : list, optional
+        List of months to be selected, by default None
+    daysofyear : list, optional
+        List of julian days of year to be selected, by default None
+    hours : list, optional
+        List of hours of day to be selected, by default None
+    year_range : list, optional
+        Range of years to be selected, given as a list containing the start year and the end year (e.g., [2000,2004]).
+        Both endpoints will be included in the selection. By default None.
+    month_range : list, optional
+        Range of months to be selected, given as a list containing the start month and the end month (e.g., [4,6]).
+        Both endpoints will be included in the selection. By default None.
+    dayofyear_range : list, optional
+        Range of julian days of year to be selected, given as a list containing the start day of year and the end day of
+        year (e.g., [144,204]). Both endpoints will be included in the selection. By default None.
+    hour_range : list, optional
+        Range of hours of day to be selected, given as a list containing the start hour and the end hour (e.g., [11,13]).
+        Both endpoints will be included in the selection. By default None.
+
+    Returns
+    -------
+    xarray.Dataset
+        Subset of the input dataset containing only data matching the specified time criteria.
+    """
+
+    # List to store boolean arrays for each filter criteria
+    filters = []
+
+    # Helper to combine selection list (e.g. years) with range list (e.g. year_range)
+    def combine_selection(selection_list, range_list):
+        selection_list = selection_list or []
+        range_array = np.arange(range_list[0], range_list[1]+1) if range_list else []
+        return np.union1d(selection_list, range_array)
+
+    # Create filters for each variable (year, month, dayofyear, hour)
+    variables = [(years, year_range), (months, month_range), (daysofyear, dayofyear_range), (hours, hour_range)]
+    var_strs = ["year", "month", "dayofyear", "hour"]
+    for (var0, var1), var_str in zip(variables, var_strs):
+        if var0 or var1:
+            selection = combine_selection(var0, var1)
+            filters.append(getattr(ds[time_var].dt, var_str).isin(selection).values)
+
+    # Combine all time filters to one boolean array
+    time_selection = np.all(filters, axis=0)
+
+    # Apply time filter
+    ds_subset = ds.sel({time_var:time_selection})
 
     return ds_subset
