@@ -405,7 +405,7 @@ def thin_dataset(dataset, n_thin, outfile=None):
         An integer value for thinning across all dimensions, or a dictionary with keys matching the dimensions of the
         dataset and the values specifying the thinning value for that dimension.
     outfile : str, optional
-        Path to write the thinned .nc file, if specified. If no path is specified, the thinned dataser won't be written
+        Path to write the thinned .nc file, if specified. If no path is specified, the thinned dataset won't be written
         out to a file.
 
     Returns
@@ -427,6 +427,51 @@ def thin_dataset(dataset, n_thin, outfile=None):
         ds_thinned.to_netcdf(outfile)
 
     return ds_thinned
+
+
+def coarsen_dataset(dataset, n_window, boundary='trim', outfile=None, **kwargs):
+    """
+    Coarsen a dataset by performing block aggregation. Supports aggregation along
+    multiple dimensions.
+
+    Note: this function is a thin wrapper around xarray.Dataset.coarsen
+
+    Parameters
+    ----------
+    dataset : str, Path, or xarray.Dataset
+        File path to the dataset, or an xarray.Dataset
+    n_window : dict
+        Dictionary with keys matching the dimensions of the dataset and the values
+        specifying the window size for that dimension.
+    boundary: ({"trim", "exact", "pad"}, default: "trim")
+        How to handle cases where the dimension size is not a multiple of the window size.
+        If "trim", the excess is dropped. If "pad", the dataset will be padded with NaN.
+        If "exact", an error will be raised.
+    outfile : str, optional
+        Path to write the .nc file for the new dataset, if specified. If no path is specified,
+        the new dataset won't be written out to a file.
+    **kwargs :
+        Additional arguments to be passed to xarray.Dataset.coarsen
+
+    Returns
+    -------
+    xarray.Dataset
+        Coarsened dataset
+    """
+
+    # Check if input is a dataset or the filepath to the dataset, and load dataset if necessary
+    if isinstance(dataset, str) | isinstance(dataset, Path):
+        ds = xr.load_dataset(dataset)
+    elif isinstance(dataset, xr.Dataset):
+        ds = dataset.copy()
+
+    ds_coarsen = ds.coarsen(n_window, boundary=boundary, **kwargs).mean()
+
+    # Write thinned dataset to file if output path was specified
+    if outfile is not None:
+        ds_coarsen.to_netcdf(outfile)
+
+    return ds_coarsen
 
 
 def select_spatial(ds, boundary, invert=False, crs=None, **kwargs):

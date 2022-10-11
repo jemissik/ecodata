@@ -12,6 +12,7 @@ from pymovebank.functions import (
     read_track_data,
     bbox2poly,
     thin_dataset,
+    coarsen_dataset,
     select_spatial,
     select_time_range,
     select_time_cond,
