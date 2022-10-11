@@ -7,7 +7,7 @@ import geopandas as gpd
 import pandas as pd
 import xarray as xr
 import numpy as np
-import rioxarray
+import rioxarray  # noqa
 import matplotlib.pyplot as plt
 from pathlib import Path
 from shapely.geometry import Polygon
