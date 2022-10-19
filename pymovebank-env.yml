@@ -1,5 +1,6 @@
 name: pymovebank-env
 channels:
+  - pyviz
   - conda-forge
   - defaults
 dependencies:
@@ -7,7 +8,10 @@ dependencies:
   - xarray
   - conda-forge::rioxarray
   - pyviz::hvplot
-  # - pyviz::spatialpandas
+  - pyviz::panel
+  - pyviz::datashader
+  - pyviz::geoviews
+  - pyviz::spatialpandas
   - dask
   - netCDF4
   - bottleneck

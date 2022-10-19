@@ -1,4 +1,5 @@
 channels:
+- pyviz
 - conda-forge
 - defaults
 dependencies:
@@ -20,9 +21,14 @@ dependencies:
 - pyinstaller
 - conda-forge::rioxarray
 - pyviz::hvplot
+- pyviz::panel
+- pyviz::datashader
+- pyviz::geoviews
+- pyviz::spatialpandas
+- bokeh::jupyter_bokeh  # Enables interactive widgets in vscode
 # - pyviz::spatialpandas
 - pip:
-  - spatialpandas
+  # - spatialpandas
   - -e .
   - black
   - conda-merge
