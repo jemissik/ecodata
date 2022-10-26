@@ -9,6 +9,7 @@ import xarray as xr
 import numpy as np
 import rioxarray  # noqa
 import matplotlib.pyplot as plt
+import spatialpandas as spd
 from pathlib import Path
 from shapely.geometry import Polygon
 from pyproj.crs import CRS
@@ -228,9 +229,75 @@ def subset_data(
 
     return gdf, boundary
 
+
+def plot_subset_interactive(subset, boundary, bounding_geom=None, track_points=None,
+                            datashade_tracks=False, projection = ccrs.PlateCarree()):
+    """
+    Plots the results of the subset_data function in an interactive plot using
+    hvplot/geoviews.
+
+    Parameters
+    ----------
+    subset_data : geopandas.GeoDataFrame
+        Subset data
+    boundary : geopandas.GeoSeries
+        Subsetting boundary
+    bounding_geom : geopandas.GeoSeries, optional
+        Bounding geometry used for subsetting, by default None
+    track_points : geopandas.GeoDataFrame, optional
+        Track points used for subsetting, by default None
+
+    Returns
+    -------
+    holoviews.core.overlay.Overlay
+        Figure showing the subset results, along with the bounding geometry or track points provided.
+    """
+
+    # Plot for boundary
+    if isinstance(boundary, gpd.GeoSeries):
+        _boundary = gpd.GeoDataFrame(geometry=boundary).to_crs(subset.crs)
+    else:
+        _boundary = boundary.to_crs(subset.crs)
+
+    boundary_plot = _boundary.to_crs(subset.crs).hvplot(geo=True, alpha=0.15)
+
+    # Check the geometry type of the subset
+    subset_geom_type = set(pd.unique(subset.geom_type))
+
+    # Use hvplot for points
+    if subset_geom_type.issubset({'Point', 'MultiPoint'}):
+        subset_plot = subset.hvplot.points(hover=False, geo=True,
+                                 projection=projection)
+    # Use geoviews for paths
+    if subset_geom_type.issubset({'LineString', 'MultiLineString'}):
+        subset_plot = gv.Path(subset).opts(projection=projection, color='k')
+    # TODO: Add polygon option
+    else:
+        raise TypeError(
+            "plot_subset_interactive: Geometry type of the subset is not supported."
+        )
+
+    plot = boundary_plot * subset_plot
+
+
+    # Plot for bounding_geom
+    if bounding_geom is not None:
+        bounding_geom_plot = bounding_geom.to_crs(subset.crs).hvplot(geo=True, alpha=0.3)
+        plot = bounding_geom_plot * plot
+
+    #Plot for track points
+    if track_points is not None:
+        track_plot = track_points.hvplot.points('location-long', 'location-lat',
+                                 hover=False, geo=True, datashade = datashade_tracks, dynspread=True,
+                                 projection=projection, color = 'r', cmap='Reds', project=True)
+        plot = plot * track_plot
+
+    return plot
+
+
 def plot_subset(subset_data, boundary, bounding_geom=None, track_points=None):
     """
-    Plots the results of the subset_data function.
+    Plots the results of the subset_data function in a static plot using matplotlib.
 
     Parameters
     ----------
