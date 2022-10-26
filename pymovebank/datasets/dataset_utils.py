@@ -65,7 +65,7 @@ def get_path(dataset):
         The name of the dataset. See ``pymovebank.data.available`` for
         all options.
     """
-    if dataset in available:
+    if dataset in available():
         path = _dict_available[dataset]
         if path.suffix == ".zip":
             path = "zip://" + str(path)
@@ -74,7 +74,7 @@ def get_path(dataset):
         return path
     else:
         msg = "The dataset '{data}' is not available. ".format(data=dataset)
-        msg += "Available datasets are {}".format(", ".join(available))
+        msg += "Available datasets are {}".format(", ".join(available()))
         raise ValueError(msg)
 
 def install_dataset(data_path):
