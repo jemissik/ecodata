@@ -13,6 +13,8 @@ import spatialpandas as spd
 from pathlib import Path
 from shapely.geometry import Polygon
 from pyproj.crs import CRS
+import cartopy.crs as ccrs
+
 
 import warnings
 
