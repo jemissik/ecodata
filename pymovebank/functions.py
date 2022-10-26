@@ -393,6 +393,39 @@ def read_ref_data(filein):
     return ref_data
 
 
+def merge_tracks_ref(track_data, ref_data):
+    """
+    Merge track data and reference data on deployment_id.
+
+    Left merge is used.
+
+    Parameters
+    ----------
+    track_data : geopandas.GeoDataFrame
+        Geodataframe of track data. Must include 'deployment_id'
+    ref_data : pandas.DataFrame
+        Dataframe of reference data. Must include 'deployment_id'
+
+    Returns
+    -------
+    geopandas.GeoDataFrame
+        Merged GeoDataFrame containing track data and reference data
+
+    Raises
+    ------
+    KeyError
+        Raised if track_data and/or reference data do not contain the deployment_id column
+    """
+    
+    if ('deployment_id' in track_data.columns) and ('deployment_id' in ref_data.columns):
+        merged_data = pd.merge(track_data, ref_data, on='deployment_id', how='left')
+    else:
+        raise KeyError(
+            "merge_tracks_ref: both track_data and ref_data must contain deployment_id."
+        )
+    return merged_data
+
+
 def get_extent(filepath):
     """
     Get the extent of a spatial dataset, without reading the dataset into memory.
