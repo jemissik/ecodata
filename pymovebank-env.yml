@@ -24,6 +24,7 @@ dependencies:
   - cartopy
   - ipython
   - ipykernel
+  - dataprep
   - pip
   - pip:
     - spatialpandas

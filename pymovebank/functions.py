@@ -14,6 +14,7 @@ from pathlib import Path
 from shapely.geometry import Polygon
 from pyproj.crs import CRS
 import cartopy.crs as ccrs
+from dataprep.clean import clean_headers
 
 
 import warnings
@@ -130,7 +131,7 @@ def subset_data(
         ``(long_min, lat_min, long_max, lat_max)``.
     track_points : str, optional
         Path to csv file with animal track points. Latitude and longitude must be
-        labeled as "location-lat" and "location-long".
+        labeled as "location_lat" and "location_long".
     bounding_geom : str, optional
         Path to shapefile with bounding geometry.
     boundary_type : str, optional
@@ -184,12 +185,7 @@ def subset_data(
         # Get feature geometry for track_points case
         track_crs = "EPSG:4326"
         if track_points is not None:
-            df = pd.read_csv(track_points)
-            gdf_track = gpd.GeoDataFrame(
-                df,
-                geometry=gpd.points_from_xy(df["location-long"], df["location-lat"]),
-                crs=track_crs,
-            )
+            gdf_track = read_track_data(track_points, dissolve=False)
             feature_geom = gdf_track.dissolve()  # Dissolve points to a single geometry
 
         # Get feature geometry for bounding_geom case
@@ -289,7 +285,7 @@ def plot_subset_interactive(subset, boundary, bounding_geom=None, track_points=N
 
     #Plot for track points
     if track_points is not None:
-        track_plot = track_points.hvplot.points('location-long', 'location-lat',
+        track_plot = track_points.hvplot.points('location_long', 'location_lat',
                                  hover=False, geo=True, datashade = datashade_tracks, dynspread=True,
                                  projection=projection, color = 'r', cmap='Reds', project=True)
         plot = plot * track_plot
@@ -347,18 +343,54 @@ def bbox2poly(bbox):
 
 
 def read_track_data(filein, dissolve=False):
+    """
+    Read Movebank track data.
+
+    Column headers are cleaned to snake case.
+
+    Parameters
+    ----------
+    filein : str
+        File path for track data
+    dissolve : bool, optional
+        Whether to dissolve track points to one multipoint geometry, by default False
+
+    Returns
+    -------
+    geopandas.GeoDataFrame
+        Geodataframe of track data
+    """
     # read track csv
-    track_df = pd.read_csv(filein)
+    track_df = clean_headers(pd.read_csv(filein), report=False)
     track_gdf = gpd.GeoDataFrame(
         track_df,
         geometry=gpd.points_from_xy(
-            track_df["location-long"], track_df["location-lat"]
+            track_df["location_long"], track_df["location_lat"]
         ),
         crs="EPSG:4326",
     )
     if dissolve:
         track_gdf = track_gdf.dissolve()
     return track_gdf
+
+def read_ref_data(filein):
+    """
+    Read Movebank reference data.
+
+    Column headers are cleaned to snake case.
+
+    Parameters
+    ----------
+    filein : str
+        File path for refrence data
+
+    Returns
+    -------
+    pandas.DataFrame
+        Dataframe of reference data
+    """
+    ref_data = clean_headers(pd.read_csv(filein))
+    return ref_data
 
 
 def get_extent(filepath):
