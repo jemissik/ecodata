@@ -442,6 +442,28 @@ def combine_studies(studies):
     return all_studies
 
 
+def clip_tracks_timerange(df, df2):
+    """
+    Clip tracks dataset to include only points within the time range of another study
+
+    Parameters
+    ----------
+    df : geopandas.GeoDataFrame
+        Track dataset to clip
+    df2 : geopandas.GeoDataFrame
+        Other study that will be used to determine the time window of interest
+
+    Returns
+    -------
+    geopandas.GeoDataFrame
+        Track dataset containing only points within the time range of the other study
+    """
+    tmin = df2.timestamp.min()
+    tmax = df2.timestamp.max()
+    mask = (df.timestamp >= tmin) & (df.timestamp <= tmax)
+
+    return df.loc[mask]
+
 def get_extent(filepath):
     """
     Get the extent of a spatial dataset, without reading the dataset into memory.

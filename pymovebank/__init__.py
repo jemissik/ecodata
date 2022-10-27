@@ -14,6 +14,7 @@ from pymovebank.functions import (
     read_ref_data,
     merge_tracks_ref,
     combine_studies,
+    clip_tracks_timerange,
     bbox2poly,
     thin_dataset,
     coarsen_dataset,
