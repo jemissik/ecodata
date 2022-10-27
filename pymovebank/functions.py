@@ -373,6 +373,7 @@ def read_track_data(filein, dissolve=False):
         track_gdf = track_gdf.dissolve()
     return track_gdf
 
+
 def read_ref_data(filein):
     """
     Read Movebank reference data.
@@ -416,7 +417,7 @@ def merge_tracks_ref(track_data, ref_data):
     KeyError
         Raised if track_data and/or reference data do not contain the deployment_id column
     """
-    
+
     if ('deployment_id' in track_data.columns) and ('deployment_id' in ref_data.columns):
         merged_data = pd.merge(track_data, ref_data, on='deployment_id', how='left')
     else:
@@ -424,6 +425,21 @@ def merge_tracks_ref(track_data, ref_data):
             "merge_tracks_ref: both track_data and ref_data must contain deployment_id."
         )
     return merged_data
+
+
+def combine_studies(studies):
+
+    studies_to_concat = []
+    for study in studies:
+        if isinstance(study, str) | isinstance(study, Path):
+            studies_to_concat.append(read_track_data(study))
+        elif isinstance(study, gpd.GeoDataFrame):
+            studies_to_concat.append(study)
+
+        all_studies = pd.concat(studies_to_concat)
+        all_studies = gpd.GeoDataFrame(all_studies, geometry=all_studies.geometry, crs="EPSG:4326")
+
+    return all_studies
 
 
 def get_extent(filepath):
