@@ -11,6 +11,9 @@ pymovebank/datasets/user_datasets/*
 #small datasets (for now)
 pymovebank/datasets/small_datasets/*
 
+# App notebooks
+apps/notebooks/*
+
 # pyinstaller builds
 scripts/build
 scripts/dist

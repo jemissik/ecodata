@@ -28,6 +28,7 @@ dependencies:
 - pyviz::spatialpandas
 - bokeh::jupyter_bokeh
 - dataprep
+- jupytext
 - pip:
   - spatialpandas
   - black

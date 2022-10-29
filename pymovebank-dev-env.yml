@@ -28,6 +28,7 @@ dependencies:
 - bokeh::jupyter_bokeh  # Enables interactive widgets in vscode
 # - pyviz::spatialpandas
 - dataprep
+- jupytext
 - pip:
   # - spatialpandas
   - -e .

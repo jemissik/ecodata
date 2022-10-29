@@ -25,6 +25,7 @@ dependencies:
   - ipython
   - ipykernel
   - dataprep
+  - jupytext
   - pip
   - pip:
     - spatialpandas
