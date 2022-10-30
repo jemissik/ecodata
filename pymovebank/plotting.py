@@ -42,3 +42,7 @@ def plot_tracks_with_tiles(tracks, tiles='StamenTerrain', datashade=True, cmap='
                                 tiles=tiles, datashade=datashade, project=True,
                                 hover=False, cmap=cmap, c=c, marker=marker, alpha=alpha).opts(responsive=True)
     return plot
+
+
+def plot_gridded_data(ds, x='longitude', y='latitude', z='t2m', time='time', cmap='coolwarm'):
+    return ds.hvplot(x=x, y=y, z=z, cmap=cmap, geo=True)
