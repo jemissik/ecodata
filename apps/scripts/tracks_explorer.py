@@ -42,52 +42,13 @@ import cartopy.crs as ccrs
 from pyproj.crs import CRS
 import datetime as dt 
 from pathlib import Path
-from tkinter import Tk, filedialog
+
+from pymovebank.plotting import map_tile_options, plot_tracks_with_tiles 
+from pymovebank.panel_utils import select_file, select_output, param_widget
 
 from holoviews.operation.datashader import datashade, shade, dynspread, spread
 
 pn.extension(template='fast-list', loading_spinner='dots', loading_color='#00aa41', sizing_mode="stretch_width")
-
-# %%
-map_tile_options = [None,
-                    'CartoDark',
-                    'CartoLight',
-                    'EsriImagery', 
-                    'EsriNatGeo', 
-                    'EsriReference',
-                    'EsriTerrain', 
-                    'EsriUSATopo', 
-                    'OSM', 
-                    'StamenTerrain', 
-                    'StamenTerrainRetina', 
-                    'StamenToner', 
-                    'StamenTonerBackground', 
-                    'StamenWatercolor']
-
-
-# %%
-def select_file():
-    root = Tk()
-    root.attributes('-topmost', True)
-    root.withdraw()     
-    f = filedialog.askopenfilename(multiple=False) 
-
-    if f:
-        return f
-    
-def select_output(initial_dir=None, initial_file=None, extension=None):
-    root = Tk()
-    root.attributes('-topmost', True)
-    root.withdraw()     
-    f = filedialog.asksaveasfilename(initialdir = initial_dir, 
-                                     initialfile=initial_file, defaultextension=extension) 
-    if f:
-        return f
-
-
-# %%
-def param_widget(panel_widget):
-    return param.ClassSelector(class_=pn.widgets.Widget, default=panel_widget)
 
 
 # %%
@@ -148,9 +109,13 @@ class TracksExplorer(param.Parameterized):
         
     @param.depends("load_tracks_button.value", watch=True)#depends on load_tracks_button
     def load_data(self):
-        tracks = pmv.read_track_data(self.tracksfile.value)
-        self.status_text = "Track file loaded"
-        self.tracks = tracks
+        if self.tracksfile.value:
+            self.status_text = "Loading data..."
+            tracks = pmv.read_track_data(self.tracksfile.value)
+            self.status_text = "Track file loaded"
+            self.tracks = tracks
+        else:
+            self.status_text = "File path must be selected first!"
         
     @param.depends("tracks", watch=True)
     def get_tracks_extent(self):
@@ -171,48 +136,26 @@ class TracksExplorer(param.Parameterized):
     @param.depends("save_tracks_extent_button.value", watch=True)
     def save_tracks_extent(self):
         outfile = Path(self.output_fname.value).resolve()
-        #TODO allow filepath selector 
         #TODO check that tracks/extent exists 
-        self.tracks_extent.to_file(outfile, driver='GeoJSON')
-        self.status_text = (f'File saved to: {outfile}')
-    # @param.depends("tracks")
-    # def get_plot(self):
-    #     plot = (self.tracks.hvplot.points('location_long', 'location_lat', geo=True, 
-    #                                      tiles='StamenTerrain', datashade=True, project=True, 
-    #                                      hover=False, cmap='fire').opts(frame_width=500)
-    #             * self.tracks_extent.hvplot(alpha=0.2, geo=True, project=True))
-    #     return plot
-    #     # if isinstance(ds, xr.Dataset):
-        #     vals = ds.time.values
-        #     options = {label: val for label, val in zip(pd.to_datetime(vals), vals)}
-        #     time_slider = pn.widgets.DiscreteSlider(options=options, name="Date Time Slider")
-        #     fig = pn.bind(get_plot_t2m, ds=ds, time=time_slider)
-        #     return fig, time_slider
-        # if isinstance(ds, gpd.GeoDataFrame):
-        #     return get_plot_shp(shp=ds), None   
+        if self.tracks_extent:
+            self.tracks_extent.to_file(outfile, driver='GeoJSON')
+            self.status_text = (f'File saved to: {outfile}') 
+        else: 
+            self.status_text = "Tracks data must be added before a tracks extent file can be saved!"
     
     @param.depends("status_text", watch=True)
     def update_status_view(self):
         self.view[2] = pn.pane.Alert(self.status_text)
         
     @param.depends("tracks", "ds_checkbox.value", "map_tile.value", watch=True)
-    # @param.depends("tracks", watch=True)
     def update_view(self):
         self.status_text = "Creating plot..."
-        # self.ds_checkbox
-        plot = pn.pane.HoloViews(self.tracks.hvplot.points('location_long', 'location_lat', geo=True, 
-                                    tiles=self.map_tile.value, datashade=self.ds_checkbox.value, project=True, 
-                                    hover=False, cmap='fire', c='r', marker='circle', alpha=0.3).opts(responsive=True)
+        plot = pn.pane.HoloViews(plot_tracks_with_tiles(self.tracks, tiles=self.map_tile.value, 
+                                                        datashade=self.ds_checkbox.value, cmap='fire', c='r', 
+                                                        marker='circle', alpha=0.3)
          * self.tracks_extent.hvplot(alpha=0.2, geo=True, project=True).opts(responsive=True, frame_height=800, frame_width=800))
-        # plot = pn.pane.HoloViews(self.tracks.hvplot.points('location_long', 'location_lat', 
-        #                             tiles='StamenTerrain', datashade=True,
-        #                             hover=False, cmap='fire')
-        #  * self.tracks_extent.hvplot(alpha=0.2), 
-        #  sizing_mode="stretch_both")
+
         self.view[0] = pn.Column(pn.Row(self.ds_checkbox, self.map_tile), plot)
-
-        # self.view[0] = plot
-
         self.status_text = "Plot created!"
 
         
@@ -237,3 +180,5 @@ tabs = pn.Tabs(
 
 # %%
 tabs
+
+# %%
