@@ -8,12 +8,9 @@ import panel as pn
 import pandas as pd
 import panel.widgets as pnw
 import holoviews as hv
-import time
-import param
 import cartopy.crs as ccrs
 from pyproj.crs import CRS
 import datetime as dt
-from pathlib import Path
 
 from holoviews.operation.datashader import datashade, shade, dynspread, spread
 
@@ -44,5 +41,10 @@ def plot_tracks_with_tiles(tracks, tiles='StamenTerrain', datashade=True, cmap='
     return plot
 
 
-def plot_gridded_data(ds, x='longitude', y='latitude', z='t2m', time='time', cmap='coolwarm'):
-    return ds.hvplot(x=x, y=y, z=z, cmap=cmap, geo=True)
+def plot_gridded_data(ds, x='longitude', y='latitude', z='t2m', time='time', cmap='coolwarm', fix_clim=True):
+
+    if fix_clim:
+        clim = (ds[z].min(), ds[z].max())
+    else:
+        clim = None
+    return ds.hvplot(x=x, y=y, z=z, cmap=cmap, geo=True, clim=clim)
