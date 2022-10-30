@@ -22,3 +22,6 @@ from pymovebank.functions import (
     select_time_range,
     select_time_cond,
 )
+
+import pymovebank.plotting
+import pymovebank.panel_utils
