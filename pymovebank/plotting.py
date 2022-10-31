@@ -48,3 +48,7 @@ def plot_gridded_data(ds, x='longitude', y='latitude', z='t2m', time='time', cma
     else:
         clim = None
     return ds.hvplot(x=x, y=y, z=z, cmap=cmap, geo=True, clim=clim)
+
+
+def plot_avg_timeseries(ds, x='longitude', y='latitude', z='t2m', time='time', color='k'):
+    return ds[z].mean([x, y]).hvplot.line(time, color=color)
