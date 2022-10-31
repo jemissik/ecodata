@@ -18,6 +18,7 @@ import pymovebank as pmv
 import xarray as xr
 import hvplot.xarray  # noqa
 import hvplot.pandas  # noqa
+import geoviews as gv
 import numpy as np
 import panel as pn
 import pandas as pd
@@ -33,7 +34,7 @@ from pathlib import Path
 from holoviews.operation.datashader import datashade, shade, dynspread, spread
 
 from pymovebank.plotting import plot_gridded_data, plot_avg_timeseries
-from pymovebank.panel_utils import param_widget
+from pymovebank.panel_utils import param_widget, detect_varnames
 
 
 pn.extension(template='fast-list', loading_spinner='dots', loading_color='#00aa41', sizing_mode="stretch_width")
@@ -50,6 +51,11 @@ class GriddedDataExplorer(param.Parameterized):
     # TODO replace with new file selector 
     filein = param_widget(pn.widgets.TextInput(placeholder='Select a file...', name='Data file'))
     load_data_button = param_widget(pn.widgets.Button(button_type='primary', name='Load data'))
+    timevar = param_widget(pn.widgets.Select(options=[], name='Time'))
+    latvar = param_widget(pn.widgets.Select(options=[], name='Latitude'))
+    lonvar = param_widget(pn.widgets.Select(options=[], name='Longitude'))
+    zvar = param_widget(pn.widgets.Select(options=[], name='Variable of interest'))
+    update_varnames = param_widget(pn.widgets.Button(button_type='primary', name='Update variable names'))
 
     polyfile = param_widget(pn.widgets.TextInput(placeholder='Select a file...', name='Polygon file'))
     load_polyfile = param_widget(pn.widgets.Button(button_type='primary', name='Load data'))
@@ -78,6 +84,11 @@ class GriddedDataExplorer(param.Parameterized):
         # Reset names for panel widgets 
         self.filein.name = "File path"
         self.load_data_button.name = 'Load data'
+        self.timevar.name = 'Time'
+        self.latvar.name = 'Latitude'
+        self.lonvar.name = 'Longitude'
+        self.zvar.name = 'Variable of interest'
+        self.update_varnames.name = "Update variable names"
 
         self.polyfile.name = "Polygon file"
         self.load_polyfile.name = 'Load file'
@@ -86,47 +97,55 @@ class GriddedDataExplorer(param.Parameterized):
         self.update_filters.name = 'Update filters'
         self.revert_filters.name = 'Revert filters'
                
+        self.filein_widgets = pn.Row(self.filein, self.load_data_button)
+        self.varname_widgets = pn.Row(self.timevar, self.latvar, self.lonvar, self.zvar, self.update_varnames)
+
         self.selection_options = pn.WidgetBox(self.date_range, self.selection_type, 
                                               pn.Row(self.update_filters, self.revert_filters))
-        # Add widgets to widgetbox 
-        self.widgets = pn.Column(
-                pn.Row(self.filein, self.load_data_button),
-                pn.Row(self.polyfile, self.load_polyfile),
-                self.selection_options,
-                )
+        self.polyfile_widgets = pn.Row(self.polyfile, self.load_polyfile)
         
         #Add view
         self.view = pn.Column(
             pn.pane.Markdown("## Select file to plot!"),
-            self.widgets, 
+            self.filein_widgets, 
+            self.varname_widgets,
+            self.polyfile_widgets,
+            self.selection_options,
             pn.pane.Alert(self.status_text)           
             )
 
     @param.depends("ds_raw", watch=True)
     def update_selection_widgets(self):
         if self.ds_raw is not None:
+            self.status_text = 'Updating widgets'
             self.date_range = pn.widgets.DateRangeSlider(name="Date range selection", 
                                                          start=self.ds_raw.time.min().values, 
                                                          end=self.ds_raw.time.max().values)
             
             self.selection_options = pn.WidgetBox(self.date_range, self.selection_type, 
                                                   pn.Row(self.update_filters, self.revert_filters))
-            self.view[1] = pn.Column(
-                pn.Row(self.filein, self.load_data_button),
-                pn.Row(self.polyfile, self.load_polyfile),
-                self.selection_options,
-                )
+            self.view[4] = self.selection_options
           
     @param.depends("load_data_button.value", watch=True)
     def load_data(self):
         if self.filein.value:
             self.status_text = "Loading data..."
             ds_raw = xr.load_dataset(self.filein.value)
-            self.status_text = "File loaded"
             self.ds_raw = ds_raw
-            self.ds = ds_raw.copy()
+            matched_vars, ds_vars, unmatched_vars = detect_varnames(ds_raw)
+            self.timevar.options = list(ds_vars) 
+            self.latvar.options = list(ds_vars) 
+            self.lonvar.options = list(ds_vars)
+            self.timevar.value = matched_vars['timevar']
+            self.latvar.value = matched_vars['latvar']
+            self.lonvar.value = matched_vars['lonvar']
+            self.zvar.options = [None] + list(unmatched_vars) 
+            self.zvar.value = None
+            self.status_text = "File loaded"
+            self.ds = ds_raw.copy()  
         else:
-            self.status_text = "File path must be selected first!"
+            self.status_text = "File path must be selected first!"        
+    
     
     @param.depends("load_polyfile.value", watch=True)
     def load_poly_data(self):
@@ -161,22 +180,28 @@ class GriddedDataExplorer(param.Parameterized):
             
     @param.depends("status_text", watch=True)
     def update_status_view(self):
-        self.view[2] = pn.pane.Alert(self.status_text)
+        self.view[-1] = pn.pane.Alert(self.status_text)
 
-    @param.depends("ds", "poly", watch=True)
+    @param.depends("ds", "update_varnames.value", "poly", watch=True)
     def update_plot_view(self):
-        self.status_text = "Creating plot"
-        width = 500
-        plot = pn.pane.HoloViews(plot_gridded_data(self.ds).opts(frame_width=width))
-        widget = plot.widget_box.objects[0]
-        widget.width = width
-        widget.align = 'center'
-        ts_plot = plot_avg_timeseries(self.ds).opts(frame_width=width)
-        figs_with_widget = pn.Row(plot, pn.Column(widget,ts_plot, align='center'))
-        
-        self.status_text = "Plot created!"
+        if all([self.timevar.value, self.latvar.value, self.lonvar.value, self.zvar.value]):
+            self.status_text = "Creating plot"
+            width = 500
+            ds_plot = plot_gridded_data(self.ds).opts(frame_width=width)
+            if self.poly is not None:
+                ds_plot = ds_plot * gv.Polygons(self.poly).opts(fill_color=None)
+            plot = pn.pane.HoloViews(ds_plot)
+            widget = plot.widget_box.objects[0]
+            widget.width = width
+            widget.align = 'center'
+            ts_plot = plot_avg_timeseries(self.ds).opts(frame_width=width)
+            figs_with_widget = pn.Row(plot, pn.Column(widget,ts_plot, align='center'), pn.Column(self.ds, background='whitesmoke'))
+            
+            self.status_text = "Plot created!"
 
-        self.view[0] = figs_with_widget
+            self.view[0] = figs_with_widget
+        else:
+            self.status_text = 'Please specify variable names'
 
 # %%
 g = GriddedDataExplorer()
