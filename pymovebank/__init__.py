@@ -8,6 +8,7 @@ from pymovebank.functions import (
     grib2nc,
     geotif2nc,
     subset_data,
+    get_tracks_extent,
     plot_subset_interactive,
     plot_subset,
     read_track_data,

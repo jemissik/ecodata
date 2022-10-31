@@ -227,6 +227,21 @@ def subset_data(
 
     return gdf, boundary
 
+def get_tracks_extent(tracks, boundary_shape='rectangular', buffer=0):
+    # get boundary
+    if boundary_shape == 'rectangular':
+        boundary = tracks.dissolve().envelope
+    if boundary_shape == 'convex_hull':
+        boundary = tracks.dissolve().convex_hull
+
+    #apply buffer
+    if buffer != 0:
+        tot_bounds = boundary.geometry.total_bounds
+        buffer_scale = max(
+            [abs(tot_bounds[2] - tot_bounds[0]), abs(tot_bounds[3] - tot_bounds[1])]
+        )
+        boundary = boundary.buffer(buffer * buffer_scale, cap_style=2, join_style=2)
+        return gpd.GeoDataFrame(geometry=boundary)
 
 def plot_subset_interactive(subset, boundary, bounding_geom=None, track_points=None,
                             datashade_tracks=False, projection = ccrs.PlateCarree()):
