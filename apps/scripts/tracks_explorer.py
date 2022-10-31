@@ -43,6 +43,7 @@ from pyproj.crs import CRS
 import datetime as dt 
 from pathlib import Path
 
+import pymovebank as pmv
 from pymovebank.plotting import map_tile_options, plot_tracks_with_tiles 
 from pymovebank.panel_utils import select_file, select_output, param_widget
 
@@ -60,6 +61,12 @@ class TracksExplorer(param.Parameterized):
 
     tracks = param.ClassSelector(class_=gpd.GeoDataFrame, precedence=-1)
     tracks_extent = param.ClassSelector(class_=gpd.GeoDataFrame, precedence=-1)
+    tracks_boundary_shape = param_widget(pn.widgets.Select(
+        options={'Rectangular': 'rectangular', 'Convex hull': 'convex_hull'}, 
+        value='rectangular', name='Boundary shape'))
+    tracks_buffer = param_widget(pn.widgets.EditableFloatSlider(name='Buffer size', 
+                                                                start=0, end=1, step=0.01, value=0.1))
+    boundary_update = param_widget(pn.widgets.Button(button_type='primary', value=False, name='Update boundary'))
     
     output_file_button = param_widget(pn.widgets.Button(button_type='primary', name='Choose output file'))
     output_fname = param_widget(pn.widgets.TextInput(placeholder='Select a file...', 
@@ -83,6 +90,9 @@ class TracksExplorer(param.Parameterized):
         self.output_fname.name = 'Output file'
         self.output_file_button.name = 'Choose output file'
         self.save_tracks_extent_button.name = 'Save extent'
+        self.tracks_boundary_shape.name = 'Boundary shape'
+        self.boundary_update.name = 'Create boundary'
+        self.tracks_buffer.name = 'Buffer size'
         self.ds_checkbox.name = 'Datashade tracks'
         self.map_tile.name = 'Map tile'
         
@@ -90,6 +100,9 @@ class TracksExplorer(param.Parameterized):
         self.widgets = pn.WidgetBox(self.file_selector_button, 
                                     self.tracksfile, 
                                     self.load_tracks_button, 
+                                    self.tracks_boundary_shape,
+                                    self.tracks_buffer,
+                                    self.boundary_update,
                                     self.output_file_button,
                                     self.output_fname,
                                     self.save_tracks_extent_button)
@@ -113,14 +126,18 @@ class TracksExplorer(param.Parameterized):
             self.status_text = "Loading data..."
             tracks = pmv.read_track_data(self.tracksfile.value)
             self.status_text = "Track file loaded"
+            self.tracks_extent = pmv.get_tracks_extent(tracks, boundary_shape=self.tracks_boundary_shape.value, 
+                                                       buffer=self.tracks_buffer.value)
             self.tracks = tracks
+
         else:
             self.status_text = "File path must be selected first!"
-        
-    @param.depends("tracks", watch=True)
-    def get_tracks_extent(self):
-        extent = self.tracks.dissolve().convex_hull
-        self.tracks_extent = gpd.GeoDataFrame(geometry=extent)
+            
+            
+    @param.depends("boundary_update.value", watch=True)
+    def update_tracks_extent(self):
+        self.tracks_extent = pmv.get_tracks_extent(self.tracks, boundary_shape=self.tracks_boundary_shape.value, 
+                                                       buffer=self.tracks_buffer.value)
         
     
     @param.depends("output_file_button.value", watch=True)
@@ -137,7 +154,7 @@ class TracksExplorer(param.Parameterized):
     def save_tracks_extent(self):
         outfile = Path(self.output_fname.value).resolve()
         #TODO check that tracks/extent exists 
-        if self.tracks_extent:
+        if self.tracks_extent is not None:
             self.tracks_extent.to_file(outfile, driver='GeoJSON')
             self.status_text = (f'File saved to: {outfile}') 
         else: 
@@ -147,13 +164,15 @@ class TracksExplorer(param.Parameterized):
     def update_status_view(self):
         self.view[2] = pn.pane.Alert(self.status_text)
         
-    @param.depends("tracks", "ds_checkbox.value", "map_tile.value", watch=True)
+    @param.depends("tracks", "boundary_update.value", "ds_checkbox.value", "map_tile.value", watch=True)
     def update_view(self):
+        print("calling update view")
         self.status_text = "Creating plot..."
         plot = pn.pane.HoloViews(plot_tracks_with_tiles(self.tracks, tiles=self.map_tile.value, 
                                                         datashade=self.ds_checkbox.value, cmap='fire', c='r', 
                                                         marker='circle', alpha=0.3)
-         * self.tracks_extent.hvplot(alpha=0.2, geo=True, project=True).opts(responsive=True, frame_height=800, frame_width=800))
+         * self.tracks_extent.hvplot(alpha=0.2, geo=True, project=True).opts(responsive=True, frame_height=800, frame_width=800,
+                                                                             active_tools=['wheel_zoom']))
 
         self.view[0] = pn.Column(pn.Row(self.ds_checkbox, self.map_tile), plot)
         self.status_text = "Plot created!"
