@@ -62,3 +62,24 @@ def select_output(initial_dir=None, initial_file=None, extension=None):
                                      initialfile=initial_file, defaultextension=extension)
     if f:
         return f
+
+def detect_varnames(ds):
+    matched_vars = dict(timevar = None,
+                    latvar = None,
+                    lonvar = None)
+
+    label_options = dict(time_options = ['time', 'timestamp', 'Time'],
+                        lat_options = ['lat', 'latitude', 'Latitude'],
+                        lon_options = ['lon', 'long', 'longitude', 'Longitude'])
+
+    # Variables in dataset
+    dataset_vars = set(list(ds.coords) + list(ds))
+    unmatched_vars = set(dataset_vars)
+
+    for variable, label_opt in zip(matched_vars, label_options):
+        matched_var = dataset_vars.intersection(label_options[label_opt])
+        if matched_var:
+            matched_var = matched_var.pop()
+            matched_vars[variable] = matched_var
+            unmatched_vars.remove(matched_var)
+    return matched_vars, dataset_vars, unmatched_vars
