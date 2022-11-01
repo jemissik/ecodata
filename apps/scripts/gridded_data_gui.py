@@ -13,6 +13,9 @@
 # ---
 
 # %%
+import sys
+sys.path.append("/Users/jmissik/Desktop/repos.nosync/panel")
+
 import geopandas as gpd
 import pymovebank as pmv
 import xarray as xr
@@ -37,7 +40,7 @@ from pymovebank.plotting import plot_gridded_data, plot_avg_timeseries
 from pymovebank.panel_utils import param_widget, detect_varnames
 
 
-pn.extension(template='fast-list', loading_spinner='dots', loading_color='#00aa41', sizing_mode="stretch_width")
+pn.extension('tabulator', template='fast-list', loading_spinner='dots', loading_color='#00aa41', sizing_mode="stretch_width")
 
 
 # %%
@@ -50,15 +53,15 @@ class GriddedDataExplorer(param.Parameterized):
 
     # TODO replace with new file selector 
     filein = param_widget(pn.widgets.TextInput(placeholder='Select a file...', name='Data file'))
-    load_data_button = param_widget(pn.widgets.Button(button_type='primary', name='Load data', align='end'))
-    timevar = param_widget(pn.widgets.Select(options=[], name='Time'))
-    latvar = param_widget(pn.widgets.Select(options=[], name='Latitude'))
-    lonvar = param_widget(pn.widgets.Select(options=[], name='Longitude'))
-    zvar = param_widget(pn.widgets.Select(options=[], name='Variable of interest'))
-    update_varnames = param_widget(pn.widgets.Button(button_type='primary', name='Update variable names', align='end'))
+    load_data_button = param_widget(pn.widgets.Button(button_type='primary', name='Load data', align='end', sizing_mode='fixed'))
+    timevar = param_widget(pn.widgets.Select(options=[], name='Time', sizing_mode='fixed'))
+    latvar = param_widget(pn.widgets.Select(options=[], name='Latitude', sizing_mode='fixed'))
+    lonvar = param_widget(pn.widgets.Select(options=[], name='Longitude', sizing_mode='fixed'))
+    zvar = param_widget(pn.widgets.Select(options=[], name='Variable of interest', sizing_mode='fixed'))
+    update_varnames = param_widget(pn.widgets.Button(button_type='primary', name='Update variable names', align='end', sizing_mode='fixed'))
 
     polyfile = param_widget(pn.widgets.TextInput(placeholder='Select a file...', name='Polygon file'))
-    load_polyfile = param_widget(pn.widgets.Button(button_type='primary', name='Load data'))
+    load_polyfile = param_widget(pn.widgets.Button(button_type='primary', name='Load data', sizing_mode='fixed'))
     
 
     status_text = param.String('Ready...')
@@ -74,19 +77,26 @@ class GriddedDataExplorer(param.Parameterized):
     poly_selection_dict = {'Select within boundary':False, 'Mask within boundary':True}
     selection_type = param_widget(pn.widgets.RadioBoxGroup(name='Selection options', options = poly_selection_dict))
     
-    update_filters = param_widget(pn.widgets.Button(button_type='primary', name='Update filters', align='end'))
-    revert_filters = param_widget(pn.widgets.Button(button_type='primary', name='Revert filters', align='end'))
+    update_filters = param_widget(pn.widgets.Button(button_type='primary', name='Update filters', align='end', sizing_mode='fixed'))
+    revert_filters = param_widget(pn.widgets.Button(button_type='primary', name='Revert filters', align='end', sizing_mode='fixed'))
     
     # Time interpolation
-    rs_time_quantity = param_widget(pn.widgets.FloatInput(name='Amount', value=1., step=1e-1, start=0, end=100))
-    rs_time_unit = param_widget(pn.widgets.Select(options={'Days':'D', 'Hours':'H'}, name='Time unit'))
-    rs_time = param_widget(pn.widgets.Button(button_type='primary', name='Resample time', align='end'))
+    rs_time_quantity = param_widget(pn.widgets.FloatInput(name='Amount', value=1., step=1e-1, start=0, end=100, sizing_mode='fixed'))
+    rs_time_unit = param_widget(pn.widgets.Select(options={'Days':'D', 'Hours':'H'}, name='Time unit', sizing_mode='fixed'))
+    rs_time = param_widget(pn.widgets.Button(button_type='primary', name='Resample time', align='end', sizing_mode='fixed'))
     
-
+    # Group selection for aggregation
+    group_selector = param_widget(pn.widgets.CrossSelector(name='Groupings', 
+        options=['year', 'month', 'day', 'hour'], definition_order=False,sizing_mode='fixed'))
+    calculate_stats = param_widget(pn.widgets.Button(button_type='primary', name='Calculate statistics', align='start', sizing_mode='fixed')) 
+    
+    stats = param.ClassSelector(class_=pd.DataFrame, precedence=-1)
+    stats_widget =  param_widget(pn.widgets.Tabulator(name='DataFrame', hierarchical=True))
+      
     # Save dataset
     output_fname = param_widget(pn.widgets.TextInput(placeholder='Output filename...', 
                                                      value='processed_dataset.nc',name='Output file'))
-    save_ds = param_widget(pn.widgets.Button(name='Save dataset', button_type='primary', align='end'))
+    save_ds = param_widget(pn.widgets.Button(name='Save dataset', button_type='primary', align='end', sizing_mode='fixed'))
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -109,8 +119,11 @@ class GriddedDataExplorer(param.Parameterized):
         self.rs_time_quantity.name = 'Amount'
         self.rs_time_unit.name = 'Time unit'
         self.rs_time.name = 'Resample time'
+        self.group_selector.name = 'Groupings'
+        self.calculate_stats.name = "Calculate statistics"
         self.output_fname.name = 'Output file'
         self.save_ds.name = "Save dataset"
+        
                
         # Widget groups
         self.filein_widgets = pn.Row(self.filein, self.load_data_button)
@@ -124,6 +137,8 @@ class GriddedDataExplorer(param.Parameterized):
         
         self.rs_time_widgets = pn.Card(pn.Row(self.rs_time_quantity, self.rs_time_unit, self.rs_time), title='Time interpolation')
         
+        self.groupby_widgets = pn.Card(pn.Row(self.group_selector), self.calculate_stats, title='Calculate statistics')
+        
         self.outfile_widgets = pn.Card(pn.Row(self.output_fname, self.save_ds), title='Output file')
         #Add view
         self.view = pn.Column(
@@ -132,6 +147,7 @@ class GriddedDataExplorer(param.Parameterized):
             self.polyfile_widgets,
             self.selection_options,
             self.rs_time_widgets,
+            self.groupby_widgets,
             self.outfile_widgets,
             pn.Card(pn.pane.Alert(self.status_text), title='Status')           
             )
@@ -172,10 +188,9 @@ class GriddedDataExplorer(param.Parameterized):
                 
             self.status_text = "File loaded"
             self.ds_raw = ds_raw
-            self.ds = ds_raw.copy()  
+            self.ds = ds_raw.copy()
         else:
             self.status_text = "File path must be selected first!"        
-    
     
     @param.depends("load_polyfile.value", watch=True)
     def load_poly_data(self):
@@ -227,7 +242,7 @@ class GriddedDataExplorer(param.Parameterized):
             ds_plot = plot_gridded_data(self.ds, x=self.lonvar.value, y=self.latvar.value, z=self.zvar.value, 
                                         time=self.timevar.value).opts(frame_width=width)
             if self.poly is not None:
-                ds_plot = ds_plot * gv.Polygons(self.poly).opts(fill_color=None)
+                ds_plot = ds_plot * gv.Polygons(self.poly).opts(fill_color=None, line_color='k', line_width=2)
             plot = pn.pane.HoloViews(ds_plot)
             widget = plot.widget_box.objects[0]
             widget.width = width
@@ -241,6 +256,29 @@ class GriddedDataExplorer(param.Parameterized):
             self.view[0] = figs_with_widget
         else:
             self.status_text = 'Please specify variable names'
+           
+    @param.depends("calculate_stats.value", watch=True) 
+    def groupby_apply(self):
+        self.status_text = "Calculating..."
+        
+        select_list = self.group_selector.value
+        self.status_text = str(self.group_selector.value)
+        
+        # Aggregate spatially 
+        df = self.ds[self.zvar.value].mean(dim=[self.latvar.value, self.lonvar.value]).to_dataframe()
+        # group_dict = {'year':df.index.year, 'month':df.index.month, 
+         #'hour':df.index.month.hour
+        
+        # Apply groupings
+        groupings = [df.index.__getattribute__(val) for val in select_list] 
+        result = df.groupby(groupings).describe()
+        result = result[self.zvar.value].drop(columns=('count'))
+        # result.columns = result.columns.droplevel()
+        self.stats = result
+        # self.stats_widget.value = result
+        self.status_text = "Calculations completed"
+        self.view[-1] = pn.Card(self.stats, title='Statistics')
+        
     
     @param.depends("save_ds.value", watch=True)
     def save_dataset(self):

@@ -816,3 +816,5 @@ def select_time_cond(ds,
 
 def resample_time(ds, timevar='time', time_quantity=1, time_unit='day'):
     return ds.resample({timevar: pd.Timedelta(time_quantity, unit=time_unit)}).interpolate()
+
+
