@@ -22,6 +22,7 @@ from pymovebank.functions import (
     select_spatial,
     select_time_range,
     select_time_cond,
+    resample_time,
 )
 
 import pymovebank.plotting
