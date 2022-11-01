@@ -76,6 +76,12 @@ class GriddedDataExplorer(param.Parameterized):
     
     update_filters = param_widget(pn.widgets.Button(button_type='primary', name='Update filters', align='end'))
     revert_filters = param_widget(pn.widgets.Button(button_type='primary', name='Revert filters', align='end'))
+    
+    # Time interpolation
+    rs_time_quantity = param_widget(pn.widgets.FloatInput(name='Amount', value=1., step=1e-1, start=0, end=100))
+    rs_time_unit = param_widget(pn.widgets.Select(options={'Days':'D', 'Hours':'H'}, name='Time unit'))
+    rs_time = param_widget(pn.widgets.Button(button_type='primary', name='Resample time', align='end'))
+    
 
     # Save dataset
     output_fname = param_widget(pn.widgets.TextInput(placeholder='Output filename...', 
@@ -100,6 +106,9 @@ class GriddedDataExplorer(param.Parameterized):
         self.selection_type.name = 'Polygon selection options'
         self.update_filters.name = 'Update filters'
         self.revert_filters.name = 'Revert filters'
+        self.rs_time_quantity.name = 'Amount'
+        self.rs_time_unit.name = 'Time unit'
+        self.rs_time.name = 'Resample time'
         self.output_fname.name = 'Output file'
         self.save_ds.name = "Save dataset"
                
@@ -113,13 +122,16 @@ class GriddedDataExplorer(param.Parameterized):
                                               pn.Row(self.update_filters, self.revert_filters), title="Selection options")
         self.polyfile_widgets = pn.Card(self.polyfile, self.load_polyfile, title='Input polygon file')
         
-        self.outfile_widgets = pn.Card(pn.Row(self.output_fname, self.save_ds))
+        self.rs_time_widgets = pn.Card(pn.Row(self.rs_time_quantity, self.rs_time_unit, self.rs_time), title='Time interpolation')
+        
+        self.outfile_widgets = pn.Card(pn.Row(self.output_fname, self.save_ds), title='Output file')
         #Add view
         self.view = pn.Column(
             pn.pane.Markdown("## Select file to plot!"),
             self.file_input_card,
             self.polyfile_widgets,
             self.selection_options,
+            self.rs_time_widgets,
             self.outfile_widgets,
             pn.Card(pn.pane.Alert(self.status_text), title='Status')           
             )
@@ -143,7 +155,6 @@ class GriddedDataExplorer(param.Parameterized):
         if self.filein.value:
             self.status_text = "Loading data..."
             ds_raw = xr.load_dataset(self.filein.value)
-            self.ds_raw = ds_raw
             matched_vars, ds_vars, unmatched_vars = detect_varnames(ds_raw)
             self.timevar.options = list(ds_vars) 
             self.latvar.options = list(ds_vars) 
@@ -153,7 +164,14 @@ class GriddedDataExplorer(param.Parameterized):
             self.lonvar.value = matched_vars['lonvar']
             self.zvar.options = [None] + list(unmatched_vars) 
             self.zvar.value = None
+            
+            # Convert to datetime if necessary 
+            if ds_raw[self.timevar.value].dtype=='O':
+                datetimeindex = ds_raw.indexes[self.timevar.value].to_datetimeindex()
+                ds_raw[self.timevar.value] = datetimeindex
+                
             self.status_text = "File loaded"
+            self.ds_raw = ds_raw
             self.ds = ds_raw.copy()  
         else:
             self.status_text = "File path must be selected first!"        
@@ -189,6 +207,13 @@ class GriddedDataExplorer(param.Parameterized):
         if self.ds_raw is not None:
             self.ds = self.ds_raw.copy()
             self.status_text = "Filters reverted"
+            
+    @param.depends("rs_time.value", watch=True)
+    def resample_time(self):
+        self.status_text = "Interpolating..."
+        self.ds = pmv.resample_time(self.ds, timevar=self.timevar.value, 
+                                    time_quantity=self.rs_time_quantity.value, time_unit=self.rs_time_unit.value)
+        self.status_text = "Dataset resampled"
             
     @param.depends("status_text", watch=True)
     def update_status_view(self):
