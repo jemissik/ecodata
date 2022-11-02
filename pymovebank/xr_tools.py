@@ -32,6 +32,25 @@ def detect_varnames(ds):
     return matched_vars, dataset_vars, unmatched_vars
 
 
+def get_time_res(ds, timevar='time'):
+    """
+    Detect time resolution of a dataset, calculated as the average diff of the time array
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset with a time dimension
+    timevar : str, optional
+        Label of the time dimension in the dataset, by default 'time'
+
+    Returns
+    -------
+    pandas.Timedelta
+        Time resolution of the dataset
+    """
+    return pd.Timedelta(ds[timevar].diff(dim='time').mean().values)
+
+
 def thin_dataset(dataset, n_thin, outfile=None):
     """
     Thin a dataset by keeping the n-th value across the specified dimensions. Useful for applications such as plotting
@@ -269,5 +288,48 @@ def select_time_cond(ds,
     return ds_subset
 
 
-def resample_time(ds, timevar='time', time_quantity=1, time_unit='day'):
-    return ds.resample({timevar: pd.Timedelta(time_quantity, unit=time_unit)}).interpolate()
+def resample_time(ds, timevar='time', time_quantity=1, time_unit='day', interp_irreg=False):
+    """
+    Convert a dataset to a new time resolution. Uses interpolation for upsampling and mean for downsampling.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset to sesample
+    timevar : str, optional
+        Label of time variable in the dataset, by default 'time'
+    time_quantity : int, optional
+        Quantity of time for the new time resolution, by default 1
+    time_unit : str, optional
+        Unit of time for the new time resolution, by default 'day'
+    interp_irreg : bool, optional
+        Determines how downsampling should happen in cases where the new time resolution is not an even multiple
+        of the time resolution of the input dataset. If true, the dataset will be interpolated to the greatest common
+        timedelta before downsampling is performed. By default False.
+
+    Returns
+    -------
+    xarray.Dataset
+        Resampled dataset
+    """
+
+    resample_freq = pd.Timedelta(time_quantity, time_unit)
+    ds_freq = get_time_res(ds)
+
+    if resample_freq == ds_freq:
+        ds_resampled = ds
+
+    # Use interpolation for upsampling
+    elif resample_freq < ds_freq:
+        ds_resampled = ds.resample({timevar: resample_freq}).interpolate()
+
+    # Use mean for downsampling
+    elif resample_freq > ds_freq:
+        if interp_irreg and ((resample_freq % ds_freq) != pd.Timedelta(0)):
+            #Find greatest common divisor of the two time frequencies
+            gcd = np.gcd(resample_freq, ds_freq)
+            ds_resampled = ds.resample({timevar: gcd}).interpolate().resample({timevar: resample_freq}).mean()
+        else:
+            ds_resampled = ds.resample({timevar: resample_freq}).mean()
+
+    return ds_resampled

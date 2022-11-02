@@ -1,5 +1,8 @@
 dist/
 
+# test notebooks
+test_notebooks/
+
 # Movebank login credentials
 movebank_credentials.txt
 

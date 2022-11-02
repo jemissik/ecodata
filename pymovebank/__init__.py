@@ -21,6 +21,7 @@ from pymovebank.functions import (
 
 from pymovebank.xr_tools import (
     detect_varnames,
+    get_time_res,
     thin_dataset,
     coarsen_dataset,
     select_spatial,
