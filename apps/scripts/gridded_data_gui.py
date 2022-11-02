@@ -37,7 +37,8 @@ from pathlib import Path
 from holoviews.operation.datashader import datashade, shade, dynspread, spread
 
 from pymovebank.plotting import plot_gridded_data, plot_avg_timeseries
-from pymovebank.panel_utils import param_widget, detect_varnames
+from pymovebank.panel_utils import param_widget
+from pymovebank.xr_tools import detect_varnames
 
 
 pn.extension('tabulator', template='fast-list', loading_spinner='dots', loading_color='#00aa41', sizing_mode="stretch_width")
@@ -285,7 +286,7 @@ class GriddedDataExplorer(param.Parameterized):
         outfile = Path(self.output_fname.value).resolve()
         self.ds.to_netcdf(outfile)
         self.status_text = f'File saved to: {outfile}'
-            
+
 
 # %%
 g = GriddedDataExplorer()

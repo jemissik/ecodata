@@ -17,6 +17,10 @@ from pymovebank.functions import (
     combine_studies,
     clip_tracks_timerange,
     bbox2poly,
+)
+
+from pymovebank.xr_tools import (
+    detect_varnames,
     thin_dataset,
     coarsen_dataset,
     select_spatial,
