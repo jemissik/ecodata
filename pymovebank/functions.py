@@ -434,7 +434,9 @@ def merge_tracks_ref(track_data, ref_data):
     """
 
     if ('deployment_id' in track_data.columns) and ('deployment_id' in ref_data.columns):
-        merged_data = pd.merge(track_data, ref_data, on='deployment_id', how='left')
+        merged_data = pd.merge(track_data, ref_data, on='deployment_id', how='left', suffixes=(None, "_ref"))
+        cols_to_drop = [c for c in merged_data.columns if '_ref' in c]
+        merged_data = merged_data.drop(columns=cols_to_drop)
     else:
         raise KeyError(
             "merge_tracks_ref: both track_data and ref_data must contain deployment_id."
@@ -816,5 +818,3 @@ def select_time_cond(ds,
 
 def resample_time(ds, timevar='time', time_quantity=1, time_unit='day'):
     return ds.resample({timevar: pd.Timedelta(time_quantity, unit=time_unit)}).interpolate()
-
-
