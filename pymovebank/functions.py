@@ -228,13 +228,12 @@ def subset_data(
             gdf.to_file(outdir / outfile.name)
         else:
             gdf.to_file(outfile)
-
-    if bbox:
-        return gdf, boundary
-    elif track_points:
-        return gdf, boundary, gdf_track
+    output = dict(subset=gdf, boundary=boundary)
+    if track_points:
+        output['track_points'] = gdf_track
     elif bounding_geom:
-        return gdf, boundary, gdf_features
+        output['bounding_geom'] = gdf_features
+    return output
 
 def get_tracks_extent(tracks, boundary_shape='rectangular', buffer=0):
     # get boundary
@@ -317,13 +316,13 @@ def plot_subset_interactive(subset, boundary, bounding_geom=None, track_points=N
     return plot
 
 
-def plot_subset(subset_data, boundary, bounding_geom=None, track_points=None):
+def plot_subset(subset, boundary, bounding_geom=None, track_points=None):
     """
     Plots the results of the subset_data function in a static plot using matplotlib.
 
     Parameters
     ----------
-    subset_data : geopandas.GeoDataFrame
+    subset : geopandas.GeoDataFrame
         Subset data
     boundary : geopandas.GeoSeries
         Subsetting boundary
@@ -340,11 +339,11 @@ def plot_subset(subset_data, boundary, bounding_geom=None, track_points=None):
     plt.ioff()
     fig, ax = plt.subplots()
     boundary.plot(ax=ax, color='c', alpha=0.4)
-    subset_data.plot(ax=ax, color='b', linewidth=0.75)
+    subset.plot(ax=ax, color='b', linewidth=0.75)
     if bounding_geom is not None:
-        bounding_geom.to_crs(subset_data.crs).plot(ax=ax, color='r', alpha=0.4)
+        bounding_geom.to_crs(subset.crs).plot(ax=ax, color='r')
     if track_points is not None:
-        track_points.to_crs(subset_data.crs).plot(ax = ax, color = 'r', marker='.', alpha = 0.4)
+        track_points.to_crs(subset.crs).plot(ax = ax, color = 'r', marker='.', alpha = 0.4)
     return fig
 
 
