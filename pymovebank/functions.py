@@ -221,9 +221,13 @@ def subset_data(
 
     # Write new data to file if output path was specified
     if outfile is not None:
-        if Path(outfile).suffix == '.shp':
-            Path(outfile).mkdir(exist_ok=True)
-        gdf.to_file(outfile)
+        outfile = Path(outfile)
+        if outfile.suffix == '.shp':
+            outdir = (outfile.parent / outfile.stem)
+            outdir.mkdir(exist_ok=True)
+            gdf.to_file(outdir / outfile.name)
+        else:
+            gdf.to_file(outfile)
 
     if bbox:
         return gdf, boundary
