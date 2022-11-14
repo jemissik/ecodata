@@ -225,7 +225,12 @@ def subset_data(
             Path(outfile).mkdir(exist_ok=True)
         gdf.to_file(outfile)
 
-    return gdf, boundary
+    if bbox:
+        return gdf, boundary
+    elif track_points:
+        return gdf, boundary, gdf_track
+    elif bounding_geom:
+        return gdf, boundary, gdf_features
 
 def get_tracks_extent(tracks, boundary_shape='rectangular', buffer=0):
     # get boundary
