@@ -88,7 +88,7 @@ class GriddedDataExplorer(param.Parameterized):
     
     # Group selection for aggregation
     group_selector = param_widget(pn.widgets.CrossSelector(name='Groupings', 
-        options=['year', 'month', 'day', 'hour'], definition_order=False,sizing_mode='fixed'))
+        options=['polygon', 'year', 'month', 'day', 'hour'], definition_order=False,sizing_mode='fixed'))
     calculate_stats = param_widget(pn.widgets.Button(button_type='primary', name='Calculate statistics', align='start', sizing_mode='fixed')) 
     
     stats = param.ClassSelector(class_=pd.DataFrame, precedence=-1)
@@ -243,7 +243,7 @@ class GriddedDataExplorer(param.Parameterized):
             ds_plot = plot_gridded_data(self.ds, x=self.lonvar.value, y=self.latvar.value, z=self.zvar.value, 
                                         time=self.timevar.value).opts(frame_width=width)
             if self.poly is not None:
-                ds_plot = ds_plot * gv.Polygons(self.poly).opts(fill_color=None, line_color='k', line_width=2)
+                ds_plot = ds_plot * gv.Path(self.poly).opts(line_color='k', line_width=2)
             plot = pn.pane.HoloViews(ds_plot)
             widget = plot.widget_box.objects[0]
             widget.width = width
@@ -263,20 +263,29 @@ class GriddedDataExplorer(param.Parameterized):
         self.status_text = "Calculating..."
         
         select_list = self.group_selector.value
-        self.status_text = str(self.group_selector.value)
         
-        # Aggregate spatially 
-        df = self.ds[self.zvar.value].mean(dim=[self.latvar.value, self.lonvar.value]).to_dataframe()
-        # group_dict = {'year':df.index.year, 'month':df.index.month, 
-         #'hour':df.index.month.hour
+        # Check if grouping by polygon 
+        if 'polygon' in select_list:
+            time_list = select_list.copy()
+            time_list.remove('polygon')
+            poly = self.poly.reset_index()
+            self.stats = pmv.groupby_poly_time(vector_data=poly, 
+                                               vector_var='index', 
+                                               ds=self.ds, 
+                                               ds_var=self.zvar.value,
+                                               latvar=self.latvar.value,
+                                               lonvar=self.lonvar.value,
+                                               timevar=self.timevar.value, 
+                                               groupby_vars=time_list)
+        else:
+            result = pmv.groupby_multi_time(ds=self.ds, 
+                                            var=self.zvar.value, 
+                                            time=self.timevar.value, 
+                                            groupby_vars=select_list)
+            result = result.to_dataframe().reorder_levels(select_list).sort_index()
+            result = result[['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max']]
+            self.stats = result
         
-        # Apply groupings
-        groupings = [df.index.__getattribute__(val) for val in select_list] 
-        result = df.groupby(groupings).describe()
-        result = result[self.zvar.value].drop(columns=('count'))
-        # result.columns = result.columns.droplevel()
-        self.stats = result
-        # self.stats_widget.value = result
         self.status_text = "Calculations completed"
         self.view[-1] = pn.Card(self.stats, title='Statistics')
         
@@ -291,5 +300,3 @@ class GriddedDataExplorer(param.Parameterized):
 # %%
 g = GriddedDataExplorer()
 pn.Row(g.view).servable()
-
-# %%

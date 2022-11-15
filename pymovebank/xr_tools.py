@@ -430,7 +430,7 @@ def groupby_poly_time(vector_data, vector_var, ds, ds_var, latvar='latitude',
         res = res.assign_coords({'polygon': group[0]})
         poly_results.append(res)
     result = xr.concat(poly_results, dim='polygon').to_dataframe()
-    index_levels = groupby_vars
+    index_levels = groupby_vars.copy()
     index_levels.insert(0,'polygon')
     result = result.reorder_levels(index_levels).sort_index()
     result = result[['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max']]
