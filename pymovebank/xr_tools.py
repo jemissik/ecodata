@@ -333,3 +333,49 @@ def resample_time(ds, timevar='time', time_quantity=1, time_unit='day', interp_i
             ds_resampled = ds.resample({timevar: resample_freq}).mean()
 
     return ds_resampled
+
+
+def groupby_multi_time(ds, var, time='time', groupby_vars=None):
+    """
+    Groupby stats for multiple time groupings.
+    Returns a dataset with summary statistics (count, min, max, mean, std, quantiles).
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset including a time coordinate
+    var : str
+        Variable in the dataset to calculate statistics for
+    time : str, optional
+        Name of the time dimension in the dataset, by default 'time'
+    groupby_vars : list, optional
+        List of time groupings to group by. Valid grouping variables include:
+        ('year', 'month', 'dayofyear', 'hour'). Order or variables in the list determines
+        the groupig order.
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset including summary statistics for the variable of interest.
+    """
+
+    da = ds[var]
+
+    grouped_index = pd.MultiIndex.from_arrays(
+        [getattr(da[time].dt, groupby_var).values for groupby_var in groupby_vars], names=groupby_vars)
+
+    da.coords['grouped_time_index'] = ('time', grouped_index)
+
+    grouped = da.groupby('grouped_time_index')
+
+    result = xr.Dataset({
+        'count': grouped.count(...),
+        'mean':grouped.mean(...),
+        'std':grouped.std(...),
+        'min':grouped.min(...),
+        '25%':grouped.quantile(0.25, dim=...).drop_vars('quantile'),
+        '50%':grouped.quantile(0.50, dim=...).drop_vars('quantile'),
+        '75%':grouped.quantile(0.75, dim=...).drop_vars('quantile'),
+        'max':grouped.max(...),
+                         })
+    return result
