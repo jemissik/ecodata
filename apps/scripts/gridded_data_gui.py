@@ -99,6 +99,11 @@ class GriddedDataExplorer(param.Parameterized):
                                                      value='processed_dataset.nc',name='Output file'))
     save_ds = param_widget(pn.widgets.Button(name='Save dataset', button_type='primary', align='end', sizing_mode='fixed'))
 
+    # Save statistics
+    stats_fname = param_widget(pn.widgets.TextInput(placeholder='Output filename...', 
+                                                     value='statistics.csv',name='Output file for statistics'))
+    save_stats = param_widget(pn.widgets.Button(name='Save statistics', button_type='primary', align='end', sizing_mode='fixed'))
+
     def __init__(self, **params):
         super().__init__(**params)
         
@@ -124,6 +129,8 @@ class GriddedDataExplorer(param.Parameterized):
         self.calculate_stats.name = "Calculate statistics"
         self.output_fname.name = 'Output file'
         self.save_ds.name = "Save dataset"
+        self.stats_fname.name = 'Output file for statistics'
+        self.save_stats.name = 'Save statistics'
         
                
         # Widget groups
@@ -141,7 +148,20 @@ class GriddedDataExplorer(param.Parameterized):
         self.groupby_widgets = pn.Card(pn.Row(self.group_selector), self.calculate_stats, title='Calculate statistics')
         
         self.outfile_widgets = pn.Card(pn.Row(self.output_fname, self.save_ds), title='Output file')
-        #Add view
+        
+        self.save_stats_widgets = pn.Row(self.stats_fname, self.save_stats)
+        
+        # View
+        
+        self.view_objects = {'plot':0,
+                             'file_input_card':1,
+                             'polyfile_widgets':2,
+                             'selection_options':3,
+                             'rs_time_widgets':4,
+                             'groupby_widgets':5,
+                             'outfile_widgets':6,
+                             'stats':7,
+                             'status':8}
         self.view = pn.Column(
             pn.pane.Markdown("## Select file to plot!"),
             self.file_input_card,
@@ -150,6 +170,7 @@ class GriddedDataExplorer(param.Parameterized):
             self.rs_time_widgets,
             self.groupby_widgets,
             self.outfile_widgets,
+            pn.Card(self.save_stats_widgets, title='Statistics'),
             pn.Card(pn.pane.Alert(self.status_text), title='Status')           
             )
 
@@ -165,7 +186,7 @@ class GriddedDataExplorer(param.Parameterized):
             #                                       pn.Row(self.update_filters, self.revert_filters))
             self.selection_options = pn.Card(self.date_range, self.selection_type, 
                                               pn.Row(self.update_filters, self.revert_filters), title="Selection options")
-            self.view[3] = self.selection_options
+            self.view[self.view_objects['selection_options']] = self.selection_options
           
     @param.depends("load_data_button.value", watch=True)
     def load_data(self):
@@ -233,7 +254,7 @@ class GriddedDataExplorer(param.Parameterized):
             
     @param.depends("status_text", watch=True)
     def update_status_view(self):
-        self.view[-1] = pn.Card(pn.pane.Alert(self.status_text), title='Status')
+        self.view[self.view_objects['status']] = pn.Card(pn.pane.Alert(self.status_text), title='Status')
 
     @param.depends("ds", "update_varnames.value", "poly", watch=True)
     def update_plot_view(self):
@@ -254,7 +275,7 @@ class GriddedDataExplorer(param.Parameterized):
             
             self.status_text = "Plot created!"
 
-            self.view[0] = figs_with_widget
+            self.view[self.view_objects['plot']] = figs_with_widget
         else:
             self.status_text = 'Please specify variable names'
            
@@ -287,14 +308,21 @@ class GriddedDataExplorer(param.Parameterized):
             self.stats = result
         
         self.status_text = "Calculations completed"
-        self.view[-1] = pn.Card(self.stats, title='Statistics')
+        self.view[self.view_objects['stats']] = pn.Card(self.save_stats_widgets, self.stats, title='Statistics')
         
+        
+    @param.depends("save_stats.value", watch=True)
+    def save_stats_results(self):
+        outfile = Path(self.stats_fname.value).resolve()
+        self.stats.to_csv(outfile)
+        self.status_text = f'File saved to: {outfile}' 
     
     @param.depends("save_ds.value", watch=True)
     def save_dataset(self):
         outfile = Path(self.output_fname.value).resolve()
         self.ds.to_netcdf(outfile)
         self.status_text = f'File saved to: {outfile}'
+        
 
 
 # %%
