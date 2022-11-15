@@ -28,6 +28,8 @@ from pymovebank.xr_tools import (
     select_time_range,
     select_time_cond,
     resample_time,
+    groupby_multi_time,
+    groupby_poly_time,
 )
 
 import pymovebank.plotting

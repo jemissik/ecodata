@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import xarray as xr
 import rioxarray  # noqa
+from geocube.api.core import make_geocube
 from pyproj.crs import CRS
 from pathlib import Path
 
@@ -348,10 +349,10 @@ def groupby_multi_time(ds, var, time='time', groupby_vars=None):
         Variable in the dataset to calculate statistics for
     time : str, optional
         Name of the time dimension in the dataset, by default 'time'
-    groupby_vars : list, optional
+    groupby_vars : list
         List of time groupings to group by. Valid grouping variables include:
         ('year', 'month', 'dayofyear', 'hour'). Order or variables in the list determines
-        the groupig order.
+        the grouping order.
 
     Returns
     -------
@@ -378,4 +379,59 @@ def groupby_multi_time(ds, var, time='time', groupby_vars=None):
         '75%':grouped.quantile(0.75, dim=...).drop_vars('quantile'),
         'max':grouped.max(...),
                          })
+    return result
+
+
+def groupby_poly_time(vector_data, vector_var, ds, ds_var, latvar='latitude',
+                      lonvar='longitude', timevar='time', groupby_vars=None):
+    """
+    Groupby stats for a multi groupby including polygons and time variables.
+    Returns summary statistics for the variable of interest.
+
+    Parameters
+    ----------
+    vector_data : str, path-like object, or geopandas.GeoDataFrame
+        Vector dataset containing polygons
+    vector_var : str
+        Variable in the vector dataset to use for groupings
+    ds : xarray.Dataset
+        Dataset
+    ds_var : str
+        Variable in the dataset to calculate statistics for
+    latvar : str
+        label of the latitude variable in the dataset
+    lonvar : str
+        label of the longitude variable in the dataset
+    timevar : str, optional
+        Label of the time variable in the dataset, by default 'time'
+    groupby_vars : list
+        List of time groupings to group by. Valid grouping variables include:
+        ('year', 'month', 'dayofyear', 'hour'). Order or variables in the list determines
+        the grouping order.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Dataframe with summary statistics
+    """
+    # vector_data can be either gdf or pathlike?
+
+    # Rasterize vector data
+    gc = make_geocube(vector_data=vector_data, like=ds)
+
+    # Add vector data as a coordinate of the dataset
+    ds2 = ds.assign_coords({'polygon':([latvar, lonvar], gc[vector_var].values)})
+
+    # Apply the time groupings for each polygon
+    # TODO This approach should be updated when xarray's multi groupby is added
+    poly_results = []
+    for group in ds2.groupby('polygon'):
+        res = groupby_multi_time(group[1], var=ds_var, groupby_vars=groupby_vars)
+        res = res.assign_coords({'polygon': group[0]})
+        poly_results.append(res)
+    result = xr.concat(poly_results, dim='polygon').to_dataframe()
+    index_levels = groupby_vars
+    index_levels.insert(0,'polygon')
+    result = result.reorder_levels(index_levels).sort_index()
+    result = result[['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max']]
     return result
