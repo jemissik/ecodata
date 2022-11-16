@@ -26,6 +26,7 @@ dependencies:
 - pyviz::geoviews
 - pyviz::spatialpandas
 - bokeh::jupyter_bokeh  # Enables interactive widgets in vscode
+- conda-forge::geocube
 # - pyviz::spatialpandas
 - dataprep
 - jupytext
