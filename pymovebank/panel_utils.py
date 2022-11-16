@@ -1,5 +1,6 @@
 import param
 import panel as pn
+import functools
 from tkinter import Tk, filedialog
 
 
@@ -63,3 +64,13 @@ def select_output(initial_dir=None, initial_file=None, extension=None):
     if f:
         return f
 
+def try_catch(msg="Error... Check options and try again"):
+    def inner(func):
+        @functools.wraps(func)
+        def tru_dec(self, *args, **kwargs):
+            try:
+                return func(self, *args, **kwargs)
+            except Exception as e:
+                self.status_text = msg
+        return tru_dec
+    return inner

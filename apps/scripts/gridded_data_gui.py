@@ -37,16 +37,11 @@ from pathlib import Path
 from holoviews.operation.datashader import datashade, shade, dynspread, spread
 
 from pymovebank.plotting import plot_gridded_data, plot_avg_timeseries
-from pymovebank.panel_utils import param_widget
+from pymovebank.panel_utils import param_widget, try_catch
 from pymovebank.xr_tools import detect_varnames
 
 
-pn.extension('tabulator', template='fast-list', loading_spinner='dots', loading_color='#00aa41', sizing_mode="stretch_width")
-
-
-# %%
-def get_plot_shp(shp):
-    return shp.hvplot(alpha=0.5)
+pn.extension('tabulator', template='bootstrap', loading_spinner='dots', loading_color='#00aa41', sizing_mode="stretch_width")
 
 
 # %%
@@ -62,7 +57,7 @@ class GriddedDataExplorer(param.Parameterized):
     update_varnames = param_widget(pn.widgets.Button(button_type='primary', name='Update variable names', align='end', sizing_mode='fixed'))
 
     polyfile = param_widget(pn.widgets.TextInput(placeholder='Select a file...', name='Polygon file'))
-    load_polyfile = param_widget(pn.widgets.Button(button_type='primary', name='Load data', sizing_mode='fixed'))
+    load_polyfile = param_widget(pn.widgets.Button(button_type='primary', name='Load data', sizing_mode='fixed', align='end'))
     
 
     status_text = param.String('Ready...')
@@ -71,8 +66,27 @@ class GriddedDataExplorer(param.Parameterized):
     ds = param.ClassSelector(class_=xr.Dataset, precedence=-1)
     poly = param.ClassSelector(class_=gpd.GeoDataFrame, precedence=-1)
     
+    # Time selection widgets
     date_range = param_widget(pn.widgets.DateRangeSlider(name="Date range", 
                                                          start=dt.date.today() - dt.timedelta(1), end=dt.date.today()))
+    
+    year_range = param_widget(pn.widgets.EditableRangeSlider(name='Year range', step=1, format='0'))
+    month_range = param_widget(pn.widgets.EditableRangeSlider(name='Month range', step=1, format='0'))
+    dayofyear_range = param_widget(pn.widgets.EditableRangeSlider(name='Day of year range', step=1, format='0'))
+    hour_range = param_widget(pn.widgets.EditableRangeSlider(name='Hour range', step=1, format='0'))
+    year_selection = param_widget(pn.widgets.MultiChoice(name='Years'))
+    month_selection = param_widget(pn.widgets.MultiChoice(name='Months'))
+    dayofyear_selection = param_widget(pn.widgets.MultiChoice(name='Days of year'))
+    hour_selection = param_widget(pn.widgets.MultiChoice(name='Hours'))
+    
+    add_year_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
+    reset_year = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
+    add_month_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
+    reset_month = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
+    add_doy_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
+    reset_doy = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
+    add_hour_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
+    reset_hour = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
     
     # Polygon selection
     poly_selection_dict = {'Select within boundary':False, 'Mask within boundary':True}
@@ -81,10 +95,14 @@ class GriddedDataExplorer(param.Parameterized):
     update_filters = param_widget(pn.widgets.Button(button_type='primary', name='Update filters', align='end', sizing_mode='fixed'))
     revert_filters = param_widget(pn.widgets.Button(button_type='primary', name='Revert filters', align='end', sizing_mode='fixed'))
     
-    # Time interpolation
+    # Time resampling
     rs_time_quantity = param_widget(pn.widgets.FloatInput(name='Amount', value=1., step=1e-1, start=0, end=100, sizing_mode='fixed'))
     rs_time_unit = param_widget(pn.widgets.Select(options={'Days':'D', 'Hours':'H'}, name='Time unit', sizing_mode='fixed'))
     rs_time = param_widget(pn.widgets.Button(button_type='primary', name='Resample time', align='end', sizing_mode='fixed'))
+    
+    # Spatial resolution 
+    space_coarsen_factor = param_widget(pn.widgets.FloatInput(name='Window size', value=2., step=1, start=2, end=100, sizing_mode='fixed'))
+    rs_space = param_widget(pn.widgets.Button(button_type='primary', name='Resample space', align='end', sizing_mode='fixed'))
     
     # Group selection for aggregation
     group_selector = param_widget(pn.widgets.CrossSelector(name='Groupings', 
@@ -119,12 +137,30 @@ class GriddedDataExplorer(param.Parameterized):
         self.polyfile.name = "Polygon file"
         self.load_polyfile.name = 'Load file'
         self.date_range.name = "Date range selection"
+        self.year_range.name = "Year range"
+        self.dayofyear_range.name = "DOY range"
+        self.hour_range.name = "Hour range"
+        self.month_range.name = "Month range"
+        self.year_selection.name = "Years"
+        self.month_selection.name = "Months"
+        self.dayofyear_selection.name = "Days of year"
+        self.hour_selection.name = "Hours"
+        self.add_year_range.name = "Add range to selection"
+        self.reset_year.name = "Reset selection"
+        self.add_month_range.name = "Add range to selection"
+        self.reset_month.name = "Reset selection"
+        self.add_doy_range.name = "Add range to selection"
+        self.reset_doy.name = "Reset selection"
+        self.add_hour_range.name = "Add range to selection"
+        self.reset_hour.name = "Reset selection"
         self.selection_type.name = 'Polygon selection options'
         self.update_filters.name = 'Update filters'
         self.revert_filters.name = 'Revert filters'
         self.rs_time_quantity.name = 'Amount'
         self.rs_time_unit.name = 'Time unit'
         self.rs_time.name = 'Resample time'
+        self.space_coarsen_factor.name = "Window size"
+        self.rs_space.name = "Coarsen dataset"
         self.group_selector.name = 'Groupings'
         self.calculate_stats.name = "Calculate statistics"
         self.output_fname.name = 'Output file'
@@ -139,11 +175,12 @@ class GriddedDataExplorer(param.Parameterized):
         self.file_input_card = pn.Card(self.filein_widgets, self.varname_widgets, 
                                        title="Input environmental dataset file")
 
-        self.selection_options = pn.Card(self.date_range, self.selection_type, 
+        self.selection_options = pn.Card(self.selection_type, 
                                               pn.Row(self.update_filters, self.revert_filters), title="Selection options")
         self.polyfile_widgets = pn.Card(self.polyfile, self.load_polyfile, title='Input polygon file')
         
-        self.rs_time_widgets = pn.Card(pn.Row(self.rs_time_quantity, self.rs_time_unit, self.rs_time), title='Time interpolation')
+        self.rs_time_widgets = pn.Card(pn.Row(self.rs_time_quantity, self.rs_time_unit, self.rs_time), title='Time resampling')
+        self.rs_space_widgets = pn.Card(pn.Row(self.space_coarsen_factor, self.rs_space), title="Spatial resolution")
         
         self.groupby_widgets = pn.Card(pn.Row(self.group_selector), self.calculate_stats, title='Calculate statistics')
         
@@ -158,36 +195,66 @@ class GriddedDataExplorer(param.Parameterized):
                              'polyfile_widgets':2,
                              'selection_options':3,
                              'rs_time_widgets':4,
-                             'groupby_widgets':5,
+                             'rs_space_widgets':5,
                              'outfile_widgets':6,
-                             'stats':7,
-                             'status':8}
+                             'groupby_widgets':7,
+                             'stats':8,
+                             'status':9}
+        
         self.view = pn.Column(
             pn.pane.Markdown("## Select file to plot!"),
             self.file_input_card,
             self.polyfile_widgets,
             self.selection_options,
             self.rs_time_widgets,
-            self.groupby_widgets,
+            self.rs_space_widgets,
             self.outfile_widgets,
+            self.groupby_widgets,
             pn.Card(self.save_stats_widgets, title='Statistics'),
             pn.Card(pn.pane.Alert(self.status_text), title='Status')           
             )
 
+
+    @try_catch() 
     @param.depends("update_varnames.value", watch=True)
     def update_selection_widgets(self):
         if self.ds_raw is not None:
             self.status_text = 'Updating widgets'
+            selection_card = pn.Card(title="Selection options")
+            
             self.date_range = pn.widgets.DateRangeSlider(name="Date range selection", 
                                                          start=self.ds_raw[self.timevar.value].min().values, 
                                                          end=self.ds_raw[self.timevar.value].max().values)
+            selection_card.append(self.date_range)
             
-            # self.selection_options = pn.WidgetBox(self.date_range, self.selection_type, 
-            #                                       pn.Row(self.update_filters, self.revert_filters))
-            self.selection_options = pn.Card(self.date_range, self.selection_type, 
-                                              pn.Row(self.update_filters, self.revert_filters), title="Selection options")
+            self.time_cond_args =[]
+            def update_time_selection(time_unit, range_widget, selection_widget):
+                time_values = pd.unique(self.ds_raw[self.timevar.value].dt.__getattribute__(time_unit))
+                if len(time_values)>1:
+                    range_widget.start = time_values.min()
+                    range_widget.end = time_values.max()
+                    range_widget.value = (time_values.min(), time_values.max())
+                    selection_widget.options = list(time_values)
+                    self.time_cond_args.append(time_unit)
+                    selection_card.append(pn.Row(range_widget, pn.Row(selection_widget)))
+                    # selection_card.append(selection_widget)
+
+                    
+            time_units = ['year', 'dayofyear', 'month', 'hour']
+            range_widgets = [self.year_range, self.dayofyear_range, self.month_range, self.hour_range]
+            selection_widgets = [self.year_selection, self.dayofyear_selection, self.month_selection, self.hour_selection]            
+            
+            for time_unit, range_widget, selection_widget in zip(time_units, range_widgets, selection_widgets):
+                update_time_selection(time_unit, range_widget, selection_widget)
+            
+            selection_card.append(self.selection_type)
+            selection_card.append(pn.Row(self.update_filters, self.revert_filters)) 
+            
+            self.selection_options = selection_card
             self.view[self.view_objects['selection_options']] = self.selection_options
-          
+
+
+    @try_catch()                  
     @param.depends("load_data_button.value", watch=True)
     def load_data(self):
         if self.filein.value:
@@ -212,8 +279,10 @@ class GriddedDataExplorer(param.Parameterized):
             self.ds_raw = ds_raw
             self.ds = ds_raw.copy()
         else:
-            self.status_text = "File path must be selected first!"        
-    
+            self.status_text = "File path must be selected first!"  
+            
+                  
+    @try_catch()            
     @param.depends("load_polyfile.value", watch=True)
     def load_poly_data(self):
         if self.polyfile.value:
@@ -224,12 +293,29 @@ class GriddedDataExplorer(param.Parameterized):
         else:
             self.status_text = "File path must be selected first!"
 
-        
+    
+    @try_catch()        
     @param.depends("update_filters.value", watch=True)
     def update_ds(self):
         if self.ds_raw is not None:
             self.status_text = "Updating..."
-            _ds = pmv.select_time_range(self.ds_raw, start_time=self.date_range.value[0], end_time=self.date_range.value[1])
+            _ds = pmv.select_time_range(self.ds_raw, time_var=self.timevar.value,
+                                        start_time=self.date_range.value[0], end_time=self.date_range.value[1])
+            kwargs = {}
+            if 'year' in self.time_cond_args:
+                kwargs['years'] = self.year_selection.value
+                kwargs['year_range'] = self.year_range.value
+            if 'month' in self.time_cond_args:
+                kwargs['months'] = self.month_selection.value
+                kwargs['month_range'] = self.month_range.value
+            if 'dayofyear' in self.time_cond_args:
+                kwargs['daysofyear'] = self.dayofyear_selection.value
+                kwargs['dayofyear_range'] = self.dayofyear_range.value
+            if 'hour' in self.time_cond_args:
+                kwargs['hours'] = self.hour_selection.value
+                kwargs['hour_range'] = self.hour_range.value
+            _ds = pmv.select_time_cond(_ds, time_var=self.timevar.value, **kwargs)
+            
             if self.poly is not None:
                 _ds = pmv.select_spatial(_ds, boundary=self.poly, invert=self.selection_type.value)
             self.ds = _ds
@@ -237,6 +323,8 @@ class GriddedDataExplorer(param.Parameterized):
         else:
             self.status_text = "No dataset available"
             
+    
+    @try_catch()            
     @param.depends("revert_filters.value", watch=True) 
     def revert_ds(self):
         # self.date_range.values = (self.ds_raw.time.min().values, self.ds_raw.time.max().values)
@@ -245,17 +333,32 @@ class GriddedDataExplorer(param.Parameterized):
             self.ds = self.ds_raw.copy()
             self.status_text = "Filters reverted"
             
+    
+    @try_catch(msg="Resampling failed.")         
     @param.depends("rs_time.value", watch=True)
     def resample_time(self):
-        self.status_text = "Interpolating..."
+        self.status_text = "Resampling..."
         self.ds = pmv.resample_time(self.ds, timevar=self.timevar.value, 
                                     time_quantity=self.rs_time_quantity.value, time_unit=self.rs_time_unit.value)
         self.status_text = "Dataset resampled"
+        
+    
+    @try_catch(msg="Aggregation failed.")
+    @param.depends("rs_space.value", watch=True)
+    def resample_space(self):
+        self.status_text = "Calculating..."
+        self.ds = pmv.coarsen_dataset(self.ds, n_window={self.latvar.value:self.space_coarsen_factor.value, 
+                                                        self.lonvar.value:self.space_coarsen_factor.value})
+        self.status_text = "Aggregation completed."
             
+            
+    @try_catch()           
     @param.depends("status_text", watch=True)
     def update_status_view(self):
         self.view[self.view_objects['status']] = pn.Card(pn.pane.Alert(self.status_text), title='Status')
 
+
+    @try_catch()
     @param.depends("ds", "update_varnames.value", "poly", watch=True)
     def update_plot_view(self):
         if all([self.timevar.value, self.latvar.value, self.lonvar.value, self.zvar.value]):
@@ -279,6 +382,8 @@ class GriddedDataExplorer(param.Parameterized):
         else:
             self.status_text = 'Please specify variable names'
            
+    
+    @try_catch()
     @param.depends("calculate_stats.value", watch=True) 
     def groupby_apply(self):
         self.status_text = "Calculating..."
@@ -291,13 +396,13 @@ class GriddedDataExplorer(param.Parameterized):
             time_list.remove('polygon')
             poly = self.poly.reset_index()
             self.stats = pmv.groupby_poly_time(vector_data=poly, 
-                                               vector_var='index', 
-                                               ds=self.ds, 
-                                               ds_var=self.zvar.value,
-                                               latvar=self.latvar.value,
-                                               lonvar=self.lonvar.value,
-                                               timevar=self.timevar.value, 
-                                               groupby_vars=time_list)
+                                            vector_var='index', 
+                                            ds=self.ds, 
+                                            ds_var=self.zvar.value,
+                                            latvar=self.latvar.value,
+                                            lonvar=self.lonvar.value,
+                                            timevar=self.timevar.value, 
+                                            groupby_vars=time_list)
         else:
             result = pmv.groupby_multi_time(ds=self.ds, 
                                             var=self.zvar.value, 
@@ -309,14 +414,17 @@ class GriddedDataExplorer(param.Parameterized):
         
         self.status_text = "Calculations completed"
         self.view[self.view_objects['stats']] = pn.Card(self.save_stats_widgets, self.stats, title='Statistics')
+
         
-        
+    @try_catch(msg="File couldn't be saved.")    
     @param.depends("save_stats.value", watch=True)
     def save_stats_results(self):
         outfile = Path(self.stats_fname.value).resolve()
         self.stats.to_csv(outfile)
         self.status_text = f'File saved to: {outfile}' 
     
+    
+    @try_catch(msg="File couldn't be saved.")    
     @param.depends("save_ds.value", watch=True)
     def save_dataset(self):
         outfile = Path(self.output_fname.value).resolve()
