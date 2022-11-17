@@ -39,9 +39,7 @@ from holoviews.operation.datashader import datashade, shade, dynspread, spread
 from pymovebank.plotting import plot_gridded_data, plot_avg_timeseries
 from pymovebank.panel_utils import param_widget, try_catch
 from pymovebank.xr_tools import detect_varnames
-
-
-pn.extension('tabulator', template='bootstrap', loading_spinner='dots', loading_color='#00aa41', sizing_mode="stretch_width")
+from pymovebank.apps import config
 
 
 # %%
@@ -434,7 +432,6 @@ class GriddedDataExplorer(param.Parameterized):
         self.status_text = f'File saved to: {outfile}'
 
 
-
-if __name__ == "__main__":
-    g = GriddedDataExplorer()
-    pn.Row(g.view).servable()
+if __name__ == "__main__" or __name__.startswith("bokeh"):
+    config.extension('tabulator', url="gridded_data_explorer", main_max_width="80%")
+    GriddedDataExplorer().view.servable()

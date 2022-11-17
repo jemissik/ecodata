@@ -46,13 +46,12 @@ from pathlib import Path
 import pymovebank as pmv
 from pymovebank.plotting import map_tile_options, plot_tracks_with_tiles
 from pymovebank.panel_utils import select_file, select_output, param_widget
+from pymovebank.apps import config
 
 from holoviews.operation.datashader import datashade, shade, dynspread, spread
 
-from panel_jstree.widgets.jstree import FileTree
 
-# pn.extension()
-pn.extension(template='fast-list', loading_spinner='dots', loading_color='#00aa41', sizing_mode="stretch_width")
+from panel_jstree.widgets.jstree import FileTree
 
 
 # %%
@@ -83,11 +82,17 @@ class TracksExplorer(param.Parameterized):
     ds_checkbox = param_widget(pn.widgets.Checkbox(name='Datashade tracks', value=True,))
     map_tile = param_widget(pn.widgets.Select(options=map_tile_options, value='StamenTerrain', name='Map tile' ))
 
+    plot_pane = param.ClassSelector(class_=pn.pane.HoloViews)
+    view = param.ClassSelector(class_=pn.Column)
 
     status_text = param.String('Ready...')
 
 
     def __init__(self, **params):
+        params["plot_pane"] = pn.pane.HoloViews(
+            None, sizing_mode="stretch_both",
+        )
+        params["view"] = pn.Column(sizing_mode="stretch_both")
         super().__init__(**params)
 
         # Reset names for panel widgets
@@ -103,57 +108,54 @@ class TracksExplorer(param.Parameterized):
         self.tracks_buffer.name = 'Buffer size'
         self.ds_checkbox.name = 'Datashade tracks'
         self.map_tile.name = 'Map tile'
-        # self.param.bind
 
-        # ft = FileTree("..",
-        #           select_multiple=False
-        #           )
-        # print(ft)
+
         self.file_card = pn.Card(self.tracksfile,
                                  self.filetree,
                                  self.load_tracks_button,
                                  title="Select File",
-                                 collapsed=True,
-                                #  header_background="black",
-                                #  header_color="white",
+                                 # collapsed=True,
+                                 header_background=config.ACCENT,
+                                 header_color="white",
+                                 header_css_classes=["card-header-custom"],
                                  )
 
-        self.options_card = pn.Card(pn.Row(self.tracks_boundary_shape,self.tracks_buffer,),
-                                    self.boundary_update, title="Options")
+        self.options_col = pn.Column(self.tracks_boundary_shape,
+                                     self.tracks_buffer,
+                                     self.boundary_update,)
 
-        # Add widgets to widgetbox
         self.widgets = pn.WidgetBox(self.file_card,
-                                    self.options_card,
+                                    # self.options_card,
                                     self.output_file_button,
                                     self.output_fname,
                                     self.save_tracks_extent_button)
 
-        # Add view
-        self.view = pn.Column(
-                pn.Column(pn.pane.Markdown("## Select file to plot!")),
+        self.alert = pn.pane.Alert(self.status_text)
+
+        # # Add view
+        # self.view = pn.Column(
+        #         pn.Column(pn.pane.Markdown("## Select file to plot!")),
+        #         self.widgets,
+        #         pn.pane.Alert(self.status_text),
+        #         sizing_mode="stretch_both")
+       # Add view
+        self.view[:] = [
+                self.alert,
+                pn.Row(self.plot_pane),
                 self.widgets,
-                pn.pane.Alert(self.status_text),
-                sizing_mode="stretch_both")
+                ]
 
     @param.depends("load_tracks_button.value", watch=True)#depends on load_tracks_button
     def load_data(self):
-        if self.filetree.value:
+        if self.filetree.value or self.tracksfile.value:
             self.status_text = "Loading data..."
-            val = self.filetree.value[0]
+            val = self.tracksfile.value or self.filetree.value[0]
             self.file_card.collapsed = True
             tracks = pmv.read_track_data(val)
             self.status_text = "Track file loaded"
             self.tracks_extent = pmv.get_tracks_extent(tracks, boundary_shape=self.tracks_boundary_shape.value,
                                                        buffer=self.tracks_buffer.value)
             self.tracks = tracks
-
-        # if self.tracksfile.value:
-        #     self.status_text = "Loading data..."
-        #     tracks = pmv.read_track_data(self.tracksfile.value)
-        #     self.status_text = "Track file loaded"
-        #     self.tracks_extent = pmv.get_tracks_extent(tracks, boundary_shape=self.tracks_boundary_shape.value,
-        #                                                buffer=self.tracks_buffer.value)
-        #     self.tracks = tracks
 
         else:
             self.status_text = "File path must be selected first!"
@@ -199,59 +201,34 @@ class TracksExplorer(param.Parameterized):
 
     @param.depends("status_text", watch=True)
     def update_status_view(self):
-        self.view[2].object = self.status_text
+        self.alert.object = self.status_text
 
     @param.depends("tracks", "boundary_update.value", "ds_checkbox.value", "map_tile.value", watch=True)
     def update_view(self):
         print("calling update view")
         self.status_text = "Creating plot..."
-        plot = pn.pane.HoloViews(plot_tracks_with_tiles(self.tracks, tiles=self.map_tile.value,
-                                                        datashade=self.ds_checkbox.value, cmap='fire', c='r',
-                                                        marker='circle', alpha=0.3)
-         * self.tracks_extent.hvplot(alpha=0.2, geo=True, project=True).opts(responsive=True, frame_height=800, frame_width=800,
-                                                                             active_tools=['wheel_zoom']))
 
-        self.options_card.objects = [pn.Row(self.map_tile,self.ds_checkbox,),
-                                     pn.Row(self.tracks_boundary_shape,self.tracks_buffer,),
-                                     self.boundary_update
-                                     ]
+        plot = (plot_tracks_with_tiles(self.tracks, tiles=self.map_tile.value,
+                                       datashade=self.ds_checkbox.value, cmap='fire', c='r',
+                                       marker='circle', alpha=0.3).opts(responsive=True,)
+                * self.tracks_extent.hvplot(alpha=0.2, geo=True, project=True).opts(responsive=True,)).opts(
+            # responsive=True,
+            # sizing_mode="stretch_both",
+            frame_height=800,
+            frame_width=600,
+            active_tools=[
+                'wheel_zoom'])
 
-        self.view[0][:] = [plot]
+        self.options_col.append(self.map_tile)
+        self.options_col.append(self.ds_checkbox)
+
+        self.plot_pane.object = plot
+
         self.status_text = "Plot created!"
 
 
-
-if __name__ == "__main__":
-
-    def view():
-        intro_text = """
-        # Welcome to the Movement Data Explorer!
-        """
-        intro_pane = pn.pane.Markdown(intro_text)
-        t = TracksExplorer()
-        return pn.Tabs(
-            ('Welcome', intro_pane),
-            ('Tracks Explorer', t.view),
-            tabs_location = 'left',
-            dynamic=True
-        )
-
-
-    # t = TracksExplorer()
-    # def view():
-    #     ft = FileTree("..",
-    #               select_multiple=False
-    #               )
-    #     return pn.Column(ft)
-
-
-
-    pn.serve({"tracks_explorer": view}, port=5007, show=False)
-
-
-    # pn.serve({"tracks_explorer":     pn.Tabs(
-    #     ('Welcome', intro_pane),
-    #     ('Tracks Explorer', t.view),
-    #     tabs_location = 'left',
-    #     dynamic=True
-    # ).servable(title="Movement Data Aggregator")}, port=5007, show=False)
+if __name__.startswith("bokeh"):
+    config.extension(url="tracks_explorer", main_max_width="80%")
+    viewer = TracksExplorer()
+    viewer.options_col.servable(area="sidebar")
+    viewer.view.servable()

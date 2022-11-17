@@ -30,12 +30,9 @@ import param
 import cartopy.crs as ccrs
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
 from pymovebank.panel_utils import param_widget
-
+from pymovebank.apps import config
 
 # from holoviews.operation.datashader import datashade, shade, dynspread, spread
-
-
-pn.extension(template='fast-list', loading_spinner='dots', loading_color='#00aa41', sizing_mode="stretch_width")
 
 
 # %% pycharm={"name": "#%%\n"}
@@ -129,13 +126,15 @@ class Subsetter(param.Parameterized):
                              'shared_widgets':4,
                              'status':5}
 
+        self.alert = pn.pane.Alert(self.status_text)
+
         self.view = pn.Column(
             pn.pane.Markdown("## Create a subset!"),
             self.input_file,
             self.option_picker,
             self.bbox_widgets,
             self.shared_widgets,
-            self.status
+            self.alert
         )
 
     @param.depends("status_text", watch=True)
@@ -193,6 +192,7 @@ class Subsetter(param.Parameterized):
         finally:
             stop_loading_spinner(self.view)
 
-if __name__ == "__main__":
-    subsetter = Subsetter()
-    pn.Row(subsetter.view).servable()
+
+if __name__ == "__main__" or __name__.startswith("bokeh"):
+    config.extension(url="subsetter", main_max_width="80%")
+    Subsetter().view.servable()

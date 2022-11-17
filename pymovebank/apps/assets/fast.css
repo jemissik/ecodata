@@ -1,0 +1,9 @@
+.bk.card-header-custom {
+  align-items: center;
+  background-color: #1f77b4;
+  color: #ffffff;
+  border-radius: 0.25rem;
+  display: inline-flex;
+  justify-content: start;
+  width: 100%;
+}
