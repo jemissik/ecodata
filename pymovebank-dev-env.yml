@@ -30,6 +30,7 @@ dependencies:
 # - pyviz::spatialpandas
 - dataprep
 - jupytext
+- nodejs>=14
 - pip:
   # - spatialpandas
   - -e .
@@ -45,4 +46,5 @@ dependencies:
   - wget
   - click
   - build
+  - git+https://github.com/madeline-scyphers/panel-jstree.git
 name: pmv-dev
