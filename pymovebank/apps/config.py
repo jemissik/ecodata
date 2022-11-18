@@ -6,9 +6,9 @@ from urllib.parse import urlsplit
 import panel as pn
 from awesome_panel_extensions.site.gallery import GalleryTemplate
 from awesome_panel_extensions.site.models import Application
-from panel.template import FastGridTemplate, FastListTemplate
+from panel.template import FastGridTemplate, FastListTemplate, GoldenTemplate
 
-from pymovebank.apps.assets import menu_fast_html, list_links_html, APPLICATIONS_CONFIG_PATH, FAST_CSS
+from pymovebank.apps.assets import menu_fast_html, list_links_html, APPLICATIONS_CONFIG_PATH, FAST_CSS, FAST_CSS_PATH
 
 SITE = "PyMoveBanks"
 
@@ -37,8 +37,6 @@ APPLICATIONS_MAP = {app.url: app for app in APPLICATIONS}
 
 list_html = {"dashboard_links": list_links_html([{"url": app.url, "name": app.name}
                                                  for app in APPLICATIONS if app.category == "Dashboards"])}
-print(list_html["dashboard_links"])
-
 _TEMPLATES = [FastGridTemplate, FastListTemplate, GalleryTemplate]
 
 # pylint: disable=line-too-long
@@ -65,11 +63,23 @@ def add_header(template: pn.template.BaseTemplate):
     # template.header.append(get_header())
 
 
+for _template in _TEMPLATES:
+    _template.param.favicon.default = FAVICON
+    _template.param.site.default = "Awesome Panel"
+    _template.param.accent_base_color.default = ACCENT
+
+    if not _template == GalleryTemplate:
+        _template.param.header_background.default = ACCENT
+        _template.param.sidebar_footer.default = menu_fast_html(accent=ACCENT, jinja_subs=list_html)
+
 def extension(
     *args,
     url,
     site=SITE,
     template: Optional[Union[str, pn.template.BaseTemplate]] = "fast",
+    # template: Optional[Union[str, pn.template.BaseTemplate]] = pn.template.FastGridTemplate,
+    # template: Optional[Union[str, pn.template.BaseTemplate]] = "fastgrid",
+    # template: Optional[Union[str, pn.template.BaseTemplate]] = "bootstrap",
     accent_color=ACCENT,
     main_max_width=None,
     intro_section=True,
@@ -79,6 +89,12 @@ def extension(
     **kwargs,
 ) -> Application:
     """A customized version of pn.extension for this site"""
+    # template = pn.template.FastGridTemplate(
+    #     theme_toggle=False,
+    #     prevent_collision=True,
+    #     save_layout=True,
+    #     # pylint: disable=line-too-long
+    # )
     raw_css = list(raw_css) if raw_css else []
     if isinstance(template, str) or not template:
         pn.extension(*args, sizing_mode=sizing_mode, template=template, raw_css=raw_css, **kwargs)
@@ -115,4 +131,4 @@ def extension(
     if intro_section and template not in [pn.template.FastGridTemplate]:
         app.intro_section().servable()
 
-    return app
+    return app, template

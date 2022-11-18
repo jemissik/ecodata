@@ -47,6 +47,7 @@ import pymovebank as pmv
 from pymovebank.plotting import map_tile_options, plot_tracks_with_tiles
 from pymovebank.panel_utils import select_file, select_output, param_widget
 from pymovebank.apps import config
+from pymovebank.apps.models import PMVCard
 
 from holoviews.operation.datashader import datashade, shade, dynspread, spread
 
@@ -82,17 +83,17 @@ class TracksExplorer(param.Parameterized):
     ds_checkbox = param_widget(pn.widgets.Checkbox(name='Datashade tracks', value=True,))
     map_tile = param_widget(pn.widgets.Select(options=map_tile_options, value='StamenTerrain', name='Map tile' ))
 
-    plot_pane = param.ClassSelector(class_=pn.pane.HoloViews)
-    view = param.ClassSelector(class_=pn.Column)
+    plot_pane = param.ClassSelector(class_=pn.pane.HoloViews, default=pn.pane.HoloViews(None, sizing_mode="stretch_both",))
+    view = param.ClassSelector(class_=pn.Column, default=pn.Column(sizing_mode="stretch_both"))
 
     status_text = param.String('Ready...')
 
 
     def __init__(self, **params):
-        params["plot_pane"] = pn.pane.HoloViews(
-            None, sizing_mode="stretch_both",
-        )
-        params["view"] = pn.Column(sizing_mode="stretch_both")
+        # params["plot_pane"] = pn.pane.HoloViews(
+        #     None, sizing_mode="stretch_both",
+        # )
+        # params["view"] = pn.Column(sizing_mode="stretch_both")
         super().__init__(**params)
 
         # Reset names for panel widgets
@@ -109,16 +110,13 @@ class TracksExplorer(param.Parameterized):
         self.ds_checkbox.name = 'Datashade tracks'
         self.map_tile.name = 'Map tile'
 
-
-        self.file_card = pn.Card(self.tracksfile,
+        self.file_card = PMVCard(self.tracksfile,
                                  self.filetree,
                                  self.load_tracks_button,
                                  title="Select File",
-                                 # collapsed=True,
-                                 header_background=config.ACCENT,
-                                 header_color="white",
-                                 header_css_classes=["card-header-custom"],
                                  )
+
+        print(self.file_card.active_header_background, self.file_card.header_background)
 
         self.options_col = pn.Column(self.tracks_boundary_shape,
                                      self.tracks_buffer,
@@ -218,9 +216,14 @@ class TracksExplorer(param.Parameterized):
             frame_width=600,
             active_tools=[
                 'wheel_zoom'])
+        self.options_col.objects = [self.tracks_boundary_shape,
+                                     self.tracks_buffer,
+                                     self.boundary_update,
+                                    self.map_tile,
+                                    self.ds_checkbox]
 
-        self.options_col.append(self.map_tile)
-        self.options_col.append(self.ds_checkbox)
+        # self.options_col.append(self.map_tile)
+        # self.options_col.append(self.ds_checkbox)
 
         self.plot_pane.object = plot
 
@@ -228,7 +231,7 @@ class TracksExplorer(param.Parameterized):
 
 
 if __name__.startswith("bokeh"):
-    config.extension(url="tracks_explorer", main_max_width="80%")
+    config.extension(url="tracks_explorer")
     viewer = TracksExplorer()
     viewer.options_col.servable(area="sidebar")
     viewer.view.servable()

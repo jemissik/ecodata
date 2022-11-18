@@ -34,12 +34,26 @@ from pyproj.crs import CRS
 import datetime as dt
 from pathlib import Path
 
+from panel.reactive import ReactiveHTML, Viewable
+
 from holoviews.operation.datashader import datashade, shade, dynspread, spread
 
 from pymovebank.plotting import plot_gridded_data, plot_avg_timeseries
 from pymovebank.panel_utils import param_widget, try_catch
 from pymovebank.xr_tools import detect_varnames
 from pymovebank.apps import config
+
+
+class HTML_WidgetBox(ReactiveHTML):
+    object = param.ClassSelector(class_=Viewable)
+    _template = """
+
+    <div id="clickable" style="overflow: scroll" >
+    ${object}
+    </div>
+    """
+    def __init__(self, object, **params):
+        super().__init__(object=object, **params)
 
 
 # %%
@@ -68,27 +82,28 @@ class GriddedDataExplorer(param.Parameterized):
     date_range = param_widget(pn.widgets.DateRangeSlider(name="Date range",
                                                          start=dt.date.today() - dt.timedelta(1), end=dt.date.today()))
 
-    year_range = param_widget(pn.widgets.EditableRangeSlider(name='Year range', step=1, format='0'))
-    month_range = param_widget(pn.widgets.EditableRangeSlider(name='Month range', step=1, format='0'))
-    dayofyear_range = param_widget(pn.widgets.EditableRangeSlider(name='Day of year range', step=1, format='0'))
-    hour_range = param_widget(pn.widgets.EditableRangeSlider(name='Hour range', step=1, format='0'))
-    year_selection = param_widget(pn.widgets.MultiChoice(name='Years'))
-    month_selection = param_widget(pn.widgets.MultiChoice(name='Months'))
-    dayofyear_selection = param_widget(pn.widgets.MultiChoice(name='Days of year'))
-    hour_selection = param_widget(pn.widgets.MultiChoice(name='Hours'))
+    # year_range = param_widget(pn.widgets.EditableRangeSlider(name='Year range', step=1, format='0',))
+    # month_range = param_widget(pn.widgets.EditableRangeSlider(name='Month range', step=1, format='0', ))
+    # dayofyear_range = param_widget(pn.widgets.EditableRangeSlider( step=1, format='0',))
+    # hour_range = param_widget(pn.widgets.EditableRangeSlider(name='Hour range', step=1, format='0'))
+    # year_selection = param_widget(pn.widgets.MultiChoice(name='Years'))
+    # month_selection = param_widget(pn.widgets.MultiChoice(name='Months'))
+    # dayofyear_selection = param_widget(pn.widgets.MultiChoice())
+    # hour_selection = param_widget(pn.widgets.MultiChoice(name='Hours'))
 
-    add_year_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
-    reset_year = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
-    add_month_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
-    reset_month = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
-    add_doy_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
-    reset_doy = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
-    add_hour_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
-    reset_hour = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
+    # add_year_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
+    # reset_year = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
+    # add_month_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
+    # reset_month = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
+    # add_doy_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
+    # reset_doy = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
+    # add_hour_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
+    # reset_hour = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
 
     # Polygon selection
-    poly_selection_dict = {'Select within boundary':False, 'Mask within boundary':True}
-    selection_type = param_widget(pn.widgets.RadioBoxGroup(name='Selection options', options = poly_selection_dict))
+    selection_type = param_widget(pn.widgets.RadioBoxGroup(name='Selection options',
+                                                           options={'Select within boundary':False,
+                                                                    'Mask within boundary':True}))
 
     update_filters = param_widget(pn.widgets.Button(button_type='primary', name='Update filters', align='end', sizing_mode='fixed'))
     revert_filters = param_widget(pn.widgets.Button(button_type='primary', name='Revert filters', align='end', sizing_mode='fixed'))
@@ -107,8 +122,9 @@ class GriddedDataExplorer(param.Parameterized):
         options=['polygon', 'year', 'month', 'day', 'hour'], definition_order=False,sizing_mode='fixed'))
     calculate_stats = param_widget(pn.widgets.Button(button_type='primary', name='Calculate statistics', align='start', sizing_mode='fixed'))
 
-    stats = param.ClassSelector(class_=pd.DataFrame, precedence=-1)
-    stats_widget =  param_widget(pn.widgets.Tabulator(name='DataFrame', hierarchical=True))
+    stats = param.ClassSelector(class_=pd.DataFrame)
+    # stats_widget = param.Parameter()
+    # stats_widget = param_widget(pn.widgets.Tabulator(None, name='DataFrame', hierarchical=True))
 
     # Save dataset
     output_fname = param_widget(pn.widgets.TextInput(placeholder='Output filename...',
@@ -120,9 +136,23 @@ class GriddedDataExplorer(param.Parameterized):
                                                      value='statistics.csv',name='Output file for statistics'))
     save_stats = param_widget(pn.widgets.Button(name='Save statistics', button_type='primary', align='end', sizing_mode='fixed'))
 
+    save_stats_widgets = param.ClassSelector(class_=pn.Card, default=pn.Card(title='Statistics', sizing_mode="stretch_both"))
+
+    # stats = param.DataFrame()
+
+    # view
+
+    # view = param.ClassSelector(class_=pn.Column, default=pn.Column(sizing_mode="stretch_both"))
+
     def __init__(self, **params):
         super().__init__(**params)
-
+        # self.stats_widget = pn.widgets.Tabulator(
+        #     pd.DataFrame(),
+        #     name='DataFrame', hierarchical=True,
+        #
+        #     # height=400,
+        #     sizing_mode="stretch_both",
+        # )
         # Reset names for panel widgets
         self.filein.name = "File path"
         self.load_data_button.name = 'Load data'
@@ -135,22 +165,16 @@ class GriddedDataExplorer(param.Parameterized):
         self.polyfile.name = "Polygon file"
         self.load_polyfile.name = 'Load file'
         self.date_range.name = "Date range selection"
-        self.year_range.name = "Year range"
-        self.dayofyear_range.name = "DOY range"
-        self.hour_range.name = "Hour range"
-        self.month_range.name = "Month range"
-        self.year_selection.name = "Years"
-        self.month_selection.name = "Months"
-        self.dayofyear_selection.name = "Days of year"
-        self.hour_selection.name = "Hours"
-        self.add_year_range.name = "Add range to selection"
-        self.reset_year.name = "Reset selection"
-        self.add_month_range.name = "Add range to selection"
-        self.reset_month.name = "Reset selection"
-        self.add_doy_range.name = "Add range to selection"
-        self.reset_doy.name = "Reset selection"
-        self.add_hour_range.name = "Add range to selection"
-        self.reset_hour.name = "Reset selection"
+
+        self.year_range = pn.widgets.EditableRangeSlider(step=1, format='0', )
+        self.month_range = pn.widgets.EditableRangeSlider(step=1, format='0', )
+        self.dayofyear_range = pn.widgets.EditableRangeSlider(step=1, format='0', )
+        self.hour_range = pn.widgets.EditableRangeSlider(step=1, format='0')
+        self.year_selection = pn.widgets.MultiChoice()
+        self.month_selection = pn.widgets.MultiChoice()
+        self.dayofyear_selection = pn.widgets.MultiChoice()
+        self.hour_selection = pn.widgets.MultiChoice()
+
         self.selection_type.name = 'Polygon selection options'
         self.update_filters.name = 'Update filters'
         self.revert_filters.name = 'Revert filters'
@@ -169,14 +193,18 @@ class GriddedDataExplorer(param.Parameterized):
 
         # Widget groups
         self.filein_widgets = pn.Row(self.filein, self.load_data_button)
+        # self.file_card = pn.Card(self.filein,
+        #                          self.load_data_button,
+        #                          title="Select File",
+        #                          )
         self.varname_widgets = pn.Column(
-            pn.Row(self.timevar, self.latvar, self.lonvar),
-            pn.Row(self.zvar, self.update_varnames))
+            pn.Row( self.latvar, self.lonvar),
+            pn.Row(self.timevar, self.zvar, ),
+            pn.Row(self.update_varnames)
+        )
         self.file_input_card = pn.Card(self.filein_widgets, self.varname_widgets,
-                                       title="Input environmental dataset file", )
+                                       title="Input environmental dataset file", width_policy="max")
 
-        self.selection_options = pn.Card(self.selection_type,
-                                              pn.Row(self.update_filters, self.revert_filters), title="Selection options")
         self.polyfile_widgets = pn.Card(self.polyfile, self.load_polyfile, title='Input polygon file')
 
         self.rs_time_widgets = pn.Card(pn.Row(self.rs_time_quantity, self.rs_time_unit, self.rs_time), title='Time resampling')
@@ -186,73 +214,114 @@ class GriddedDataExplorer(param.Parameterized):
 
         self.outfile_widgets = pn.Card(pn.Row(self.output_fname, self.save_ds), title='Output file')
 
-        self.save_stats_widgets = pn.Row(self.stats_fname, self.save_stats)
+        self.save_stats_widgets[:] = [pn.Row(self.stats_fname, self.save_stats), self.stats]
+
+        self.alert = pn.pane.Alert(self.status_text)
 
         # View
 
-        self.view_objects = {'plot':0,
+        self.sidebar = pn.Accordion(
+            ("Selection Options",
+             pn.Column(
+                self.selection_type,
+                self.update_filters,
+                self.revert_filters,)),
+            ("Processing Options",
+            pn.Column(
+                self.rs_time_quantity,
+                self.rs_time_unit,
+                self.rs_time,
+                self.space_coarsen_factor,
+                self.rs_space)),
+            active=[0]
+        )
+
+        self.plot_col = pn.Column(height_policy="max")
+        self.ts_pane = pn.pane.HoloViews(sizing_mode="stretch_both")
+        self.ds_pane = pn.pane.HTML(sizing_mode="stretch_both", style={"overflow": "auto"})
+        self.ts_widget = pn.pane.Markdown("")
+        self.figs_with_widget = pn.Tabs()
+
+        self.view_objects = {
                              'file_input_card':1,
                              'polyfile_widgets':2,
-                             'selection_options':3,
-                             'rs_time_widgets':4,
-                             'rs_space_widgets':5,
-                             'outfile_widgets':6,
-                             'groupby_widgets':7,
-                             'stats':8,
-                             'status':9}
+                             'outfile_widgets':5,
+                             'groupby_widgets':6,
+                             'stats':7,
+                             'status':8}
 
         self.view = pn.Column(
-            pn.pane.Markdown("## Select file to plot!"),
             self.file_input_card,
             self.polyfile_widgets,
-            self.selection_options,
-            self.rs_time_widgets,
-            self.rs_space_widgets,
             self.outfile_widgets,
             self.groupby_widgets,
-            pn.Card(self.save_stats_widgets, title='Statistics'),
-            pn.Card(pn.pane.Alert(self.status_text), title='Status')
-            )
-
+            self.save_stats_widgets,
+            self.alert,
+            sizing_mode="stretch_both")
 
     @try_catch()
     @param.depends("update_varnames.value", watch=True)
     def update_selection_widgets(self):
         if self.ds_raw is not None:
             self.status_text = 'Updating widgets'
-            selection_card = pn.Card(title="Selection options")
+
 
             self.date_range = pn.widgets.DateRangeSlider(name="Date range selection",
                                                          start=self.ds_raw[self.timevar.value].min().values,
                                                          end=self.ds_raw[self.timevar.value].max().values)
-            selection_card.append(self.date_range)
 
             self.time_cond_args =[]
-            def update_time_selection(time_unit, range_widget, selection_widget):
-                time_values = pd.unique(self.ds_raw[self.timevar.value].dt.__getattribute__(time_unit))
+            tabs = pn.Tabs()
+            def update_time_selection(time_str, range_widget, selection_widget):
+                time_unit = time_str.replace(" ", "")
+                time_values = pd.unique(getattr(self.ds_raw[self.timevar.value].dt, time_unit))
                 if len(time_values)>1:
+
+                    range_check = pn.widgets.Checkbox(value=True, name="Range Values")
+                    disc_check = pn.widgets.Checkbox(value=True, name="Discrete Values")
+
+                    # range_widget.visible = False
+                    # selection_widget.visible = False
+
+                    range_widget.name = ""
+                    selection_widget.name = ""
+
+                    @pn.depends(range_check, watch=True)
+                    def range_cb(val):
+                        range_widget.visible = val
+                        range_widget.min_height = range_widget.min_height + 1 if val else range_widget.min_height - 1
+
+                    @pn.depends(disc_check, watch=True)
+                    def disc_cb(val):
+                        selection_widget.visible = val
+
+                    range_widget.min_height = 50
                     range_widget.start = time_values.min()
                     range_widget.end = time_values.max()
                     range_widget.value = (time_values.min(), time_values.max())
                     selection_widget.options = list(time_values)
                     self.time_cond_args.append(time_unit)
-                    selection_card.append(pn.Row(range_widget, pn.Row(selection_widget)))
-                    # selection_card.append(selection_widget)
+                    # tabs.append((time_str.title(), pn.Column(pn.WidgetBox(range_check, range_widget),
+                    #                                          pn.WidgetBox(disc_check, selection_widget,))))
+                    tabs.append((time_str.title(), pn.Column(range_check, range_widget,
+                                                             disc_check, selection_widget),))
 
 
-            time_units = ['year', 'dayofyear', 'month', 'hour']
+            time_units = ['year', 'day of year', 'month', 'hour']
             range_widgets = [self.year_range, self.dayofyear_range, self.month_range, self.hour_range]
             selection_widgets = [self.year_selection, self.dayofyear_selection, self.month_selection, self.hour_selection]
 
             for time_unit, range_widget, selection_widget in zip(time_units, range_widgets, selection_widgets):
                 update_time_selection(time_unit, range_widget, selection_widget)
 
-            selection_card.append(self.selection_type)
-            selection_card.append(pn.Row(self.update_filters, self.revert_filters))
-
-            self.selection_options = selection_card
-            self.view[self.view_objects['selection_options']] = self.selection_options
-
+            self.sidebar[0].objects = [
+                "## Selection options",
+                self.selection_type,
+                self.date_range,
+                tabs,
+                self.update_filters,
+                self.revert_filters,
+            ]
 
     @try_catch()
     @param.depends("load_data_button.value", watch=True)
@@ -281,7 +350,6 @@ class GriddedDataExplorer(param.Parameterized):
         else:
             self.status_text = "File path must be selected first!"
 
-
     @try_catch()
     @param.depends("load_polyfile.value", watch=True)
     def load_poly_data(self):
@@ -292,7 +360,6 @@ class GriddedDataExplorer(param.Parameterized):
             self.poly = poly
         else:
             self.status_text = "File path must be selected first!"
-
 
     @try_catch()
     @param.depends("update_filters.value", watch=True)
@@ -323,7 +390,6 @@ class GriddedDataExplorer(param.Parameterized):
         else:
             self.status_text = "No dataset available"
 
-
     @try_catch()
     @param.depends("revert_filters.value", watch=True)
     def revert_ds(self):
@@ -333,7 +399,6 @@ class GriddedDataExplorer(param.Parameterized):
             self.ds = self.ds_raw.copy()
             self.status_text = "Filters reverted"
 
-
     @try_catch(msg="Resampling failed.")
     @param.depends("rs_time.value", watch=True)
     def resample_time(self):
@@ -341,7 +406,6 @@ class GriddedDataExplorer(param.Parameterized):
         self.ds = pmv.resample_time(self.ds, timevar=self.timevar.value,
                                     time_quantity=self.rs_time_quantity.value, time_unit=self.rs_time_unit.value)
         self.status_text = "Dataset resampled"
-
 
     @try_catch(msg="Aggregation failed.")
     @param.depends("rs_space.value", watch=True)
@@ -351,12 +415,10 @@ class GriddedDataExplorer(param.Parameterized):
                                                         self.lonvar.value:self.space_coarsen_factor.value})
         self.status_text = "Aggregation completed."
 
-
     @try_catch()
     @param.depends("status_text", watch=True)
     def update_status_view(self):
-        self.view[self.view_objects['status']] = pn.Card(pn.pane.Alert(self.status_text), title='Status')
-
+        self.alert.object = self.status_text
 
     @try_catch()
     @param.depends("ds", "update_varnames.value", "poly", watch=True)
@@ -365,23 +427,51 @@ class GriddedDataExplorer(param.Parameterized):
             self.status_text = "Creating plot"
             width = 500
             ds_plot = plot_gridded_data(self.ds, x=self.lonvar.value, y=self.latvar.value, z=self.zvar.value,
-                                        time=self.timevar.value).opts(frame_width=width)
+                                        time=self.timevar.value).opts(
+                frame_width=width,
+            )
+            #.opts(frame_width=width)
             if self.poly is not None:
                 ds_plot = ds_plot * gv.Path(self.poly).opts(line_color='k', line_width=2)
             plot = pn.pane.HoloViews(ds_plot)
             widget = plot.widget_box.objects[0]
             widget.width = width
             widget.align = 'center'
-            ts_plot = plot_avg_timeseries(self.ds, x=self.lonvar.value, y=self.latvar.value,
-                                          z=self.zvar.value, time=self.timevar.value ).opts(frame_width=width)
-            figs_with_widget = pn.Row(plot, pn.Column(widget,ts_plot, align='center'), pn.Column(self.ds, background='whitesmoke'))
+            # widget.orientation = "vertical"
+            # label = widget.name
+            # print(repr(widget))
+            # print(dir(widget))
+            ds_ts_plot = plot_avg_timeseries(self.ds, x=self.lonvar.value, y=self.latvar.value,
+                                z=self.zvar.value, time=self.timevar.value)#.opts(width=width)
+            # vertical_label = pn.pane.HTML()
+            # @pn.depends(widget, watch=True)
+            # def update_widget_label(val):
+            #     vertical_label.object = f"<p style='writing-mode: vertical-rl; text-orientation: mixed;'>{label}: {val}</p>"
+
+
+            # vertical_label = pn.pane.HTML(f"<p style='writing-mode: vertical-rl; text-orientation: mixed;'>{label}</p>")
+
+            ts_plot = pn.pane.HoloViews(ds_ts_plot, sizing_mode="stretch_both")
+            # figs_with_widget = pn.Column(pn.Card(pn.Column(plot, widget), align='center'), pn.Card(ts_plot),
+                                         # pn.Card(self.ds)
+                                         # )
+            # figs_with_widget = pn.Card(plot, widget, ts_plot, self.ds, background='whitesmoke')
+            self.plot_col.objects = [plot, widget, ds_ts_plot]
+            # self.plot_col.objects = [pn.Row(plot, widget), ds_ts_plot]
+            # self.ts_pane.object = ds_ts_plot
+            self.ds_pane.object = self.ds
+            # self.ts_widget = widget
+
+
+            self.figs_with_widget[:] = [
+                ("Charts", self.plot_col),
+                ("Data", self.ds_pane),
+                ]
 
             self.status_text = "Plot created!"
 
-            self.view[self.view_objects['plot']] = figs_with_widget
         else:
             self.status_text = 'Please specify variable names'
-
 
     @try_catch()
     @param.depends("calculate_stats.value", watch=True)
@@ -395,7 +485,7 @@ class GriddedDataExplorer(param.Parameterized):
             time_list = select_list.copy()
             time_list.remove('polygon')
             poly = self.poly.reset_index()
-            self.stats = pmv.groupby_poly_time(vector_data=poly,
+            result = pmv.groupby_poly_time(vector_data=poly,
                                             vector_var='index',
                                             ds=self.ds,
                                             ds_var=self.zvar.value,
@@ -403,6 +493,8 @@ class GriddedDataExplorer(param.Parameterized):
                                             lonvar=self.lonvar.value,
                                             timevar=self.timevar.value,
                                             groupby_vars=time_list)
+            self.stats = result
+
         else:
             result = pmv.groupby_multi_time(ds=self.ds,
                                             var=self.zvar.value,
@@ -411,10 +503,11 @@ class GriddedDataExplorer(param.Parameterized):
             result = result.to_dataframe().reorder_levels(select_list).sort_index()
             result = result[['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max']]
             self.stats = result
+            # self.stats_widget.value = result
 
         self.status_text = "Calculations completed"
-        self.view[self.view_objects['stats']] = pn.Card(self.save_stats_widgets, self.stats, title='Statistics')
 
+        self.save_stats_widgets.objects = [pn.Row(self.stats_fname, self.save_stats), self.stats]
 
     @try_catch(msg="File couldn't be saved.")
     @param.depends("save_stats.value", watch=True)
@@ -433,5 +526,30 @@ class GriddedDataExplorer(param.Parameterized):
 
 
 if __name__ == "__main__" or __name__.startswith("bokeh"):
-    config.extension('tabulator', url="gridded_data_explorer", main_max_width="80%")
-    GriddedDataExplorer().view.servable()
+    config.extension('tabulator', url="gridded_data_explorer")
+    viewer = GriddedDataExplorer()
+    viewer.sidebar.servable(area="sidebar")
+    viewer.figs_with_widget.servable()
+    # viewer.ts_widget.servable()
+    # viewer.plot_col.servable()
+    # viewer.ts_pane.servable()
+    # viewer.ds_pane.servable()
+
+    viewer.view.servable()
+    # template = pn.template.FastGridTemplate(
+    #     theme_toggle=False,
+    #     prevent_collision=True,
+    #     save_layout=True,
+    #     # pylint: disable=line-too-long
+    # )
+    # template.sidebar[:] = [viewer.sidebar]
+    #
+    # # template.main[:, 0:1] = viewer.ts_widget
+    # template.main[:, 1:4] = viewer.plot_pane
+    # template.main[:, 4:7] = viewer.ts_pane
+    # # template.main[:, 7:10] = viewer.ds_pane
+    #
+    # # template.main[:, 0:6] = viewer.figs_with_widget
+    # print(viewer.view)
+    # # template.main[:, 6:12] = viewer.view
+    # template.servable()

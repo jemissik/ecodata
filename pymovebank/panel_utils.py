@@ -1,7 +1,11 @@
 import param
 import panel as pn
 import functools
+import logging
+
 from tkinter import Tk, filedialog
+
+logger = logging.getLogger(__file__)
 
 
 def param_widget(panel_widget):
@@ -64,6 +68,7 @@ def select_output(initial_dir=None, initial_file=None, extension=None):
     if f:
         return f
 
+
 def try_catch(msg="Error... Check options and try again"):
     def inner(func):
         @functools.wraps(func)
@@ -71,6 +76,7 @@ def try_catch(msg="Error... Check options and try again"):
             try:
                 return func(self, *args, **kwargs)
             except Exception as e:
+                logging.exception(msg)
                 self.status_text = msg
         return tru_dec
     return inner

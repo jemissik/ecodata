@@ -13,6 +13,7 @@ PATH = pathlib.Path(__file__).parent
 APPLICATIONS_CONFIG_PATH = PATH / "config.yaml"
 MAIN_MENU = (PATH / "main_menu.html").read_text(encoding="utf8")
 LIST_ITEM_TEMPLATE = (PATH / "list_item_template.html").read_text(encoding="utf8")
+FAST_CSS_PATH = PATH / "fast.css"
 FAST_CSS = (PATH / "fast.css").read_text(encoding="utf8")
 
 _JINJA_ENV = jinja2.Environment(
@@ -40,4 +41,5 @@ def menu_fast_html(accent: str = "#1f77b4", jinja_subs = None) -> str:
 
 def list_links_html(links: list[dict]):
     list_html = "\n".join(LINKS_TEMPLATE.render(**link) for link in links)
+    list_html = f"<ul>\n{list_html}\n</ul>"
     return list_html

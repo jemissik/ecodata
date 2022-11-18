@@ -11,29 +11,22 @@
 #     language: python
 #     name: python3
 # ---
+import logging
 
 # %% pycharm={"name": "#%%\n"}
-import geopandas as gpd
 import pymovebank as pmv
-import xarray as xr
 import hvplot.xarray  # noqa
 import hvplot.pandas  # noqa
-import spatialpandas as spd
-import numpy as np
 import panel as pn
-import panel.widgets as pnw
-import holoviews as hv
-import time
-import param
 
 import param
-import cartopy.crs as ccrs
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
 from pymovebank.panel_utils import param_widget
 from pymovebank.apps import config
 
 # from holoviews.operation.datashader import datashade, shade, dynspread, spread
 
+logger = logging.getLogger(__file__)
 
 # %% pycharm={"name": "#%%\n"}
 class Subsetter(param.Parameterized):
@@ -139,8 +132,7 @@ class Subsetter(param.Parameterized):
 
     @param.depends("status_text", watch=True)
     def update_status_text(self):
-        self.view[self.view_objects['status']] = pn.pane.Alert(self.status_text)
-        # self.view[-1] = pn.pane.Alert(self.status_text)
+        self.alert.object = self.status_text
 
     @param.depends("option_picker.value", watch=True)
     def _update_widgets(self):
@@ -186,13 +178,16 @@ class Subsetter(param.Parameterized):
                     self.view[self.view_objects['plot']] = pn.pane.Matplotlib(plot)
                 else:
                     self.view[self.view_objects['plot']] = pn.pane.Markdown(' ## Subset saved to output directory')
-        except:
+        except Exception as e:
+            msg = 'Error creating subset. Make sure all necessary inputs are provided.'
+            logger.warning(msg + f":\n{e!r}")
             self.view[self.view_objects['plot']] = pn.pane.Markdown("## Create a subset!")
-            self.status_text = 'Error creating subset. Make sure all necessary inputs are provided.'
+            self.status_text = msg
         finally:
             stop_loading_spinner(self.view)
 
 
 if __name__ == "__main__" or __name__.startswith("bokeh"):
-    config.extension(url="subsetter", main_max_width="80%")
+    config.extension(url="subsetter",)
+
     Subsetter().view.servable()
