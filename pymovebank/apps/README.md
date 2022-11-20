@@ -20,7 +20,7 @@ conda activate pmv
 
 for /f %%i in ('python -c "import pymovebank; print(pymovebank.__path__[0])"') do set pmv_path=%i
 
-python -m panel serve %pmv_path%/apps/apps/*.py --glob --port 5006
+python -m panel serve %pmv_path%/apps/apps/*app.py --glob --port 5006
 ```
 
 ## Web address
