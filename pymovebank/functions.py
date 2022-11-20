@@ -6,12 +6,13 @@ import fiona
 import geopandas as gpd
 import pandas as pd
 import xarray as xr
-import numpy as np
 import rioxarray  # noqa
 import matplotlib.pyplot as plt
 from pathlib import Path
 from shapely.geometry import Polygon
-from pyproj.crs import CRS
+import cartopy.crs as ccrs
+from dataprep.clean import clean_headers
+
 
 import warnings
 
@@ -127,7 +128,7 @@ def subset_data(
         ``(long_min, lat_min, long_max, lat_max)``.
     track_points : str, optional
         Path to csv file with animal track points. Latitude and longitude must be
-        labeled as "location-lat" and "location-long".
+        labeled as "location_lat" and "location_long".
     bounding_geom : str, optional
         Path to shapefile with bounding geometry.
     boundary_type : str, optional
@@ -181,12 +182,7 @@ def subset_data(
         # Get feature geometry for track_points case
         track_crs = "EPSG:4326"
         if track_points is not None:
-            df = pd.read_csv(track_points)
-            gdf_track = gpd.GeoDataFrame(
-                df,
-                geometry=gpd.points_from_xy(df["location-long"], df["location-lat"]),
-                crs=track_crs,
-            )
+            gdf_track = read_track_data(track_points, dissolve=False)
             feature_geom = gdf_track.dissolve()  # Dissolve points to a single geometry
 
         # Get feature geometry for bounding_geom case
@@ -222,19 +218,108 @@ def subset_data(
 
     # Write new data to file if output path was specified
     if outfile is not None:
-        if Path(outfile).suffix == '.shp':
-            Path(outfile).mkdir(exist_ok=True)
-        gdf.to_file(outfile)
+        outfile = Path(outfile)
+        if outfile.suffix == '.shp':
+            outdir = (outfile.parent / outfile.stem)
+            outdir.mkdir(exist_ok=True)
+            gdf.to_file(outdir / outfile.name)
+        else:
+            gdf.to_file(outfile)
+    output = dict(subset=gdf, boundary=boundary)
+    if track_points:
+        output['track_points'] = gdf_track
+    elif bounding_geom:
+        output['bounding_geom'] = gdf_features
+    return output
 
-    return gdf, boundary
+def get_tracks_extent(tracks, boundary_shape='rectangular', buffer=0):
+    # get boundary
+    if boundary_shape == 'rectangular':
+        boundary = tracks.dissolve().envelope
+    if boundary_shape == 'convex_hull':
+        boundary = tracks.dissolve().convex_hull
 
-def plot_subset(subset_data, boundary, bounding_geom=None, track_points=None):
+    #apply buffer
+    if buffer != 0:
+        tot_bounds = boundary.geometry.total_bounds
+        buffer_scale = max(
+            [abs(tot_bounds[2] - tot_bounds[0]), abs(tot_bounds[3] - tot_bounds[1])]
+        )
+        boundary = boundary.buffer(buffer * buffer_scale, cap_style=2, join_style=2)
+        return gpd.GeoDataFrame(geometry=boundary)
+
+def plot_subset_interactive(subset, boundary, bounding_geom=None, track_points=None,
+                            datashade_tracks=False, projection = ccrs.PlateCarree()):
     """
-    Plots the results of the subset_data function.
+    Plots the results of the subset_data function in an interactive plot using
+    hvplot/geoviews.
 
     Parameters
     ----------
     subset_data : geopandas.GeoDataFrame
+        Subset data
+    boundary : geopandas.GeoSeries
+        Subsetting boundary
+    bounding_geom : geopandas.GeoSeries, optional
+        Bounding geometry used for subsetting, by default None
+    track_points : geopandas.GeoDataFrame, optional
+        Track points used for subsetting, by default None
+
+    Returns
+    -------
+    holoviews.core.overlay.Overlay
+        Figure showing the subset results, along with the bounding geometry or track points provided.
+    """
+
+    # Plot for boundary
+    if isinstance(boundary, gpd.GeoSeries):
+        _boundary = gpd.GeoDataFrame(geometry=boundary).to_crs(subset.crs)
+    else:
+        _boundary = boundary.to_crs(subset.crs)
+
+    boundary_plot = _boundary.to_crs(subset.crs).hvplot(geo=True, alpha=0.15)
+
+    # Check the geometry type of the subset
+    subset_geom_type = set(pd.unique(subset.geom_type))
+
+    # Use hvplot for points
+    if subset_geom_type.issubset({'Point', 'MultiPoint'}):
+        subset_plot = subset.hvplot.points(hover=False, geo=True,
+                                 projection=projection)
+    # Use geoviews for paths
+    if subset_geom_type.issubset({'LineString', 'MultiLineString'}):
+        subset_plot = gv.Path(subset).opts(projection=projection, color='k')
+    # TODO: Add polygon option
+    else:
+        raise TypeError(
+            "plot_subset_interactive: Geometry type of the subset is not supported."
+        )
+
+    plot = boundary_plot * subset_plot
+
+
+    # Plot for bounding_geom
+    if bounding_geom is not None:
+        bounding_geom_plot = bounding_geom.to_crs(subset.crs).hvplot(geo=True, alpha=0.3)
+        plot = bounding_geom_plot * plot
+
+    #Plot for track points
+    if track_points is not None:
+        track_plot = track_points.hvplot.points('location_long', 'location_lat',
+                                 hover=False, geo=True, datashade = datashade_tracks, dynspread=True,
+                                 projection=projection, color = 'r', cmap='Reds', project=True)
+        plot = plot * track_plot
+
+    return plot
+
+
+def plot_subset(subset, boundary, bounding_geom=None, track_points=None):
+    """
+    Plots the results of the subset_data function in a static plot using matplotlib.
+
+    Parameters
+    ----------
+    subset : geopandas.GeoDataFrame
         Subset data
     boundary : geopandas.GeoSeries
         Subsetting boundary
@@ -251,11 +336,11 @@ def plot_subset(subset_data, boundary, bounding_geom=None, track_points=None):
     plt.ioff()
     fig, ax = plt.subplots()
     boundary.plot(ax=ax, color='c', alpha=0.4)
-    subset_data.plot(ax=ax, color='b', linewidth=0.75)
+    subset.plot(ax=ax, color='b', linewidth=0.75)
     if bounding_geom is not None:
-        bounding_geom.to_crs(subset_data.crs).plot(ax=ax, color='r', alpha=0.4)
+        bounding_geom.to_crs(subset.crs).plot(ax=ax, color='r')
     if track_points is not None:
-        track_points.to_crs(subset_data.crs).plot(ax = ax, color = 'r', marker='.', alpha = 0.4)
+        track_points.to_crs(subset.crs).plot(ax = ax, color = 'r', marker='.', alpha = 0.4)
     return fig
 
 
@@ -278,12 +363,29 @@ def bbox2poly(bbox):
 
 
 def read_track_data(filein, dissolve=False):
+    """
+    Read Movebank track data.
+
+    Column headers are cleaned to snake case.
+
+    Parameters
+    ----------
+    filein : str
+        File path for track data
+    dissolve : bool, optional
+        Whether to dissolve track points to one multipoint geometry, by default False
+
+    Returns
+    -------
+    geopandas.GeoDataFrame
+        Geodataframe of track data
+    """
     # read track csv
-    track_df = pd.read_csv(filein)
+    track_df = clean_headers(pd.read_csv(filein), report=False)
     track_gdf = gpd.GeoDataFrame(
         track_df,
         geometry=gpd.points_from_xy(
-            track_df["location-long"], track_df["location-lat"]
+            track_df["location_long"], track_df["location_lat"]
         ),
         crs="EPSG:4326",
     )
@@ -291,6 +393,98 @@ def read_track_data(filein, dissolve=False):
         track_gdf = track_gdf.dissolve()
     return track_gdf
 
+
+def read_ref_data(filein):
+    """
+    Read Movebank reference data.
+
+    Column headers are cleaned to snake case.
+
+    Parameters
+    ----------
+    filein : str
+        File path for refrence data
+
+    Returns
+    -------
+    pandas.DataFrame
+        Dataframe of reference data
+    """
+    ref_data = clean_headers(pd.read_csv(filein))
+    return ref_data
+
+
+def merge_tracks_ref(track_data, ref_data):
+    """
+    Merge track data and reference data on deployment_id.
+
+    Left merge is used.
+
+    Parameters
+    ----------
+    track_data : geopandas.GeoDataFrame
+        Geodataframe of track data. Must include 'deployment_id'
+    ref_data : pandas.DataFrame
+        Dataframe of reference data. Must include 'deployment_id'
+
+    Returns
+    -------
+    geopandas.GeoDataFrame
+        Merged GeoDataFrame containing track data and reference data
+
+    Raises
+    ------
+    KeyError
+        Raised if track_data and/or reference data do not contain the deployment_id column
+    """
+
+    if ('deployment_id' in track_data.columns) and ('deployment_id' in ref_data.columns):
+        merged_data = pd.merge(track_data, ref_data, on='deployment_id', how='left', suffixes=(None, "_ref"))
+        cols_to_drop = [c for c in merged_data.columns if '_ref' in c]
+        merged_data = merged_data.drop(columns=cols_to_drop)
+    else:
+        raise KeyError(
+            "merge_tracks_ref: both track_data and ref_data must contain deployment_id."
+        )
+    return merged_data
+
+
+def combine_studies(studies):
+
+    studies_to_concat = []
+    for study in studies:
+        if isinstance(study, str) | isinstance(study, Path):
+            studies_to_concat.append(read_track_data(study))
+        elif isinstance(study, gpd.GeoDataFrame):
+            studies_to_concat.append(study)
+
+        all_studies = pd.concat(studies_to_concat)
+        all_studies = gpd.GeoDataFrame(all_studies, geometry=all_studies.geometry, crs="EPSG:4326")
+
+    return all_studies
+
+
+def clip_tracks_timerange(df, df2):
+    """
+    Clip tracks dataset to include only points within the time range of another study
+
+    Parameters
+    ----------
+    df : geopandas.GeoDataFrame
+        Track dataset to clip
+    df2 : geopandas.GeoDataFrame
+        Other study that will be used to determine the time window of interest
+
+    Returns
+    -------
+    geopandas.GeoDataFrame
+        Track dataset containing only points within the time range of the other study
+    """
+    tmin = df2.timestamp.min()
+    tmax = df2.timestamp.max()
+    mask = (df.timestamp >= tmin) & (df.timestamp <= tmax)
+
+    return df.loc[mask]
 
 def get_extent(filepath):
     """
@@ -388,240 +582,3 @@ def get_file_len(filepath):
     with fiona.open(filepath) as f:
         flen = len(f)
     return flen
-
-
-def thin_dataset(dataset, n_thin, outfile=None):
-    """
-    Thin a dataset by keeping the n-th value across the specified dimensions. Useful for applications such as plotting
-    wind data where using the original resolution would result in a crowded and unreadable figure.
-
-    Note: this function is a thin wrapper around xarray.Dataset.thin
-
-    Parameters
-    ----------
-    dataset : str, Path, or xarray.Dataset
-        File path to the dataset, or an xarray.Dataset
-    n_thin : int or dict
-        An integer value for thinning across all dimensions, or a dictionary with keys matching the dimensions of the
-        dataset and the values specifying the thinning value for that dimension.
-    outfile : str, optional
-        Path to write the thinned .nc file, if specified. If no path is specified, the thinned dataset won't be written
-        out to a file.
-
-    Returns
-    -------
-    xarray.Dataset
-        Thinned dataset
-    """
-
-    # Check if input is a dataset or the filepath to the dataset, and load dataset if necessary
-    if isinstance(dataset, str) | isinstance(dataset, Path):
-        ds = xr.load_dataset(dataset)
-    elif isinstance(dataset, xr.Dataset):
-        ds = dataset.copy()
-
-    ds_thinned = ds.thin(n_thin)
-
-    # Write thinned dataset to file if output path was specified
-    if outfile is not None:
-        ds_thinned.to_netcdf(outfile)
-
-    return ds_thinned
-
-
-def coarsen_dataset(dataset, n_window, boundary='trim', outfile=None, **kwargs):
-    """
-    Coarsen a dataset by performing block aggregation. Supports aggregation along
-    multiple dimensions.
-
-    Note: this function is a thin wrapper around xarray.Dataset.coarsen
-
-    Parameters
-    ----------
-    dataset : str, Path, or xarray.Dataset
-        File path to the dataset, or an xarray.Dataset
-    n_window : dict
-        Dictionary with keys matching the dimensions of the dataset and the values
-        specifying the window size for that dimension.
-    boundary: ({"trim", "exact", "pad"}, default: "trim")
-        How to handle cases where the dimension size is not a multiple of the window size.
-        If "trim", the excess is dropped. If "pad", the dataset will be padded with NaN.
-        If "exact", an error will be raised.
-    outfile : str, optional
-        Path to write the .nc file for the new dataset, if specified. If no path is specified,
-        the new dataset won't be written out to a file.
-    **kwargs :
-        Additional arguments to be passed to xarray.Dataset.coarsen
-
-    Returns
-    -------
-    xarray.Dataset
-        Coarsened dataset
-    """
-
-    # Check if input is a dataset or the filepath to the dataset, and load dataset if necessary
-    if isinstance(dataset, str) | isinstance(dataset, Path):
-        ds = xr.load_dataset(dataset)
-    elif isinstance(dataset, xr.Dataset):
-        ds = dataset.copy()
-
-    ds_coarsen = ds.coarsen(n_window, boundary=boundary, **kwargs).mean()
-
-    # Write thinned dataset to file if output path was specified
-    if outfile is not None:
-        ds_coarsen.to_netcdf(outfile)
-
-    return ds_coarsen
-
-
-def select_spatial(ds, boundary, invert=False, crs=None, **kwargs):
-    """
-    Selects a spatial area from a gridded dataset based on provided bounding geometry.
-
-    .. note::
-        This function is a thin wrapper around `rioxarray's clip function
-        <https://corteva.github.io/rioxarray/latest/examples/clip_geom.html>`_.
-
-
-    Parameters
-    ----------
-    ds : xarray.Dataset
-        Gridded dataset
-    boundary : geopandas.GeoDataFrame
-        Bounding geometry
-    invert : bool
-        If True, data that falls within the bounding geometry will be masked rather than selected. By default False.
-    crs : Any, optional
-        CRS of the input gridded dataset. If CRS are not already included in the data file or otherwise specified here,
-        EPSG:4326 will be used. Valid inputs are anything accepted by rasterio.crs.CRS.from_user_input.
-    **kwargs :
-        Additional arguments to be passed to rioxarray.raster_dataset.RasterDataset.clip
-
-    Returns
-    -------
-    xarray.Dataset
-        Dataset containing just the spatial area contained in the boundary
-
-
-    .. todo::
-        Test from_disk options for datasets that can't fit in memory
-    """
-
-    ds_subset = ds.copy()
-
-    # Set crs to EPSG:4326 if crs aren't provided
-    if crs is None and (ds.rio.crs is None or not ds.rio.crs.is_epsg_code):
-        ds_subset = ds_subset.rio.write_crs("EPSG:4326")
-    elif crs is not None:
-        ds_subset = ds_subset.rio.write_crs(crs)
-
-    # Transform the boundary to the raster dataset's coordinates if needed
-    ds_crs = CRS.from_user_input(ds_subset.rio.crs)
-    if boundary.crs != ds_crs:
-        boundary_clip = boundary.to_crs(ds_crs).geometry
-    else:
-        boundary_clip = boundary.geometry
-
-    # Clip the dataset
-    ds_subset = ds_subset.rio.clip(boundary_clip, invert=invert, **kwargs)
-
-    return ds_subset
-
-
-def select_time_range(ds, time_var='time', start_time=None, end_time=None):
-    """
-    Create a subset of a dataset based on a time range.
-
-    Parameters
-    ----------
-    ds : xarray.Dataset
-        Gridded dataset
-    time_var : str, optional
-        Name of the time coordinate in the dataset. Defaults to 'time' if not specified.
-    start_time : str or same type as the time coordinate in the dataset, optional
-        Start time of the time range for selection. If not provided, the earliest time in the dataset will be used.
-    end_time : str or same type as the time coordinate in the dataset, optional
-        End time of the time range for selection. If not provided, the latest time in the dataset will be used.
-
-    Returns
-    -------
-    xarray.Dataset
-        Subset of the input dataset containing only data within the specified time range.
-    """
-
-    ds_subset = ds.sel({time_var: slice(start_time, end_time)})
-
-    return ds_subset
-
-
-def select_time_cond(ds,
-                     time_var='time',
-                     years=None,
-                     months=None,
-                     daysofyear=None,
-                     hours=None,
-                     year_range = None,
-                     month_range = None,
-                     dayofyear_range = None,
-                     hour_range = None
-                     ):
-    """
-    Create a subset of a dataset including certain years, months, days of year, or hours of day.
-
-    Parameters
-    ----------
-    ds : xarray.Dataset
-        Gridded dataset
-    time_var : str, optional
-        Name of the time coordinate in the dataset. Defaults to 'time' if not specified.
-    years : list, optional
-        List of years to be selected, by default None
-    months : list, optional
-        List of months to be selected, by default None
-    daysofyear : list, optional
-        List of julian days of year to be selected, by default None
-    hours : list, optional
-        List of hours of day to be selected, by default None
-    year_range : list, optional
-        Range of years to be selected, given as a list containing the start year and the end year (e.g., [2000,2004]).
-        Both endpoints will be included in the selection. By default None.
-    month_range : list, optional
-        Range of months to be selected, given as a list containing the start month and the end month (e.g., [4,6]).
-        Both endpoints will be included in the selection. By default None.
-    dayofyear_range : list, optional
-        Range of julian days of year to be selected, given as a list containing the start day of year and the end day of
-        year (e.g., [144,204]). Both endpoints will be included in the selection. By default None.
-    hour_range : list, optional
-        Range of hours of day to be selected, given as a list containing the start hour and the end hour (e.g., [11,13]).
-        Both endpoints will be included in the selection. By default None.
-
-    Returns
-    -------
-    xarray.Dataset
-        Subset of the input dataset containing only data matching the specified time criteria.
-    """
-
-    # List to store boolean arrays for each filter criteria
-    filters = []
-
-    # Helper to combine selection list (e.g. years) with range list (e.g. year_range)
-    def combine_selection(selection_list, range_list):
-        selection_list = selection_list or []
-        range_array = np.arange(range_list[0], range_list[1]+1) if range_list else []
-        return np.union1d(selection_list, range_array)
-
-    # Create filters for each variable (year, month, dayofyear, hour)
-    variables = [(years, year_range), (months, month_range), (daysofyear, dayofyear_range), (hours, hour_range)]
-    var_strs = ["year", "month", "dayofyear", "hour"]
-    for (var0, var1), var_str in zip(variables, var_strs):
-        if var0 or var1:
-            selection = combine_selection(var0, var1)
-            filters.append(getattr(ds[time_var].dt, var_str).isin(selection).values)
-
-    # Combine all time filters to one boolean array
-    time_selection = np.all(filters, axis=0)
-
-    # Apply time filter
-    ds_subset = ds.sel({time_var:time_selection})
-
-    return ds_subset

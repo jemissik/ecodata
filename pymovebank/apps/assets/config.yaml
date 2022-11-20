@@ -1,0 +1,17 @@
+applications:
+  - url: home
+    name: Home
+    category: Main
+    author:
+  - url: tracks_explorer_app
+    name: Tracks Explorer
+    category: Dashboards
+    author:
+  - url: gridded_data_explorer_app
+    name: Gridded Data Explorer
+    author: false
+    category: Dashboards
+  - url: subsetter_app
+    name: Subsetter
+    author: false
+    category: Dashboards

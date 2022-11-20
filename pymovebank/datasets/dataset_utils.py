@@ -46,12 +46,18 @@ else:
 _dict_available = dict(zip(_user_datasets_names, _user_datasets_paths)) | dict(
     zip(_small_datasets_names, _small_datasets_paths)
 )
-available = list(_dict_available.keys())
+
+
+def available():
+    """
+    Get the list of available datasets installed in pymovebank.datasets
+    """
+    return list(_dict_available.keys())
 
 
 def get_path(dataset):
     """
-    Get the path to the test datasets in pymovebank.datasets.
+    Get the path to the datasets installed in pymovebank.datasets.
 
     Parameters
     ----------
@@ -59,7 +65,7 @@ def get_path(dataset):
         The name of the dataset. See ``pymovebank.data.available`` for
         all options.
     """
-    if dataset in available:
+    if dataset in available():
         path = _dict_available[dataset]
         if path.suffix == ".zip":
             path = "zip://" + str(path)
@@ -68,7 +74,7 @@ def get_path(dataset):
         return path
     else:
         msg = "The dataset '{data}' is not available. ".format(data=dataset)
-        msg += "Available datasets are {}".format(", ".join(available))
+        msg += "Available datasets are {}".format(", ".join(available()))
         raise ValueError(msg)
 
 def install_dataset(data_path):
@@ -83,10 +89,15 @@ def install_dataset(data_path):
     """
 
     user_data_path = Path(data_path)
+    installed_filepath = (_module_path / "user_datasets" / user_data_path.name)
+
     if user_data_path.is_dir():
-        shutil.copytree(user_data_path, (_module_path / "user_datasets" / user_data_path.name))
+        shutil.copytree(user_data_path, installed_filepath)
     elif user_data_path.is_file():
-        shutil.copy(user_data_path, (_module_path / "user_datasets" / user_data_path.name))
+        shutil.copy(user_data_path, installed_filepath)
+
+    _dict_available.update({user_data_path.name: installed_filepath})
+
 
 def install_roads_dataset():
     """

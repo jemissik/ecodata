@@ -27,3 +27,6 @@ exclude = '''
     )
 )
 '''
+
+[tool.jupytext]
+formats = "apps/notebooks///ipynb,apps/scripts///py:percent"
