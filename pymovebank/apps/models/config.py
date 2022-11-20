@@ -10,7 +10,7 @@ from panel.template import FastGridTemplate, FastListTemplate, GoldenTemplate
 
 from pymovebank.apps.assets import menu_fast_html, list_links_html, APPLICATIONS_CONFIG_PATH, FAST_CSS, FAST_CSS_PATH
 
-SITE = "PyMoveBanks"
+SITE = "Movement Data Aggregator"
 
 ACCENT = "#1f77b4"  # "#E1477E"
 PALETTE = [
