@@ -13,8 +13,6 @@
 # ---
 
 # %%
-import sys
-sys.path.append("/Users/jmissik/Desktop/repos.nosync/panel")
 
 import geopandas as gpd
 import pymovebank as pmv
@@ -41,7 +39,7 @@ from holoviews.operation.datashader import datashade, shade, dynspread, spread
 from pymovebank.plotting import plot_gridded_data, plot_avg_timeseries
 from pymovebank.panel_utils import param_widget, try_catch
 from pymovebank.xr_tools import detect_varnames
-from pymovebank.apps import config
+from pymovebank.apps.models import config
 
 
 class HTML_WidgetBox(ReactiveHTML):

@@ -2,7 +2,7 @@
 # pylint: disable=wrong-import-position, ungrouped-imports, wrong-import-order
 import panel as pn
 
-from pymovebank.apps import config
+from pymovebank.apps.models import config
 
 # pylint: enable=wrong-import-position, ungrouped-imports, wrong-import-order
 

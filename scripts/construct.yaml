@@ -39,8 +39,8 @@ channels:
 #    - requests
 #    - datasize
 #    - ../../dist/pymovebank-0.0.0.tar.gz
-environment_file: environment.yaml
-#environment_file: ../../pymovebank-dev-env.yml
+#environment_file: environment.yaml
+environment_file: ../pymovebank-dev-env.yml
 #environment: pmv-build
 #post_install: post_install.sh  # [unix]
 #conda install ctools/label/dev::constructor

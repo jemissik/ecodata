@@ -46,8 +46,8 @@ from pathlib import Path
 import pymovebank as pmv
 from pymovebank.plotting import map_tile_options, plot_tracks_with_tiles
 from pymovebank.panel_utils import select_file, select_output, param_widget
-from pymovebank.apps import config
-from pymovebank.apps.models import PMVCard
+from pymovebank.apps.models import config
+from pymovebank.apps.models.models import PMVCard
 
 from holoviews.operation.datashader import datashade, shade, dynspread, spread
 

@@ -1,7 +1,7 @@
 import param
 import panel as pn
 
-from pymovebank.apps import config
+from pymovebank.apps.models import config
 
 
 class PMVCard(pn.Card):

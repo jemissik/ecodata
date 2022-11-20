@@ -10,6 +10,9 @@ movebank_credentials.txt
 pymovebank/datasets/large_datasets/*
 pymovebank/datasets/user_datasets/*
 
+# conda constructor installables
+scripts/pymovebank-*.pkg
+scripts/pymovebank-*.sh
 
 #small datasets (for now)
 pymovebank/datasets/small_datasets/*
