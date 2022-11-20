@@ -27,20 +27,10 @@
 
 # %%
 import geopandas as gpd
-import pymovebank as pmv
-import xarray as xr
 import hvplot.xarray  # noqa
 import hvplot.pandas  # noqa
-import spatialpandas as spd
 import panel as pn
-import pandas as pd
-import panel.widgets as pnw
-import holoviews as hv
-import time
 import param
-import cartopy.crs as ccrs
-from pyproj.crs import CRS
-import datetime as dt
 from pathlib import Path
 
 import pymovebank as pmv
@@ -48,9 +38,6 @@ from pymovebank.plotting import map_tile_options, plot_tracks_with_tiles
 from pymovebank.panel_utils import select_file, select_output, param_widget
 from pymovebank.apps.models import config
 from pymovebank.apps.models.models import PMVCard
-
-from holoviews.operation.datashader import datashade, shade, dynspread, spread
-
 
 from panel_jstree.widgets.jstree import FileTree
 

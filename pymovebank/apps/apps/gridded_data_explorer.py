@@ -20,21 +20,13 @@ import xarray as xr
 import hvplot.xarray  # noqa
 import hvplot.pandas  # noqa
 import geoviews as gv
-import numpy as np
 import panel as pn
 import pandas as pd
-import panel.widgets as pnw
-import holoviews as hv
-import time
 import param
-import cartopy.crs as ccrs
-from pyproj.crs import CRS
 import datetime as dt
 from pathlib import Path
 
 from panel.reactive import ReactiveHTML, Viewable
-
-from holoviews.operation.datashader import datashade, shade, dynspread, spread
 
 from pymovebank.plotting import plot_gridded_data, plot_avg_timeseries
 from pymovebank.panel_utils import param_widget, try_catch

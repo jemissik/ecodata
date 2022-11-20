@@ -1,18 +1,5 @@
-import geopandas as gpd
-import pymovebank as pmv
-import xarray as xr
 import hvplot.xarray  # noqa
 import hvplot.pandas  # noqa
-import spatialpandas as spd
-import panel as pn
-import pandas as pd
-import panel.widgets as pnw
-import holoviews as hv
-import cartopy.crs as ccrs
-from pyproj.crs import CRS
-import datetime as dt
-
-from holoviews.operation.datashader import datashade, shade, dynspread, spread
 
 map_tile_options = [None,
                     'CartoDark',

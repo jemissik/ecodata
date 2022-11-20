@@ -6,13 +6,10 @@ import fiona
 import geopandas as gpd
 import pandas as pd
 import xarray as xr
-import numpy as np
 import rioxarray  # noqa
 import matplotlib.pyplot as plt
-import spatialpandas as spd
 from pathlib import Path
 from shapely.geometry import Polygon
-from pyproj.crs import CRS
 import cartopy.crs as ccrs
 from dataprep.clean import clean_headers
 

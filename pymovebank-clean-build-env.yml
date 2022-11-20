@@ -1,18 +1,14 @@
-# Clean environment for building the package
-# Doesn't include pymovebank; only includes requirements
-name: pmv-build-clean
 channels:
+- pyviz
 - conda-forge
 - defaults
 dependencies:
+- python=3.9
 - cartopy
 - geopandas
-- ipykernel
-- ipython
 - matplotlib
 - pandas
 - pip
-- python=3.9
 - shapely<1.8.2
 - xarray
 - dask
@@ -20,26 +16,12 @@ dependencies:
 - bottleneck
 - cfgrib
 - rasterio
-- pyinstaller
 - conda-forge::rioxarray
+- pyviz::hvplot
 - pyviz::panel
 - pyviz::datashader
 - pyviz::geoviews
-- pyviz::spatialpandas
-- bokeh::jupyter_bokeh
+- conda-forge::geocube
 - dataprep
-- jupytext
-- pip:
-  - spatialpandas
-  - black
-  - conda-merge
-  - datasize
-  - isort
-  - myst-nb
-  - pydata_sphinx_theme
-  - pytest
-  - requests
-  - sphinx_book_theme
-  - wget
-  - click
-  - build
+- nodejs>=14
+name: pmv-build
