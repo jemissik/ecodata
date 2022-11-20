@@ -1,4 +1,4 @@
-                                        name: pymovebank
+name: pymovebank
 version: X
 installer_type: all
 post_install: post_install.sh  # [unix]
@@ -39,7 +39,7 @@ channels:
 #    - requests
 #    - datasize
 #    - ../../dist/pymovebank-0.0.0.tar.gz
-environment_file: environment.yml
+environment_file: environment.yaml
 #environment_file: ../../pymovebank-dev-env.yml
 #environment: pmv-build
 #post_install: post_install.sh  # [unix]
