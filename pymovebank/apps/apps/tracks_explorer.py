@@ -39,7 +39,7 @@ from pymovebank.panel_utils import select_file, select_output, param_widget
 from pymovebank.apps.models import config
 from pymovebank.apps.models.models import PMVCard
 
-from panel_jstree.widgets.jstree import FileTree
+# from panel_jstree.widgets.jstree import FileTree
 
 
 # %%
@@ -49,7 +49,7 @@ class TracksExplorer(param.Parameterized):
     tracksfile = param_widget(pn.widgets.TextInput(placeholder='Select a file...', name='Track file'))
 
     # filetree = param_widget(FileTree("/Users/jmissik/Desktop/repos.nosync/pymovebank/pymovebank/datasets/user_datasets", select_multiple=False))
-    filetree = param_widget(FileTree("~", select_multiple=False))
+    # filetree = param_widget(FileTree("~", select_multiple=False))
 
     # filetree = param.ClassSelector(class_=FileTree)
 
@@ -98,7 +98,7 @@ class TracksExplorer(param.Parameterized):
         self.map_tile.name = 'Map tile'
 
         self.file_card = PMVCard(self.tracksfile,
-                                 self.filetree,
+                                 # self.filetree,
                                  self.load_tracks_button,
                                  title="Select File",
                                  )
@@ -132,9 +132,9 @@ class TracksExplorer(param.Parameterized):
 
     @param.depends("load_tracks_button.value", watch=True)#depends on load_tracks_button
     def load_data(self):
-        if self.filetree.value or self.tracksfile.value:
+        if self.tracksfile.value:
             self.status_text = "Loading data..."
-            val = self.tracksfile.value or self.filetree.value[0]
+            val = self.tracksfile.value# or self.filetree.value[0]
             self.file_card.collapsed = True
             tracks = pmv.read_track_data(val)
             self.status_text = "Track file loaded"
@@ -145,19 +145,19 @@ class TracksExplorer(param.Parameterized):
         else:
             self.status_text = "File path must be selected first!"
 
-    @param.depends("filetree.value", watch=True)
-    def update_tf_on_ft(self):
-        if self.filetree.value:
-            self.tracksfile.value = self.filetree.value[-1]
-        else:
-            self.tracksfile.value = ""
-
-    @param.depends("tracksfile.value", watch=True)
-    def update_ft_on_tf(self):
-        if self.tracksfile.value:
-            self.filetree.value = [self.tracksfile.value]
-        else:
-            self.filetree.value = []
+    # @param.depends("filetree.value", watch=True)
+    # def update_tf_on_ft(self):
+    #     if self.filetree.value:
+    #         self.tracksfile.value = self.filetree.value[-1]
+    #     else:
+    #         self.tracksfile.value = ""
+    #
+    # @param.depends("tracksfile.value", watch=True)
+    # def update_ft_on_tf(self):
+    #     if self.tracksfile.value:
+    #         self.filetree.value = [self.tracksfile.value]
+    #     else:
+    #         self.filetree.value = []
 
     @param.depends("boundary_update.value", watch=True)
     def update_tracks_extent(self):
