@@ -24,6 +24,9 @@ apps/notebooks/*
 scripts/build
 scripts/dist
 
+# package build
+build/
+
 #docs build
 docs/_build/
 #docs autosummary
