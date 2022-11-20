@@ -188,6 +188,6 @@ class Subsetter(param.Parameterized):
 
 
 if __name__ == "__main__" or __name__.startswith("bokeh"):
-    config.extension(url="subsetter",)
+    config.extension(url="subsetter_app",)
 
     Subsetter().view.servable()

@@ -516,7 +516,7 @@ class GriddedDataExplorer(param.Parameterized):
 
 
 if __name__ == "__main__" or __name__.startswith("bokeh"):
-    config.extension('tabulator', url="gridded_data_explorer")
+    config.extension('tabulator', url="gridded_data_explorer_app")
     viewer = GriddedDataExplorer()
     viewer.sidebar.servable(area="sidebar")
     viewer.figs_with_widget.servable()

@@ -128,7 +128,7 @@ def extension(
             template.sidebar_footer = menu_fast_html(accent=accent_color, jinja_subs=list_html)
             add_header(template)
 
-    if intro_section and template not in [pn.template.FastGridTemplate]:
-        app.intro_section().servable()
+    # if intro_section and template not in [pn.template.FastGridTemplate]:
+    #     app.intro_section().servable()
 
     return app, template

@@ -1,64 +1,17 @@
----
-users:
-  - uid: andrew_huang
-    name: Andrew Huang
-    category: Other
-    email:
-    avatar: "https://avatars3.githubusercontent.com/u/15331990?s=400&u=6f855e2f82d576fd22110f2ac9b1b7ec4825d916&v=4"
-    url: "https://twitter.com/iateandrew1"
-    resources:
-    tags:
-  - uid: jochem_smit
-    name: Jochem Smit
-    category: Other
-    email:
-    avatar: "https://avatars1.githubusercontent.com/u/7881506?s=400&u=bdf7b6635bf57e7022763ce3b002649fe80ef6a8&v=40"
-    url: "https://github.com/Jhsmit"
-    resources:
-    tags:
-  - uid: marc_skov_madsen
-    name: Marc Skov Madsen
-    category: Other
-    email:
-    avatar: "https://avatars0.githubusercontent.com/u/42288570"
-    url: "https://datamodelsanalytics.com"
-    resources:
-    tags:
-  - uid: stephen_kilcommins
-    name: Stephen Kilcommins
-    category: Other
-    email:
-    avatar: "https://miro.medium.com/fit/c/96/96/1*DOAQGAKm-Lzek_1TztoR9Q.jpeg"
-    url: "https://www.linkedin.com/in/stephen-kilcommins/"
-    resources:
-    tags:
 applications:
   - url: home
     name: Home
-    author: marc_skov_madsen
     category: Main
-    description: A classic looking Dashboard in Panel
-    description_long: |-
-      The Dashboard app shows how to create a **Classic Dashboard** in **Panel** with
-  - url: tracks_explorer
+    author:
+  - url: tracks_explorer_app
     name: Tracks Explorer
-    author: marc_skov_madsen
-    owner:
     category: Dashboards
-    description: A classic looking Dashboard in Panel
-    description_long: |-
-      The Dashboard app shows how to create a **Classic Dashboard** in **Panel** with
-  - url: gridded_data_explorer
+    author:
+  - url: gridded_data_explorer_app
     name: Gridded Data Explorer
-    author: marc_skov_madsen
+    author: false
     category: Dashboards
-    description: A classic looking Dashboard in Panel
-    description_long: |-
-      The Dashboard app shows how to create a **Classic Dashboard** in **Panel** with
-  - url: subsetter
+  - url: subsetter_app
     name: Subsetter
-    author: marc_skov_madsen
+    author: false
     category: Dashboards
-    description: A classic looking Dashboard in Panel
-    description_long: |-
-      The Dashboard app shows how to create a **Classic Dashboard** in **Panel** with

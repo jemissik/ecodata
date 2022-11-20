@@ -125,9 +125,9 @@ class TracksExplorer(param.Parameterized):
         #         sizing_mode="stretch_both")
        # Add view
         self.view[:] = [
-                self.alert,
                 pn.Row(self.plot_pane),
                 self.widgets,
+                self.alert,
                 ]
 
     @param.depends("load_tracks_button.value", watch=True)#depends on load_tracks_button
@@ -218,7 +218,7 @@ class TracksExplorer(param.Parameterized):
 
 
 if __name__.startswith("bokeh"):
-    config.extension(url="tracks_explorer")
+    config.extension(url="tracks_explorer_app")
     viewer = TracksExplorer()
     viewer.options_col.servable(area="sidebar")
     viewer.view.servable()
