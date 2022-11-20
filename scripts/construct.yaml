@@ -2,45 +2,11 @@ name: pymovebank
 version: X
 installer_type: all
 post_install: post_install.sh  # [unix]
+post_install: post_install.bat  # [windows]
 
 channels:
   - https://repo.anaconda.com/pkgs/main/
   - https://conda.anaconda.org/pyviz/
   - https://conda.anaconda.org/conda-forge/
 
-#specs:
-#  - python=3.9
-#  - xarray
-#  - conda-forge::rioxarray
-#  - pyviz::hvplot
-#  - pyviz::panel
-#  - pyviz::datashader
-#  - pyviz::geoviews
-#  - pyviz::spatialpandas
-#  - dask
-#  - netCDF4
-#  - bottleneck
-#  - cfgrib
-#  - rasterio
-#  - geopandas
-#  - shapely<1.8.2
-#  - matplotlib
-#  - pandas
-#  - cartopy
-##  - ipython
-##  - ipykernel
-#  - dataprep
-#  - jupytext
-#  - pip
-#  - file:///Users/madelinescyphers/Documents/projs_.nosync/pymovebank/dist/pymovebank-0.0.0.tar.gz
-#  - pip
-#  - pip:
-#    - wget
-#    - requests
-#    - datasize
-#    - ../../dist/pymovebank-0.0.0.tar.gz
-#environment_file: environment.yaml
 environment_file: ../pymovebank-dev-env.yml
-#environment: pmv-build
-#post_install: post_install.sh  # [unix]
-#conda install ctools/label/dev::constructor
