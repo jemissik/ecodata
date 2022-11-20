@@ -24,4 +24,7 @@ dependencies:
 - conda-forge::geocube
 - dataprep
 - nodejs>=14
+- pip:
+    - git+https://github.com/jemissik/pymovebank.git@feature/conda-constructor
+    - awesome-panel-extensions==20221019.2
 name: pmv-build
