@@ -515,7 +515,12 @@ class GriddedDataExplorer(param.Parameterized):
         self.status_text = f'File saved to: {outfile}'
 
 
-if __name__ == "__main__" or __name__.startswith("bokeh"):
+if __name__ == "__main__":
+    viewer = GriddedDataExplorer()
+    config.extension('tabulator', url="gridded_data_explorer_app")
+    pn.serve({"gridded_data_explorer_app": pn.Row(viewer.sidebar, pn.Column(viewer.figs_with_widget, viewer.view))})
+
+if __name__.startswith("bokeh"):
     config.extension('tabulator', url="gridded_data_explorer_app")
     viewer = GriddedDataExplorer()
     viewer.sidebar.servable(area="sidebar")

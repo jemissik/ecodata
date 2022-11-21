@@ -187,7 +187,11 @@ class Subsetter(param.Parameterized):
             stop_loading_spinner(self.view)
 
 
-if __name__ == "__main__" or __name__.startswith("bokeh"):
+if __name__ == "__main__":
+    config.extension(url="subsetter_app", )
+    pn.serve({"subsetter_app": Subsetter().view})
+
+if __name__.startswith("bokeh"):
     config.extension(url="subsetter_app",)
 
     Subsetter().view.servable()

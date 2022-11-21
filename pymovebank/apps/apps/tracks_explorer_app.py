@@ -217,6 +217,11 @@ class TracksExplorer(param.Parameterized):
         self.status_text = "Plot created!"
 
 
+if __name__ == "__main__":
+    viewer = TracksExplorer()
+    config.extension(url="tracks_explorer_app")
+    pn.serve({"tracks_explorer_app": pn.Row(viewer.options_col, viewer.view)})
+
 if __name__.startswith("bokeh"):
     config.extension(url="tracks_explorer_app")
     viewer = TracksExplorer()
