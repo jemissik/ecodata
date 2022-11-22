@@ -21,7 +21,7 @@ import panel as pn
 
 import param
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
-from pymovebank.panel_utils import param_widget
+from pymovebank.panel_utils import param_widget, try_catch
 from pymovebank.app.models import config
 
 # from holoviews.operation.datashader import datashade, shade, dynspread, spread
@@ -130,10 +130,12 @@ class Subsetter(param.Parameterized):
             self.alert
         )
 
+    @try_catch()
     @param.depends("status_text", watch=True)
     def update_status_text(self):
         self.alert.object = self.status_text
 
+    @try_catch()
     @param.depends("option_picker.value", watch=True)
     def _update_widgets(self):
         self.status_text = 'updated widgets'
@@ -141,6 +143,7 @@ class Subsetter(param.Parameterized):
         widgets = self.option_picker_mapper[option]
         self.view[self.view_objects['option_widgets']] = widgets
 
+    @try_catch()
     def get_args_from_widgets(self):
         args = dict(filename=self.input_file.value,
             clip=self.clip.value,
@@ -161,6 +164,7 @@ class Subsetter(param.Parameterized):
 
         return args
 
+    @try_catch()
     @param.depends('create_subset_button.value', watch=True)
     def create_subset(self):
 
