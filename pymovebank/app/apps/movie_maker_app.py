@@ -84,7 +84,16 @@ class MovieMaker(param.Parameterized):
             stop_loading_spinner(self.view)
 
 
-if __name__ == "__main__" or __name__.startswith("bokeh"):
-    config.extension(url="movie_maker_app",)
+def view():
+    _, template = config.extension('tabulator', url="gridded_data_explorer_app")
+    viewer = MovieMaker()
 
-    MovieMaker().view.servable()
+    template.main.append(viewer.view)
+    return template
+
+
+if __name__ == "__main__":
+    pn.serve({"movie_maker_app": view})
+
+if __name__.startswith("bokeh"):
+    view()
