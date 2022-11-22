@@ -15,3 +15,7 @@ applications:
     name: Subsetter
     author: false
     category: Dashboards
+  - url: movie_maker_app
+    name: Movie Maker
+    author: false
+    category: Dashboards
