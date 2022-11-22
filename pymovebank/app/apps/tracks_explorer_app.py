@@ -36,8 +36,8 @@ from pathlib import Path
 import pymovebank as pmv
 from pymovebank.plotting import map_tile_options, plot_tracks_with_tiles
 from pymovebank.panel_utils import select_file, select_output, param_widget
-from pymovebank.apps.models import config
-from pymovebank.apps.models.models import PMVCard, FileSelector
+from pymovebank.app.models import config
+from pymovebank.app.models.models import PMVCard, FileSelector
 
 # from panel_jstree.widgets.jstree import FileTree
 
@@ -49,8 +49,7 @@ class TracksExplorer(param.Parameterized):
     tracksfile = param_widget(pn.widgets.TextInput(placeholder='Select a file...', name='Track file'))
 
     # filetree = param_widget(FileTree("/Users/jmissik/Desktop/repos.nosync/pymovebank/pymovebank/datasets/user_datasets", select_multiple=False))
-    file_selector = param_widget(FileSelector("~", root_directory="/"))
-
+    # file_selector = param_widget(FileSelector("~", root_directory="/"))
 
     tracks = param.ClassSelector(class_=gpd.GeoDataFrame, precedence=-1)
     tracks_extent = param.ClassSelector(class_=gpd.GeoDataFrame, precedence=-1)
@@ -61,9 +60,13 @@ class TracksExplorer(param.Parameterized):
                                                                 start=0.01, end=1, step=0.01, value=0.1))
     boundary_update = param_widget(pn.widgets.Button(button_type='primary', value=False, name='Update boundary'))
 
-    output_file_button = param_widget(pn.widgets.Button(button_type='primary', name='Choose output file'))
+    # output_file_button = param_widget(pn.widgets.Button(button_type='primary', name='Choose output file'))
     output_fname = param_widget(pn.widgets.TextInput(placeholder='Select a file...',
-                                                     value='tracks_extent.geojson',name='Output file'))
+                                                     value=str(
+                                                         (Path.home() / 'Downloads/tracks_extent.geojson').resolve()
+                                                         if (Path.home() / 'Downloads').exists()
+                                                         else (Path.cwd() / "tracks_extent.geojson").resolve()),
+                                                     name='Output file'))
     save_tracks_extent_button = param_widget(pn.widgets.Button(name='Save extent', button_type='primary'))
 
     ds_checkbox = param_widget(pn.widgets.Checkbox(name='Datashade tracks', value=True,))
@@ -88,7 +91,7 @@ class TracksExplorer(param.Parameterized):
         # self.filetree.name = 'Track file'
         # self.filetree = FileTree("/Users/jmissik/Desktop/repos.nosync/pymovebank/pymovebank/datasets/user_datasets", select_multiple=False)
         self.output_fname.name = 'Output file'
-        self.output_file_button.name = 'Choose output file'
+        # self.output_file_button.name = 'Choose output file'
         self.save_tracks_extent_button.name = 'Save extent'
         self.tracks_boundary_shape.name = 'Boundary shape'
         self.boundary_update.name = 'Create boundary'
@@ -97,7 +100,7 @@ class TracksExplorer(param.Parameterized):
         self.map_tile.name = 'Map tile'
 
         self.file_card = PMVCard(self.tracksfile,
-                                 self.file_selector,
+                                 # self.file_selector,
                                  self.load_tracks_button,
                                  title="Select File",
                                  )
@@ -110,7 +113,7 @@ class TracksExplorer(param.Parameterized):
 
         self.widgets = pn.WidgetBox(self.file_card,
                                     # self.options_card,
-                                    self.output_file_button,
+                                    # self.output_file_button,
                                     self.output_fname,
                                     self.save_tracks_extent_button)
 
@@ -131,15 +134,16 @@ class TracksExplorer(param.Parameterized):
 
     @param.depends("load_tracks_button.value", watch=True)#depends on load_tracks_button
     def load_data(self):
-        # if self.tracksfile.value:
-        if self.file_selector.value:
+        if self.tracksfile.value:
+        # if self.file_selector.value:
             self.status_text = "Loading data..."
-            # val = self.tracksfile.value# or self.filetree.value[0]
-            val = self.filetree.value[0]
+            val = self.tracksfile.value# or self.filetree.value[0]
+            # val = self.file_selector.value[0]
             self.file_card.collapsed = True
             tracks = pmv.read_track_data(val)
             self.status_text = "Track file loaded"
-            self.tracks_extent = pmv.get_tracks_extent(tracks, boundary_shape=self.tracks_boundary_shape.value,
+            self.tracks_extent = pmv.get_tracks_extent(tracks,
+                                                       boundary_shape=self.tracks_boundary_shape.value,
                                                        buffer=self.tracks_buffer.value)
             self.tracks = tracks
 
@@ -165,15 +169,15 @@ class TracksExplorer(param.Parameterized):
         self.tracks_extent = pmv.get_tracks_extent(self.tracks, boundary_shape=self.tracks_boundary_shape.value,
                                                        buffer=self.tracks_buffer.value)
 
-    @param.depends("output_file_button.value", watch=True)
-    def get_output_fname(self):
-        downloads_dir = (Path.home() / "Downloads")
-        if downloads_dir.exists():
-            default_dir = downloads_dir
-        else:
-            default_dir = Path.cwd()
-        filename = select_output(initial_dir=default_dir, initial_file='tracks_extent.geojson', extension='.geojson')
-        self.output_fname.value = filename
+    # @param.depends("output_file_button.value", watch=True)
+    # def get_output_fname(self):
+    #     downloads_dir = (Path.home() / "Downloads")
+    #     if downloads_dir.exists():
+    #         default_dir = downloads_dir
+    #     else:
+    #         default_dir = Path.cwd()
+    #     filename = select_output(initial_dir=default_dir, initial_file='tracks_extent.geojson', extension='.geojson')
+    #     self.output_fname.value = filename
 
     @param.depends("save_tracks_extent_button.value", watch=True)
     def save_tracks_extent(self):
@@ -218,13 +222,17 @@ class TracksExplorer(param.Parameterized):
         self.status_text = "Plot created!"
 
 
-if __name__ == "__main__":
+def view():
+    _, template = config.extension('tabulator', url="gridded_data_explorer_app")
     viewer = TracksExplorer()
-    config.extension(url="tracks_explorer_app")
-    pn.serve({"tracks_explorer_app": pn.Row(viewer.options_col, viewer.view)})
+
+    template.sidebar.append(viewer.options_col)
+    template.main.append(viewer.view)
+    return template
+
+
+if __name__ == "__main__":
+    pn.serve({"tracks_explorer_app": view})
 
 if __name__.startswith("bokeh"):
-    config.extension(url="tracks_explorer_app")
-    viewer = TracksExplorer()
-    viewer.options_col.servable(area="sidebar")
-    viewer.view.servable()
+    view()

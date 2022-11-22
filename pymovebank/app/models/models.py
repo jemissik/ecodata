@@ -19,7 +19,7 @@ from typing import (
 import param
 import panel as pn
 
-from pymovebank.apps.models import config
+from pymovebank.app.models import config
 
 
 class PMVCard(pn.Card):
@@ -258,9 +258,11 @@ class FileSelector(pn.widgets.CompositeWidget):
         selected = self.value
         try:
             dirs, files = pn.widgets.file_selector._scan_path(path, self.file_pattern)
-        except OSError as e:
+            os_error = False
+        except PermissionError as e:
             self.error = e
-            return
+            dirs, files = pn.widgets.file_selector._scan_path(self._directory.value, self.file_pattern)
+            os_error = True
 
         for s in selected:
             check = os.path.realpath(s) if os.path.islink(s) else s
@@ -272,10 +274,14 @@ class FileSelector(pn.widgets.CompositeWidget):
         paths = [p for p in sorted(dirs) + sorted(files)
                  if self.show_hidden or not os.path.basename(p).startswith('.')]
 
-        abbreviated = [('📁' if f in dirs else '') + os.path.relpath(f, self._cwd) for f in paths]
-
         paths.insert(0, "..")
-        abbreviated.insert(0, "⬆️ Go Out ⬆️")
+        abbreviated = ["⬆️ Go Out ⬆️"]
+        for f in paths:
+            if f in dirs:
+                abbrev = "⛔️️" if os_error else "📁"
+            else:
+                abbrev = ""
+            abbreviated.append(abbrev + os.path.relpath(f, self._cwd))
 
         options = OrderedDict(zip(abbreviated, paths))
         self._selector.options = options

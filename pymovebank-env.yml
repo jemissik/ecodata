@@ -9,7 +9,6 @@ dependencies:
 - geopandas
 - matplotlib
 - pandas
-- pip
 - shapely<1.8.2
 - xarray
 - dask
@@ -26,6 +25,7 @@ dependencies:
 - dataprep
 - conda-forge::ffmpeg
 - anaconda::git
+- pip
 - pip:
     - git+https://github.com/jemissik/pymovebank.git@develop
     - awesome-panel-extensions==20221019.2

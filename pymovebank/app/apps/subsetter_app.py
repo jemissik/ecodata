@@ -22,7 +22,7 @@ import panel as pn
 import param
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
 from pymovebank.panel_utils import param_widget
-from pymovebank.apps.models import config
+from pymovebank.app.models import config
 
 # from holoviews.operation.datashader import datashade, shade, dynspread, spread
 
@@ -187,11 +187,17 @@ class Subsetter(param.Parameterized):
             stop_loading_spinner(self.view)
 
 
+def view():
+    _, template = config.extension('tabulator', url="gridded_data_explorer_app")
+    viewer = Subsetter()
+
+    template.main.append(viewer.view)
+    return template
+
+
 if __name__ == "__main__":
-    config.extension(url="subsetter_app", )
-    pn.serve({"subsetter_app": Subsetter().view})
+    pn.serve({"tracks_explorer_app": view})
+
 
 if __name__.startswith("bokeh"):
-    config.extension(url="subsetter_app",)
-
-    Subsetter().view.servable()
+    view()
