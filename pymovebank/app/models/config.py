@@ -8,7 +8,7 @@ from awesome_panel_extensions.site.gallery import GalleryTemplate
 from awesome_panel_extensions.site.models import Application
 from panel.template import FastGridTemplate, FastListTemplate, GoldenTemplate
 
-from pymovebank.apps.assets import menu_fast_html, list_links_html, APPLICATIONS_CONFIG_PATH, FAST_CSS, FAST_CSS_PATH
+from pymovebank.app.assets import menu_fast_html, list_links_html, APPLICATIONS_CONFIG_PATH, FAST_CSS, FAST_CSS_PATH
 
 SITE = "Movement Data Aggregator"
 

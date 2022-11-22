@@ -31,7 +31,7 @@ from panel.reactive import ReactiveHTML, Viewable
 from pymovebank.plotting import plot_gridded_data, plot_avg_timeseries
 from pymovebank.panel_utils import param_widget, try_catch
 from pymovebank.xr_tools import detect_varnames
-from pymovebank.apps.models import config
+from pymovebank.app.models import config
 
 
 class HTML_WidgetBox(ReactiveHTML):
@@ -182,18 +182,23 @@ class GriddedDataExplorer(param.Parameterized):
 
 
         # Widget groups
-        self.filein_widgets = pn.Row(self.filein, self.load_data_button)
-        # self.file_card = pn.Card(self.filein,
-        #                          self.load_data_button,
-        #                          title="Select File",
-        #                          )
-        self.varname_widgets = pn.Column(
-            pn.Row( self.latvar, self.lonvar),
-            pn.Row(self.timevar, self.zvar, ),
-            pn.Row(self.update_varnames)
-        )
-        self.file_input_card = pn.Card(self.filein_widgets, self.varname_widgets,
-                                       title="Input environmental dataset file", width_policy="max")
+        # self.filein_widgets = pn.Row(self.filein, self.load_data_button)
+        # # self.file_card = pn.Card(self.filein,
+        # #                          self.load_data_button,
+        # #                          title="Select File",
+        # #                          )
+        # self.varname_widgets = pn.Column(
+        #     pn.Row( self.latvar, self.lonvar),
+        #     pn.Row(self.timevar, self.zvar, ),
+        #     pn.Row(self.update_varnames)
+        # )
+        self.file_input_card = pn.Card(
+            self.filein,
+            pn.Row(self.latvar, self.lonvar),
+            pn.Row(self.timevar, self.zvar),
+            pn.Row(self.load_data_button, self.update_varnames),
+            title="Input environmental dataset file",
+            width_policy="max")
 
         self.polyfile_widgets = pn.Card(self.polyfile, self.load_polyfile, title='Input polygon file')
 
@@ -241,6 +246,7 @@ class GriddedDataExplorer(param.Parameterized):
                              'status':8}
 
         self.view = pn.Column(
+            # self.filein,
             self.file_input_card,
             self.polyfile_widgets,
             self.outfile_widgets,
@@ -515,31 +521,18 @@ class GriddedDataExplorer(param.Parameterized):
         self.status_text = f'File saved to: {outfile}'
 
 
-if __name__ == "__main__" or __name__.startswith("bokeh"):
-    config.extension('tabulator', url="gridded_data_explorer_app")
+def view():
+    _, template = config.extension('tabulator', url="gridded_data_explorer_app")
     viewer = GriddedDataExplorer()
-    viewer.sidebar.servable(area="sidebar")
-    viewer.figs_with_widget.servable()
-    # viewer.ts_widget.servable()
-    # viewer.plot_col.servable()
-    # viewer.ts_pane.servable()
-    # viewer.ds_pane.servable()
+    template.sidebar.append(viewer.sidebar)
+    template.main.append(viewer.figs_with_widget)
+    template.main.append(viewer.view)
+    return template
 
-    viewer.view.servable()
-    # template = pn.template.FastGridTemplate(
-    #     theme_toggle=False,
-    #     prevent_collision=True,
-    #     save_layout=True,
-    #     # pylint: disable=line-too-long
-    # )
-    # template.sidebar[:] = [viewer.sidebar]
-    #
-    # # template.main[:, 0:1] = viewer.ts_widget
-    # template.main[:, 1:4] = viewer.plot_pane
-    # template.main[:, 4:7] = viewer.ts_pane
-    # # template.main[:, 7:10] = viewer.ds_pane
-    #
-    # # template.main[:, 0:6] = viewer.figs_with_widget
-    # print(viewer.view)
-    # # template.main[:, 6:12] = viewer.view
-    # template.servable()
+
+if __name__ == "__main__":
+    pn.serve({"gridded_data_explorer_app": view})
+
+
+if __name__.startswith("bokeh"):
+    view()
