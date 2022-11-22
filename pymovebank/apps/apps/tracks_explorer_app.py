@@ -37,7 +37,7 @@ import pymovebank as pmv
 from pymovebank.plotting import map_tile_options, plot_tracks_with_tiles
 from pymovebank.panel_utils import select_file, select_output, param_widget
 from pymovebank.apps.models import config
-from pymovebank.apps.models.models import PMVCard
+from pymovebank.apps.models.models import PMVCard, FileSelector
 
 # from panel_jstree.widgets.jstree import FileTree
 
@@ -49,9 +49,8 @@ class TracksExplorer(param.Parameterized):
     tracksfile = param_widget(pn.widgets.TextInput(placeholder='Select a file...', name='Track file'))
 
     # filetree = param_widget(FileTree("/Users/jmissik/Desktop/repos.nosync/pymovebank/pymovebank/datasets/user_datasets", select_multiple=False))
-    # filetree = param_widget(FileTree("~", select_multiple=False))
+    file_selector = param_widget(FileSelector("~", root_directory="/"))
 
-    # filetree = param.ClassSelector(class_=FileTree)
 
     tracks = param.ClassSelector(class_=gpd.GeoDataFrame, precedence=-1)
     tracks_extent = param.ClassSelector(class_=gpd.GeoDataFrame, precedence=-1)
@@ -98,7 +97,7 @@ class TracksExplorer(param.Parameterized):
         self.map_tile.name = 'Map tile'
 
         self.file_card = PMVCard(self.tracksfile,
-                                 # self.filetree,
+                                 self.file_selector,
                                  self.load_tracks_button,
                                  title="Select File",
                                  )
@@ -132,9 +131,11 @@ class TracksExplorer(param.Parameterized):
 
     @param.depends("load_tracks_button.value", watch=True)#depends on load_tracks_button
     def load_data(self):
-        if self.tracksfile.value:
+        # if self.tracksfile.value:
+        if self.file_selector.value:
             self.status_text = "Loading data..."
-            val = self.tracksfile.value# or self.filetree.value[0]
+            # val = self.tracksfile.value# or self.filetree.value[0]
+            val = self.filetree.value[0]
             self.file_card.collapsed = True
             tracks = pmv.read_track_data(val)
             self.status_text = "Track file loaded"

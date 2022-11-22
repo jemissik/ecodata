@@ -1,4 +1,3 @@
-name: pmv-build
 channels:
 - pyviz
 - conda-forge
@@ -24,8 +23,5 @@ dependencies:
 - pyviz::geoviews
 - conda-forge::geocube
 - dataprep
-- conda-forge::ffmpeg
-- anaconda::git
-- pip:
-    - git+https://github.com/jemissik/pymovebank.git@develop
-    - awesome-panel-extensions==20221019.2
+- nodejs>=14
+name: pmv-build
