@@ -152,12 +152,12 @@ class Subsetter(param.Parameterized):
         elif self.option_picker.value=='track_points':
             args['track_points'] = self.tracks_file.value
             args['boundary_type'] = self.boundary_type_tracks.value
-            args['buffer'] = self.buffer.value,
+            args['buffer'] = self.buffer.value
 
         elif self.option_picker.value=='bounding_geom':
             args['bounding_geom'] = self.bounding_geom_file.value
             args['boundary_type'] = self.boundary_type_geom.value
-            args['buffer'] = self.buffer.value,
+            args['buffer'] = self.buffer.value
 
         return args
 

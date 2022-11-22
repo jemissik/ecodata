@@ -196,7 +196,7 @@ class TracksExplorer(param.Parameterized):
         plot = (plot_tracks_with_tiles(self.tracks, tiles=self.map_tile.value,
                                        datashade=self.ds_checkbox.value, cmap='fire', c='r',
                                        marker='circle', alpha=0.3).opts(responsive=True,)
-                * self.tracks_extent.hvplot(alpha=0.2, geo=True, project=True).opts(responsive=True,)).opts(
+                * self.tracks_extent.hvplot(fill_color=None, line_color='r', geo=True, project=True).opts(responsive=True,)).opts(
             # responsive=True,
             # sizing_mode="stretch_both",
             frame_height=800,

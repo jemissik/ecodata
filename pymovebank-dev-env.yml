@@ -30,6 +30,8 @@ dependencies:
 - dataprep
 - jupytext
 - nodejs>=14
+- conda-forge::ffmpeg
+- anaconda::git
 - pip:
   # - spatialpandas
   - -e .
