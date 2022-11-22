@@ -223,7 +223,7 @@ class TracksExplorer(param.Parameterized):
 
 
 def view():
-    _, template = config.extension('tabulator', url="gridded_data_explorer_app")
+    _, template = config.extension(url="tracks_explorer_app")
     viewer = TracksExplorer()
 
     template.sidebar.append(viewer.options_col)

@@ -188,7 +188,7 @@ class Subsetter(param.Parameterized):
 
 
 def view():
-    _, template = config.extension('tabulator', url="gridded_data_explorer_app")
+    _, template = config.extension('tabulator', url="subsetter_app.py")
     viewer = Subsetter()
 
     template.main.append(viewer.view)
@@ -196,7 +196,7 @@ def view():
 
 
 if __name__ == "__main__":
-    pn.serve({"tracks_explorer_app": view})
+    pn.serve({"subsetter_app": view})
 
 
 if __name__.startswith("bokeh"):

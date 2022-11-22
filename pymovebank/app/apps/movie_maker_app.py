@@ -85,7 +85,7 @@ class MovieMaker(param.Parameterized):
 
 
 def view():
-    _, template = config.extension('tabulator', url="gridded_data_explorer_app")
+    _, template = config.extension(url="movie_maker_app")
     viewer = MovieMaker()
 
     template.main.append(viewer.view)
