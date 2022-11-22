@@ -35,7 +35,7 @@ from pathlib import Path
 
 import pymovebank as pmv
 from pymovebank.plotting import map_tile_options, plot_tracks_with_tiles
-from pymovebank.panel_utils import select_file, select_output, param_widget
+from pymovebank.panel_utils import select_file, select_output, param_widget, try_catch
 from pymovebank.app.models import config
 from pymovebank.app.models.models import PMVCard, FileSelector
 
@@ -132,6 +132,7 @@ class TracksExplorer(param.Parameterized):
                 self.alert,
                 ]
 
+    @try_catch()
     @param.depends("load_tracks_button.value", watch=True)#depends on load_tracks_button
     def load_data(self):
         if self.tracksfile.value:
@@ -164,6 +165,7 @@ class TracksExplorer(param.Parameterized):
     #     else:
     #         self.filetree.value = []
 
+    @try_catch()
     @param.depends("boundary_update.value", watch=True)
     def update_tracks_extent(self):
         self.tracks_extent = pmv.get_tracks_extent(self.tracks, boundary_shape=self.tracks_boundary_shape.value,
@@ -179,6 +181,7 @@ class TracksExplorer(param.Parameterized):
     #     filename = select_output(initial_dir=default_dir, initial_file='tracks_extent.geojson', extension='.geojson')
     #     self.output_fname.value = filename
 
+    @try_catch()
     @param.depends("save_tracks_extent_button.value", watch=True)
     def save_tracks_extent(self):
         outfile = Path(self.output_fname.value).resolve()
@@ -189,10 +192,13 @@ class TracksExplorer(param.Parameterized):
         else:
             self.status_text = "Tracks data must be added before a tracks extent file can be saved!"
 
+    @try_catch()
     @param.depends("status_text", watch=True)
     def update_status_view(self):
         self.alert.object = self.status_text
 
+
+    @try_catch()
     @param.depends("tracks", "boundary_update.value", "ds_checkbox.value", "map_tile.value", watch=True)
     def update_view(self):
         print("calling update view")
