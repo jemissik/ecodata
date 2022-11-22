@@ -188,7 +188,7 @@ class Subsetter(param.Parameterized):
 
 
 def view():
-    _, template = config.extension('tabulator', url="subsetter_app.py")
+    _, template = config.extension('tabulator', url="subsetter_app")
     viewer = Subsetter()
 
     template.main.append(viewer.view)
