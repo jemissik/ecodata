@@ -68,7 +68,11 @@ pip install git+https://github.com/jemissik/pymovebank.git@develop
 
 
 ## Launching the apps
-From your terminal, run:
+
+To open a terminal:
+**Mac/Linux**: Run the commands from any terminal app
+
+**Windows**: Run the commands using the Anaconda Powershell Prompt. You can launch this by searching for "Anaconda powershell" in the start menu, or by launching Anaconda Navigator and looking for "Powershell Prompt" in the home screen.
 
 ```bash
 conda activate pmv
