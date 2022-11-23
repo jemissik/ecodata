@@ -1,29 +1,28 @@
-All the following instructions assume your env is name pmv, change the instructions for your needs.
+All the following instructions assume your env is named pmv, change the instructions for your needs.
+
+**Mac/Linux**: Run the commands from any terminal app
+
+**Windows**: Run the commands using the Anaconda Powershell terminal. Search for "Anaconda powershell" in the start menu.
 
 
-## Unix
-to launch apps in bash, you can use:
+## Launching the apps
+From your terminal, run:
 
 ```bash
 conda activate pmv
-
-pmv_path=`python -c "import pymovebank; print(pymovebank.__path__[0])"`
-
-python -m panel serve pymovebank/apps/apps/*app.py --glob --port 5006
+python -m pymovebank.app
 ```
 
-## Windows
+A browser window will open to the main app gallery page (the apps are running locally at ``localhost:5006``). There may be a short wait the first time you launch the apps (or the first time you launch after an update).
 
-on windows you can run this command with an installed environment to get the directory of the apps and then serve them:
-```commandline
+To shut down the apps, close the terminal that you used for launching.
+
+
+## Updating the apps
+
+If there are new updates to the apps, you can update your version of the apps by running:
+
+```bash
 conda activate pmv
-
-for /f %%i in ('python -c "import pymovebank; print(pymovebank.__path__[0])"') do set pmv_path=%i
-
-python -m panel serve %pmv_path%/apps/apps/*app.py --glob --port 5006
-```
-
-## Web address
-Then you can open this address in your browser to open the app:
-
-``localhost:5006``
+pip uninstall pymovebank
+pip install git+https://github.com/jemissik/pymovebank.git@develop
