@@ -18,6 +18,11 @@ import warnings
 
 warnings.filterwarnings("ignore", message="Geometry is in a geographic CRS")
 
+# Add KML support for fiona
+fiona.drvsupport.supported_drivers['kml'] = 'rw'
+fiona.drvsupport.supported_drivers['KML'] = 'rw'
+fiona.drvsupport.supported_drivers['LIBKML'] = 'rw'
+
 
 def grib2nc(filein, fileout):
     """
@@ -222,6 +227,10 @@ def subset_data(
         if outfile.suffix == '.shp':
             outdir = (outfile.parent / outfile.stem)
             outdir.mkdir(exist_ok=True)
+
+            # Drop any datetime columns since this isn't supported in shapefiles
+            gdf = gdf.select_dtypes(exclude=['datetime64[ns]'])
+            
             gdf.to_file(outdir / outfile.name)
         else:
             gdf.to_file(outfile)
