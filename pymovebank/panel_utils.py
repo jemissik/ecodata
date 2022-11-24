@@ -100,7 +100,7 @@ def split_shell_command(cmd: str):
 def make_mp4_from_frames(frames_dir, output_file, frame_rate):
     frames_pattern = Path(frames_dir) / 'Frame%d.png'
     cmd = f"""ffmpeg -framerate {frame_rate} -i {frames_pattern}
-    -vf pad="width=ceil(iw/2)*2:height=ceil(ih/2)*2"
+    -vf pad='width=ceil(iw/2)*2:height=ceil(ih/2)*2'
     -c:v libx264 -pix_fmt yuv420p -y {output_file}"""
 
     subprocess.run(split_shell_command(cmd))
