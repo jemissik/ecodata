@@ -7,6 +7,12 @@
 **Note** The apps are still under development, and installation will be simplified soon!
 
 1. Install Anaconda [Download installer here](https://www.anaconda.com/products/distribution)
+    - **For windows:** Downgrade conda to the previous version. In the Anaconda Powershell prompt, run:
+
+    ```commandline
+    conda install conda=4.14
+    ```
+    
 2. Download the environment file
 3. Create a python environment for the app.
    - Launch "Anaconda Navigator"
