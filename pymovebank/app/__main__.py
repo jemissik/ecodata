@@ -5,7 +5,7 @@ from pymovebank.app.apps.gridded_data_explorer_app import view as gridded_data_e
 from pymovebank.app.apps.subsetter_app import view as subsetter_app_view
 from pymovebank.app.apps.movie_maker_app import view as movie_maker_app_view
 
-if __name__.startswith("bokeh"):
+if __name__ == "__main__":
 
     pn.serve(
         {
