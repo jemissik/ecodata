@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from shapely.geometry import Polygon
 import cartopy.crs as ccrs
+import geoviews as gv
 from dataprep.clean import clean_headers
 
 
@@ -230,7 +231,7 @@ def subset_data(
 
             # Drop any datetime columns since this isn't supported in shapefiles
             gdf = gdf.select_dtypes(exclude=['datetime64[ns]'])
-            
+
             gdf.to_file(outdir / outfile.name)
         else:
             gdf.to_file(outfile)
