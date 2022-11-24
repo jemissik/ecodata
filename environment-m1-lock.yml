@@ -1,0 +1,4 @@
+name: pmv-dev
+channels:
+  - defaults
+prefix: /Users/jmissik/anaconda3/envs/pmv-dev
