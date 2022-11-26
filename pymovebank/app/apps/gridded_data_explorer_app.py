@@ -156,10 +156,11 @@ class GriddedDataExplorer(param.Parameterized):
         self.load_polyfile.name = 'Load file'
         self.date_range.name = "Date range selection"
 
+        # commas at the end are necessary for endpoints to be
         self.year_range = pn.widgets.EditableRangeSlider(step=1, format='0', )
         self.month_range = pn.widgets.EditableRangeSlider(step=1, format='0', )
         self.dayofyear_range = pn.widgets.EditableRangeSlider(step=1, format='0', )
-        self.hour_range = pn.widgets.EditableRangeSlider(step=1, format='0')
+        self.hour_range = pn.widgets.EditableRangeSlider(step=1, format='0', )
         self.year_selection = pn.widgets.MultiChoice()
         self.month_selection = pn.widgets.MultiChoice()
         self.dayofyear_selection = pn.widgets.MultiChoice()
@@ -303,7 +304,7 @@ class GriddedDataExplorer(param.Parameterized):
                                                              disc_check, selection_widget),))
 
 
-            self.time_units = ['year', 'day of year', 'month', 'hour']
+            self.time_units = ['year', 'dayofyear', 'month', 'hour']
             self.range_widgets = {'year_range':self.year_range,
                                   'dayofyear_range':self.dayofyear_range,
                                   'month_range':self.month_range,
@@ -373,17 +374,13 @@ class GriddedDataExplorer(param.Parameterized):
             _ds = pmv.select_time_range(self.ds_raw, time_var=self.timevar.value,
                                         start_time=self.date_range.value[0], end_time=self.date_range.value[1])
             kwargs = {}
-
             for time_unit, range_widget, selection_widget in zip(self.time_units, self.range_widgets, self.selection_widgets):
-
                 if time_unit in self.time_cond_args:
                     if getattr(self.selection_widgets[selection_widget], 'visible'):
                         kwargs[selection_widget] = getattr(self.selection_widgets[selection_widget], 'value')
                     if getattr(self.range_widgets[range_widget], 'visible'):
                         range_values = getattr(self.range_widgets[range_widget], 'value')
                         kwargs[range_widget] = (int(range_values[0]), int(range_values[1]))
-
-            print(kwargs)
             _ds = pmv.select_time_cond(_ds, time_var=self.timevar.value, **kwargs)
 
             if self.poly is not None:
@@ -444,7 +441,7 @@ class GriddedDataExplorer(param.Parameterized):
             # label = widget.name
             # print(repr(widget))
             # print(dir(widget))
-            ds_ts_plot = plot_avg_timeseries(self.ds, x=self.lonvar.value, y=self.latvar.value,
+            ds_ts_plot = plot_avg_timeseries(self.ds.reindex_like(self.ds_raw), x=self.lonvar.value, y=self.latvar.value,
                                 z=self.zvar.value, time=self.timevar.value)#.opts(width=width)
             # vertical_label = pn.pane.HTML()
             # @pn.depends(widget, watch=True)
