@@ -8,6 +8,7 @@ from pathlib import Path
 
 import requests
 import wget
+import gdown
 from datasize import DataSize
 
 __all__ = ["available", "get_path", "install_roads_dataset"]
@@ -97,6 +98,30 @@ def install_dataset(data_path):
         shutil.copy(user_data_path, installed_filepath)
 
     _dict_available.update({user_data_path.name: installed_filepath})
+
+
+def install_test_datasets():
+    """
+    Install the bundle of test datasets
+    """
+
+    url = 'https://drive.google.com/drive/folders/1eAqSKblWpM5kqqEByf6YaiRWywZFMKvJ?usp=sharing'
+    install_path = Path(_module_path) / "user_datasets"
+    install_path.mkdir(exist_ok=True)
+
+    # Download to test_data_bundle
+    download_path = install_path / "test_data_bundle"
+
+    # Delete test_data_bundle if it exists
+    shutil.rmtree(download_path, ignore_errors=True)
+
+    download_path.mkdir()
+
+    try:
+        downloaded_files = gdown.download_folder(url, output=str(download_path))
+        print("Installed test datasets.")
+    except BaseException as e:
+        print(f"\nFailed to install datasets because of {e!r}")
 
 
 def install_roads_dataset():

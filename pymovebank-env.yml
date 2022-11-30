@@ -25,6 +25,7 @@ dependencies:
 - dataprep
 - conda-forge::ffmpeg
 - anaconda::git
+- conda-forge::gdown
 - pip
 - pip:
     - git+https://github.com/jemissik/pymovebank.git@develop

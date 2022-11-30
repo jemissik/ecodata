@@ -70,7 +70,7 @@ class GriddedDataExplorer(param.Parameterized):
 
     # Time selection widgets
     date_range = param_widget(pn.widgets.DateRangeSlider(name="Date range",
-                                                         start=dt.date.today() - dt.timedelta(1), end=dt.date.today()))
+                                                         start=dt.date.today() - dt.timedelta(1), end=dt.date.today(), sizing_mode='fixed'))
 
     # year_range = param_widget(pn.widgets.EditableRangeSlider(name='Year range', step=1, format='0',))
     # month_range = param_widget(pn.widgets.EditableRangeSlider(name='Month range', step=1, format='0', ))
@@ -100,7 +100,7 @@ class GriddedDataExplorer(param.Parameterized):
 
     # Time resampling
     rs_time_quantity = param_widget(pn.widgets.FloatInput(name='Amount', value=1., step=1e-1, start=0, end=100, sizing_mode='fixed'))
-    rs_time_unit = param_widget(pn.widgets.Select(options={'Days':'D', 'Hours':'H'}, name='Time unit', sizing_mode='fixed'))
+    rs_time_unit = param_widget(pn.widgets.Select(options={'Days':'D', 'Hours':'H'}, name='Time unit', sizing_mode='stretch_width'))
     rs_time = param_widget(pn.widgets.Button(button_type='primary', name='Resample time', align='end', sizing_mode='fixed'))
 
     # Spatial resolution
@@ -156,10 +156,11 @@ class GriddedDataExplorer(param.Parameterized):
         self.load_polyfile.name = 'Load file'
         self.date_range.name = "Date range selection"
 
+        # commas at the end are necessary for endpoints to be
         self.year_range = pn.widgets.EditableRangeSlider(step=1, format='0', )
         self.month_range = pn.widgets.EditableRangeSlider(step=1, format='0', )
         self.dayofyear_range = pn.widgets.EditableRangeSlider(step=1, format='0', )
-        self.hour_range = pn.widgets.EditableRangeSlider(step=1, format='0')
+        self.hour_range = pn.widgets.EditableRangeSlider(step=1, format='0', )
         self.year_selection = pn.widgets.MultiChoice()
         self.month_selection = pn.widgets.MultiChoice()
         self.dayofyear_selection = pn.widgets.MultiChoice()
@@ -264,7 +265,7 @@ class GriddedDataExplorer(param.Parameterized):
 
             self.date_range = pn.widgets.DateRangeSlider(name="Date range selection",
                                                          start=self.ds_raw[self.timevar.value].min().values,
-                                                         end=self.ds_raw[self.timevar.value].max().values)
+                                                         end=self.ds_raw[self.timevar.value].max().values, sizing_mode="stretch_width")
 
             self.time_cond_args =[]
             tabs = pn.Tabs()
@@ -303,11 +304,19 @@ class GriddedDataExplorer(param.Parameterized):
                                                              disc_check, selection_widget),))
 
 
-            time_units = ['year', 'day of year', 'month', 'hour']
-            range_widgets = [self.year_range, self.dayofyear_range, self.month_range, self.hour_range]
-            selection_widgets = [self.year_selection, self.dayofyear_selection, self.month_selection, self.hour_selection]
+            self.time_units = ['year', 'dayofyear', 'month', 'hour']
+            self.range_widgets = {'year_range':self.year_range,
+                                  'dayofyear_range':self.dayofyear_range,
+                                  'month_range':self.month_range,
+                                  'hour_range':self.hour_range}
+            self.selection_widgets = {'years':self.year_selection,
+                                      'daysofyear':self.dayofyear_selection,
+                                      'months':self.month_selection,
+                                      'hours':self.hour_selection}
 
-            for time_unit, range_widget, selection_widget in zip(time_units, range_widgets, selection_widgets):
+            for time_unit, range_widget, selection_widget in zip(self.time_units,
+                                                                 self.range_widgets.values(),
+                                                                 self.selection_widgets.values()):
                 update_time_selection(time_unit, range_widget, selection_widget)
 
             self.sidebar[0].objects = [
@@ -365,18 +374,13 @@ class GriddedDataExplorer(param.Parameterized):
             _ds = pmv.select_time_range(self.ds_raw, time_var=self.timevar.value,
                                         start_time=self.date_range.value[0], end_time=self.date_range.value[1])
             kwargs = {}
-            if 'year' in self.time_cond_args:
-                kwargs['years'] = self.year_selection.value
-                kwargs['year_range'] = self.year_range.value
-            if 'month' in self.time_cond_args:
-                kwargs['months'] = self.month_selection.value
-                kwargs['month_range'] = self.month_range.value
-            if 'dayofyear' in self.time_cond_args:
-                kwargs['daysofyear'] = self.dayofyear_selection.value
-                kwargs['dayofyear_range'] = self.dayofyear_range.value
-            if 'hour' in self.time_cond_args:
-                kwargs['hours'] = self.hour_selection.value
-                kwargs['hour_range'] = self.hour_range.value
+            for time_unit, range_widget, selection_widget in zip(self.time_units, self.range_widgets, self.selection_widgets):
+                if time_unit in self.time_cond_args:
+                    if getattr(self.selection_widgets[selection_widget], 'visible'):
+                        kwargs[selection_widget] = getattr(self.selection_widgets[selection_widget], 'value')
+                    if getattr(self.range_widgets[range_widget], 'visible'):
+                        range_values = getattr(self.range_widgets[range_widget], 'value')
+                        kwargs[range_widget] = (int(range_values[0]), int(range_values[1]))
             _ds = pmv.select_time_cond(_ds, time_var=self.timevar.value, **kwargs)
 
             if self.poly is not None:
@@ -437,7 +441,7 @@ class GriddedDataExplorer(param.Parameterized):
             # label = widget.name
             # print(repr(widget))
             # print(dir(widget))
-            ds_ts_plot = plot_avg_timeseries(self.ds, x=self.lonvar.value, y=self.latvar.value,
+            ds_ts_plot = plot_avg_timeseries(self.ds.reindex_like(self.ds_raw), x=self.lonvar.value, y=self.latvar.value,
                                 z=self.zvar.value, time=self.timevar.value)#.opts(width=width)
             # vertical_label = pn.pane.HTML()
             # @pn.depends(widget, watch=True)
