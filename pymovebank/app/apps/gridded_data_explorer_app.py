@@ -70,7 +70,9 @@ class GriddedDataExplorer(param.Parameterized):
 
     # Time selection widgets
     date_range = param_widget(pn.widgets.DateRangeSlider(name="Date range",
-                                                         start=dt.date.today() - dt.timedelta(1), end=dt.date.today(), sizing_mode='fixed'))
+                                                         start=dt.date.today() - dt.timedelta(1),
+                                                         end=dt.date.today(),
+                                                         ))
 
     # year_range = param_widget(pn.widgets.EditableRangeSlider(name='Year range', step=1, format='0',))
     # month_range = param_widget(pn.widgets.EditableRangeSlider(name='Month range', step=1, format='0', ))
@@ -154,7 +156,6 @@ class GriddedDataExplorer(param.Parameterized):
 
         self.polyfile.name = "Polygon file"
         self.load_polyfile.name = 'Load file'
-        self.date_range.name = "Date range selection"
 
         # commas at the end are necessary for endpoints to be
         self.year_range = pn.widgets.EditableRangeSlider(step=1, format='0', )
@@ -229,7 +230,7 @@ class GriddedDataExplorer(param.Parameterized):
                 self.rs_time,
                 self.space_coarsen_factor,
                 self.rs_space)),
-            active=[0]
+            active=[0, 1]
         )
 
         self.plot_col = pn.Column(height_policy="max")
@@ -263,9 +264,10 @@ class GriddedDataExplorer(param.Parameterized):
             self.status_text = 'Updating widgets'
 
 
-            self.date_range = pn.widgets.DateRangeSlider(name="Date range selection",
+            self.date_range = pn.widgets.DateRangeSlider(name="",
                                                          start=self.ds_raw[self.timevar.value].min().values,
-                                                         end=self.ds_raw[self.timevar.value].max().values, sizing_mode="stretch_width")
+                                                         end=self.ds_raw[self.timevar.value].max().values,
+                                                         )
 
             self.time_cond_args =[]
             tabs = pn.Tabs()
@@ -320,8 +322,8 @@ class GriddedDataExplorer(param.Parameterized):
                 update_time_selection(time_unit, range_widget, selection_widget)
 
             self.sidebar[0].objects = [
-                "## Selection options",
                 self.selection_type,
+                "date range selection:",
                 self.date_range,
                 tabs,
                 self.update_filters,
