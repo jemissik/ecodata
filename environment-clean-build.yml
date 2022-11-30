@@ -25,6 +25,7 @@ dependencies:
 - dataprep
 - conda-forge::ffmpeg
 - anaconda::git
+- conda-forge::gdown
 - pip
 - pip:
     - awesome-panel-extensions==20221019.2
