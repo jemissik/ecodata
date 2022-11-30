@@ -59,7 +59,7 @@ class GriddedDataExplorer(param.Parameterized):
     update_varnames = param_widget(pn.widgets.Button(button_type='primary', name='Update variable names', align='end', sizing_mode='fixed'))
 
     polyfile = param_widget(pn.widgets.TextInput(placeholder='Select a file...', name='Polygon file'))
-    load_polyfile = param_widget(pn.widgets.Button(button_type='primary', name='Load data', sizing_mode='fixed', align='end'))
+    load_polyfile = param_widget(pn.widgets.Button(button_type='primary', name='Load data', sizing_mode='fixed', align='start'))
 
 
     status_text = param.String('Ready...')
@@ -523,6 +523,11 @@ class GriddedDataExplorer(param.Parameterized):
     @param.depends("save_ds.value", watch=True)
     def save_dataset(self):
         outfile = Path(self.output_fname.value).resolve()
+
+        # Set the time encoding to match MODIS format
+        self.ds[self.timevar.value].encoding['units'] = 'days since 2000-01-01 00:00:00'
+        print(self.ds.time.encoding)
+
         self.ds.to_netcdf(outfile)
         self.status_text = f'File saved to: {outfile}'
 
