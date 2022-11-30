@@ -32,6 +32,7 @@ dependencies:
 - nodejs>=14
 - conda-forge::ffmpeg
 - anaconda::git
+- conda-forge::gdown
 - pip:
   # - spatialpandas
   - -e .

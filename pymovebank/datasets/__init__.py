@@ -4,4 +4,5 @@ package in the ``small_datasets`` directory. For convenience, other datasets can
 ``user_datasets`` directory, which is ignored by git.
 """
 
-from pymovebank.datasets.dataset_utils import available, get_path, install_dataset, install_roads_dataset
+from pymovebank.datasets.dataset_utils import (available, get_path, install_dataset,
+                                               install_test_datasets, install_roads_dataset)
