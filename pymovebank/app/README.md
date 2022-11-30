@@ -4,7 +4,7 @@
 
 **Note** The apps are still under development, and installation will be simplified soon!
 
-## Installing the apps from command line (alternative method)
+## Installing the apps from command line
 
 1. Install Anaconda [Download installer here](https://www.anaconda.com/products/distribution)
     - **For windows:** Downgrade conda to the previous version. In the Anaconda Powershell prompt, run:
