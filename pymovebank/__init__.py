@@ -1,3 +1,15 @@
+"""
+pymovebank package
+"""
+
+try:
+    from pymovebank.__version__ import version
+
+    __version__ = version
+except ImportError:
+    # Package not installed
+    ___version__ = "0.0.0"
+
 from pymovebank.datasets import *
 from pymovebank.functions import (
     get_crs,
