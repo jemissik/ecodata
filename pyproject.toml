@@ -2,6 +2,46 @@
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "pymovebank"
+version = "0.0.0"
+description = ""
+classifiers = [
+    "Programming Language :: Python :: 3"
+]
+dependencies = [
+    "xarray",
+    "cfgrib",
+    "geopandas",
+    "shapely",
+    "matplotlib",
+    "pandas",
+    "cartopy",
+    "ipython",
+    "ipykernel",
+    "wget",
+    "gdown",
+    "requests",
+    "datasize",
+    "click",
+]
+
+[tool.setuptools]
+packages = ["pymovebank"]
+
+[tool.setuptools.package-data]
+"pymovebank.datasets" = [
+    "small_datasets/*.csv",
+    "small_datasets/*.gdb/*",
+    "small_datasets/*.shp",
+]
+"*" = [
+    "*.yaml",
+    "*.css",
+    "*.html"
+]
+
+
 [tool.isort]
 profile = "black"
 multi_line_output = 3
