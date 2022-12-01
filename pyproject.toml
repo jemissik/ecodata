@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pymovebank"
-version = "0.0.0"
+dynamic = ["version"]
 description = ""
 classifiers = [
     "Programming Language :: Python :: 3"
@@ -28,6 +28,9 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["pymovebank"]
+
+[tool.setuptools_scm]
+write_to = "pymovebank/__version__.py"
 
 [tool.setuptools.package-data]
 "pymovebank.datasets" = [
