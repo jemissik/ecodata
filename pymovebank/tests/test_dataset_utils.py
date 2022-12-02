@@ -1,7 +1,7 @@
 import pymovebank
 import pytest
 
-
+@pytest.mark.skip(reason="Needs updating for new test datasets")
 def test_that_valid_dataset_returns_correct_path():
     # Given a valid dataset
     dataset = "Y2Y_Region_Boundary"
