@@ -22,5 +22,5 @@ def test_that_invalid_dataset_raises_error():
 
     # When get_path is called
     # ValueError is raised
-    with pytest.raises(ValueError):
+    with pytest.raises((ValueError, TypeError)):
         pymovebank.get_path(invalid_dataset)
