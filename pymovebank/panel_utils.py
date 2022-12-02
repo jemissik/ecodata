@@ -1,3 +1,4 @@
+from __future__ import annotations
 import param
 import panel as pn
 import functools
@@ -6,8 +7,12 @@ import subprocess
 import os
 import shlex
 from pathlib import Path
+from typing import Callable, Sequence, Union
 
 from tkinter import Tk, filedialog
+
+Servable = Union[Callable, pn.viewable.Viewable]
+
 IS_WINDOWS = os.name == "nt"
 
 logger = logging.getLogger(__file__)
@@ -104,3 +109,21 @@ def make_mp4_from_frames(frames_dir, output_file, frame_rate):
     -c:v libx264 -pix_fmt yuv420p -y {output_file}"""
 
     subprocess.run(split_shell_command(cmd))
+
+def templater(
+        template: pn.template.BaseTemplate,
+        main: Servable | Sequence[Servable] = (),
+        sidebar: Servable | Sequence[Servable] = (),
+        header: Servable | Sequence[Servable] = (),
+):
+    main = main if isinstance(main, Sequence) else [main]
+    sidebar = sidebar if isinstance(sidebar, Sequence) else [sidebar]
+    header = header if isinstance(header, Sequence) else [header]
+    for app in main:
+        template.main.append(app)
+    for app in sidebar:
+        template.sidebar.append(app)
+    for app in header:
+        template.header.append(app)
+
+    return template
