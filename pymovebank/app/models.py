@@ -19,7 +19,7 @@ from typing import (
 import param
 import panel as pn
 
-from pymovebank.app.models import config
+from pymovebank.app import config
 
 
 class PMVCard(pn.Card):

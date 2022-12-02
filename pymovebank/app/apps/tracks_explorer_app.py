@@ -35,9 +35,9 @@ from pathlib import Path
 
 import pymovebank as pmv
 from pymovebank.plotting import map_tile_options, plot_tracks_with_tiles
-from pymovebank.panel_utils import select_file, select_output, param_widget, try_catch
-from pymovebank.app.models import config
-from pymovebank.app.models.models import PMVCard, FileSelector
+from pymovebank.panel_utils import param_widget, try_catch, templater
+from pymovebank.app import config
+from pymovebank.app.models import PMVCard, FileSelector
 
 # from panel_jstree.widgets.jstree import FileTree
 
@@ -228,13 +228,10 @@ class TracksExplorer(param.Parameterized):
         self.status_text = "Plot created!"
 
 
-def view():
-    _, template = config.extension(url="tracks_explorer_app")
+@config.register_view()
+def view(app):
     viewer = TracksExplorer()
-
-    template.sidebar.append(viewer.options_col)
-    template.main.append(viewer.view)
-    return template
+    return templater(app.template, main=[viewer.view], sidebar=[viewer.options_col])
 
 
 if __name__ == "__main__":
