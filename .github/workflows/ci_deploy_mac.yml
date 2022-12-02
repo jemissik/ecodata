@@ -1,6 +1,6 @@
-name: ci_linux
+name: ci_deploy_mac
 on:
-  # push:
+  push:
   pull_request:
     branches:
       - develop
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
 
@@ -17,14 +17,13 @@ jobs:
         with:
             miniforge-variant: Mambaforge
             miniforge-version: latest
-            activate-environment: pmv-dev
-            environment-file: ./pymovebank-dev-env.yml
+            activate-environment: pmv-x86
+            environment-file: environment-x86-lock.yml
             use-mamba: true
 
-      - name: Run tests
+      - name: Install package
         shell: bash -l {0}
         run: |
-          pwd
-          conda list
-          pip freeze
+          pip install git+https://github.com/jemissik/pymovebank.git@${{ github.ref_name }}
+          pip install pytest
           pytest -s
