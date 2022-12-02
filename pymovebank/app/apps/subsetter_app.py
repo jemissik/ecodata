@@ -21,8 +21,8 @@ import panel as pn
 
 import param
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
-from pymovebank.panel_utils import param_widget, try_catch
-from pymovebank.app.models import config
+from pymovebank.panel_utils import param_widget, try_catch, templater
+from pymovebank.app import config
 
 # from holoviews.operation.datashader import datashade, shade, dynspread, spread
 
@@ -191,12 +191,10 @@ class Subsetter(param.Parameterized):
             stop_loading_spinner(self.view)
 
 
-def view():
-    _, template = config.extension('tabulator', url="subsetter_app")
+@config.register_view()
+def view(app):
     viewer = Subsetter()
-
-    template.main.append(viewer.view)
-    return template
+    return templater(app.template, main=[viewer.view])
 
 
 if __name__ == "__main__":

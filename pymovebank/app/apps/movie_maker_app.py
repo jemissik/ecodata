@@ -7,8 +7,8 @@ import panel as pn
 
 import param
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
-from pymovebank.panel_utils import param_widget
-from pymovebank.app.models import config
+from pymovebank.panel_utils import param_widget, templater
+from pymovebank.app import config
 
 # from holoviews.operation.datashader import datashade, shade, dynspread, spread
 
@@ -84,13 +84,9 @@ class MovieMaker(param.Parameterized):
             stop_loading_spinner(self.view)
 
 
-def view():
-    _, template = config.extension(url="movie_maker_app")
-    viewer = MovieMaker()
-
-    template.main.append(viewer.view)
-    return template
-
+@config.register_view()
+def view(app):
+    return templater(app.template, main=[MovieMaker().view])
 
 if __name__ == "__main__":
     pn.serve({"movie_maker_app": view})
