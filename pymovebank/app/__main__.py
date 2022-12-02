@@ -4,10 +4,10 @@ import panel as pn
 # as the apps dict is defined. this is because
 # when the apps dict is imported, then it imports each app,
 # which registers them
-from pymovebank.app.apps import apps
+from pymovebank.app.apps import applications
 
 if __name__ == "__main__":
     pn.serve(
-        apps,
+        applications,
         port=5006
     )

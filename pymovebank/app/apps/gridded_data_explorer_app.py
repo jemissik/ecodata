@@ -532,15 +532,6 @@ class GriddedDataExplorer(param.Parameterized):
         self.status_text = f'File saved to: {outfile}'
 
 
-def view():
-    _, template = config.extension('tabulator', url="gridded_data_explorer_app")
-    viewer = GriddedDataExplorer()
-    template.sidebar.append(viewer.sidebar)
-    template.main.append(viewer.figs_with_widget)
-    template.main.append(viewer.view)
-    return template
-
-
 @config.register_view()
 def view(app):
     viewer = GriddedDataExplorer()

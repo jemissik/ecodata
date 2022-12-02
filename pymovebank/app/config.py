@@ -11,7 +11,7 @@ from awesome_panel_extensions.site.models import Application
 from panel.template import FastGridTemplate, FastListTemplate, GoldenTemplate
 
 from pymovebank.app.assets import menu_fast_html, list_links_html, APPLICATIONS_CONFIG_PATH, FAST_CSS, FAST_CSS_PATH
-from pymovebank.app.apps import apps
+from pymovebank.app.apps import applications
 
 SITE = "Movement Data Aggregator"
 
@@ -88,7 +88,7 @@ def register_view(*ext_args, url=None, **ext_kw):
             app = extension(url=url, *ext_args, **ext_kw)
 
             return view(app, *args, **kwargs)
-        apps[url] = wrapped_app
+        applications[url] = wrapped_app
         return wrapped_app
     return inner
 
