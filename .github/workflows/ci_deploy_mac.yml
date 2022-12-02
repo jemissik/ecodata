@@ -10,8 +10,6 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
-
       - name: Setup Mambaforge
         uses: conda-incubator/setup-miniconda@v2
         with:
