@@ -1,6 +1,6 @@
 name: ci_linux
 on:
-  # push:
+  push:
   pull_request:
     branches:
       - develop
