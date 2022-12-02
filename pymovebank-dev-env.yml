@@ -33,6 +33,7 @@ dependencies:
 - conda-forge::ffmpeg
 - anaconda::git
 - conda-forge::gdown
+- conda-forge::jupyterlab
 - pip:
   # - spatialpandas
   - -e .
