@@ -17,8 +17,8 @@ jobs:
         with:
             miniforge-variant: Mambaforge
             miniforge-version: latest
-            activate-environment: pmv-x86
-            environment-file: environment-x86-lock.yml
+            activate-environment: pmv
+            environment-file: environment-clean-build.yml
             use-mamba: true
 
       - name: Install package
