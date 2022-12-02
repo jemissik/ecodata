@@ -11,7 +11,6 @@ from awesome_panel_extensions.site.models import Application
 from panel.template import FastGridTemplate, FastListTemplate, GoldenTemplate
 
 from pymovebank.app.assets import menu_fast_html, list_links_html, APPLICATIONS_CONFIG_PATH, FAST_CSS, FAST_CSS_PATH
-from pymovebank.app.apps import applications
 
 SITE = "Movement Data Aggregator"
 
@@ -81,6 +80,7 @@ for _template in _TEMPLATES:
 # when the apps dict is imported, then it imports each app,
 # which registers them
 def register_view(*ext_args, url=None, **ext_kw):
+    from pymovebank.app.apps import applications
     url = url or Path(inspect.stack()[1].filename).stem  # file name of calling file
     def inner(view):
         @wraps(view)
