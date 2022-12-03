@@ -4,14 +4,30 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pymovebank"
-dynamic = ["version", "dependencies", "optional-dependencies"]
+dynamic = ["version"]
 description = ""
 classifiers = [
     "Programming Language :: Python :: 3"
 ]
+dependencies = [
+    "xarray",
+    "cfgrib",
+    "geopandas",
+    "shapely",
+    "matplotlib",
+    "pandas",
+    "cartopy",
+    "ipython",
+    "ipykernel",
+    "wget",
+    "gdown",
+    "requests",
+    "datasize",
+    "click",
+]
 
-[tool.setuptools.packages.find]
-where = ["pymovebank"]
+[tool.setuptools]
+packages = ["pymovebank"]
 
 [tool.setuptools_scm]
 write_to = "pymovebank/__version__.py"

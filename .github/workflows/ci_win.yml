@@ -1,0 +1,25 @@
+name: ci_win
+on:
+  push:
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Mambaforge
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+            miniforge-variant: Mambaforge
+            miniforge-version: latest
+            activate-environment: pmv-dev
+            environment-file: pymovebank-dev-env.yml
+            use-mamba: true
+
+      - name: Run tests
+        shell: pwsh
+        run: pytest -s
