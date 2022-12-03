@@ -29,9 +29,8 @@ from pathlib import Path
 from panel.reactive import ReactiveHTML, Viewable
 
 from pymovebank.plotting import plot_gridded_data, plot_avg_timeseries
-from pymovebank.panel_utils import param_widget, try_catch, templater
+from pymovebank.panel_utils import param_widget, try_catch, templater, register_view
 from pymovebank.xr_tools import detect_varnames
-from pymovebank.app import config
 
 
 class HTML_WidgetBox(ReactiveHTML):
@@ -532,7 +531,7 @@ class GriddedDataExplorer(param.Parameterized):
         self.status_text = f'File saved to: {outfile}'
 
 
-@config.register_view()
+@register_view()
 def view(app):
     viewer = GriddedDataExplorer()
     return templater(app.template, main=[viewer.figs_with_widget, viewer.view], sidebar=[viewer.sidebar])

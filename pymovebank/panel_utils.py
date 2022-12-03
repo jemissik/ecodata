@@ -127,3 +127,27 @@ def templater(
         template.header.append(app)
 
     return template
+
+
+import inspect
+from functools import wraps
+from pathlib import Path
+from pymovebank.app.config import extension
+
+# all registered apps need to be imported to pymovebank.app.apps. this is because
+# when the apps dict is imported, then it imports each app,
+# which registers them
+applications = {}
+
+
+def register_view(*ext_args, url=None, **ext_kw):
+    url = url or Path(inspect.stack()[1].filename).stem  # file name of calling file
+    def inner(view):
+        @wraps(view)
+        def wrapped_app(*args, **kwargs):
+            app = extension(url=url, *ext_args, **ext_kw)
+
+            return view(app, *args, **kwargs)
+        applications[url] = wrapped_app
+        return wrapped_app
+    return inner

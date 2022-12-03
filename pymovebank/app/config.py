@@ -1,9 +1,8 @@
 """Shared configuration and functionality for awesome_panel apps"""
-from functools import wraps
-from pathlib import Path
+
 from typing import Optional, Union
 from urllib.parse import urlsplit
-import inspect
+
 
 import panel as pn
 from awesome_panel_extensions.site.gallery import GalleryTemplate
@@ -11,7 +10,6 @@ from awesome_panel_extensions.site.models import Application
 from panel.template import FastGridTemplate, FastListTemplate, GoldenTemplate
 
 from pymovebank.app.assets import menu_fast_html, list_links_html, APPLICATIONS_CONFIG_PATH, FAST_CSS, FAST_CSS_PATH
-from pymovebank.app.apps import applications
 
 SITE = "Movement Data Aggregator"
 
@@ -74,23 +72,6 @@ for _template in _TEMPLATES:
     if not _template == GalleryTemplate:
         _template.param.header_background.default = ACCENT
         _template.param.sidebar_footer.default = menu_fast_html(accent=ACCENT, jinja_subs=list_html)
-
-
-# all registered apps need to be imported to the same folder
-# as the apps dict is defined. this is because
-# when the apps dict is imported, then it imports each app,
-# which registers them
-def register_view(*ext_args, url=None, **ext_kw):
-    url = url or Path(inspect.stack()[1].filename).stem  # file name of calling file
-    def inner(view):
-        @wraps(view)
-        def wrapped_app(*args, **kwargs):
-            app = extension(url=url, *ext_args, **ext_kw)
-
-            return view(app, *args, **kwargs)
-        applications[url] = wrapped_app
-        return wrapped_app
-    return inner
 
 
 def extension(
