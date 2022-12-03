@@ -25,5 +25,7 @@ jobs:
         shell: bash -l {0}
         run: |
           cd ~
-          pip install git+https://github.com/jemissik/pymovebank.git@${{ github.ref_name }}
+          pwd
+          ls
+          pip install git+https://github.com/jemissik/pymovebank.git@${{ github.sha }}
           python -c 'import pymovebank; print(pymovebank.available()); import pymovebank.app.apps.tracks_explorer_app'
