@@ -1,6 +1,5 @@
 name: ci_win
 on:
-  push:
   pull_request:
     branches:
       - develop

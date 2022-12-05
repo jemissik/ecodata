@@ -1,5 +1,6 @@
 import pytest
 import panel as pn
+import time
 from pymovebank.app.apps import applications
 
 
@@ -20,6 +21,7 @@ def apps():
 @pytest.fixture()
 def serve_apps(port, apps):
     server = pn.serve(apps, port=port, threaded=True, show=False)
+    time.sleep(1) # Wait for server to start
     yield server
     try:
         server.stop()

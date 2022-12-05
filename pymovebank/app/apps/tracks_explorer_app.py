@@ -35,14 +35,12 @@ from pathlib import Path
 
 import pymovebank as pmv
 from pymovebank.plotting import map_tile_options, plot_tracks_with_tiles
-from pymovebank.panel_utils import param_widget, try_catch, templater
-from pymovebank.app import config
+from pymovebank.panel_utils import param_widget, try_catch, templater, register_view
 from pymovebank.app.models import PMVCard, FileSelector
 
 # from panel_jstree.widgets.jstree import FileTree
 
 
-# %%
 class TracksExplorer(param.Parameterized):
 
     load_tracks_button = param_widget(pn.widgets.Button(button_type='primary', name='Load data'))
@@ -228,7 +226,7 @@ class TracksExplorer(param.Parameterized):
         self.status_text = "Plot created!"
 
 
-@config.register_view()
+@register_view()
 def view(app):
     viewer = TracksExplorer()
     return templater(app.template, main=[viewer.view], sidebar=[viewer.options_col])

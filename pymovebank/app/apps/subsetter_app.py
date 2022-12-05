@@ -21,14 +21,11 @@ import panel as pn
 
 import param
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
-from pymovebank.panel_utils import param_widget, try_catch, templater
-from pymovebank.app import config
-
-# from holoviews.operation.datashader import datashade, shade, dynspread, spread
+from pymovebank.panel_utils import param_widget, try_catch, templater, register_view
 
 logger = logging.getLogger(__file__)
 
-# %% pycharm={"name": "#%%\n"}
+
 class Subsetter(param.Parameterized):
 
     # Input GIS file
@@ -191,7 +188,7 @@ class Subsetter(param.Parameterized):
             stop_loading_spinner(self.view)
 
 
-@config.register_view()
+@register_view()
 def view(app):
     viewer = Subsetter()
     return templater(app.template, main=[viewer.view])

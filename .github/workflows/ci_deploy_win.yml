@@ -1,13 +1,12 @@
-name: ci_deploy_mac
+name: ci_deploy_win
 on:
   pull_request:
     branches:
       - develop
       - main
-
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
 
@@ -21,7 +20,7 @@ jobs:
             use-mamba: true
 
       - name: Install package
-        shell: bash -l {0}
+        shell: pwsh
         run: |
           cd ~
           pwd
