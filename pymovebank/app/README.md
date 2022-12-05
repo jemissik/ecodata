@@ -13,7 +13,7 @@
     conda install conda=4.14
     ```
 
-2. Download the environment file for your operating system [Download files here](https://jemissik.github.io/pymovebank/apps/environment_files.html)
+2. Download the environment file for your operating system [Download files here](https://jemissik.github.io/pymovebank/apps/environment_files.html).
 
 3. Open a terminal (for windows, use Anaconda Powershell)
 4. Navigate to the directory where you saved the environment file. Run ``cd <path_to_directory>`` (note that you need to replace the path with the actual path to the directory where you saved the file), for example:
@@ -57,6 +57,8 @@
     #
     #     $ conda deactivate
     ```
+
+    If there were issues with the installation, try using the "All platforms" environment file instead. 
 
 7. After the python environment is completed, you need to install the aggregator app itself. From the terminal, run:
 
