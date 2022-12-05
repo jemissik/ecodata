@@ -1,6 +1,5 @@
 name: ci_deploy_win
 on:
-  push:
   pull_request:
     branches:
       - develop
