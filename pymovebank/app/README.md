@@ -58,13 +58,13 @@
     #     $ conda deactivate
     ```
 
-    If there were issues with the installation, try using the "All platforms" environment file instead. 
+    If there were issues with the installation, try using the "All platforms" environment file instead.
 
 7. After the python environment is completed, you need to install the aggregator app itself. From the terminal, run:
 
     ```bash
     conda activate pmv
-    pip install git+https://github.com/jemissik/pymovebank.git@develop
+    pip install git+https://github.com/jemissik/pymovebank.git@main
     ```
 
 
@@ -93,5 +93,5 @@ If there are new updates to the apps, you can update your version of the apps by
 ```bash
 conda activate pmv
 pip uninstall pymovebank
-pip install git+https://github.com/jemissik/pymovebank.git@develop
+pip install git+https://github.com/jemissik/pymovebank.git@main
 ```
