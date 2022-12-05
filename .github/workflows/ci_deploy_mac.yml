@@ -1,0 +1,30 @@
+name: ci_deploy_mac
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Mambaforge
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+            miniforge-variant: Mambaforge
+            miniforge-version: latest
+            activate-environment: pmv
+            environment-file: environment-clean-build.yml
+            use-mamba: true
+
+      - name: Install package
+        shell: bash -l {0}
+        run: |
+          cd ~
+          pwd
+          ls
+          pip install git+https://github.com/jemissik/pymovebank.git@${{ github.sha }}
+          python -c 'import pymovebank; print(pymovebank.available()); import pymovebank.app.apps.tracks_explorer_app'

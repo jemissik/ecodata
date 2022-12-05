@@ -1,0 +1,13 @@
+name: pymovebank
+version: X
+installer_type: all
+post_install: post_install.sh  # [unix]
+post_install: post_install.bat  # [win]
+
+channels:
+  - https://repo.anaconda.com/pkgs/main/
+  - https://conda.anaconda.org/pyviz/
+  - https://conda.anaconda.org/conda-forge/
+
+#environment_file: ../pymovebank-env.yml
+environment: pmv

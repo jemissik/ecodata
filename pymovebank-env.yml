@@ -1,21 +1,32 @@
-name: pymovebank-env
+name: pmv
 channels:
-  - conda-forge
-  - defaults
+- pyviz
+- conda-forge
+- defaults
 dependencies:
-  - python=3.9
-  - xarray
-  - cfgrib
-  - geopandas
-  - shapely<1.8.2
-  - matplotlib
-  - pandas
-  - cartopy
-  - ipython
-  - ipykernel
-  - pip
-  - pip:
-    - wget
-    - requests
-    - datasize
-    - -e .  # Installs pymovebank in editable mode
+- python=3.9
+- cartopy
+- geopandas
+- matplotlib
+- pandas
+- shapely<1.8.2
+- xarray
+- dask
+- netCDF4
+- bottleneck
+- cfgrib
+- rasterio
+- conda-forge::rioxarray
+- pyviz::hvplot
+- pyviz::panel
+- pyviz::datashader
+- pyviz::geoviews
+- conda-forge::geocube
+- dataprep
+- conda-forge::ffmpeg
+- anaconda::git
+- conda-forge::gdown
+- pip
+- pip:
+    - git+https://github.com/jemissik/pymovebank.git@develop
+    - awesome-panel-extensions==20221019.2

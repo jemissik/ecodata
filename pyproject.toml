@@ -1,6 +1,49 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "pymovebank"
+dynamic = ["version"]
+description = ""
+classifiers = [
+    "Programming Language :: Python :: 3"
+]
+dependencies = [
+    "xarray",
+    "cfgrib",
+    "geopandas",
+    "shapely",
+    "matplotlib",
+    "pandas",
+    "cartopy",
+    "ipython",
+    "ipykernel",
+    "wget",
+    "gdown",
+    "requests",
+    "datasize",
+    "click",
+]
+
+[tool.setuptools]
+packages = ["pymovebank"]
+
+[tool.setuptools_scm]
+write_to = "pymovebank/__version__.py"
+
+[tool.setuptools.package-data]
+"pymovebank.datasets" = [
+    "small_datasets/*.csv",
+    "small_datasets/*.gdb/*",
+    "small_datasets/*.shp",
+]
+"*" = [
+    "*.yaml",
+    "*.css",
+    "*.html"
+]
+
 
 [tool.isort]
 profile = "black"
@@ -27,3 +70,6 @@ exclude = '''
     )
 )
 '''
+
+[tool.jupytext]
+formats = "apps/notebooks///ipynb,apps/scripts///py:percent"
