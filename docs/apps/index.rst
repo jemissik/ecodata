@@ -7,3 +7,4 @@ Apps
 
     installation
     environment_files
+    user_guide
