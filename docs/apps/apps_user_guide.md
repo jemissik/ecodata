@@ -1,5 +1,6 @@
 # Tracks explorer
 
+![tracks_explorer](images/tracks_explorer.png)
 ## App features
 
 - Visualize Movebank tracks data using either an aggregated point density map (good for visualizing patterns) or a
@@ -31,6 +32,8 @@ Once you have a .geojson file from the Tracks Explorer app, you can submit a req
 - In "Output options" at the bottom of the page, select “NetCDF-4” as the file format and “Geographic” as the projection.
 
 # Gridded data explorer
+
+![gridded_data_explorer](images/gridded_data_explorer.png)
 
 ## Using the app
 1. Under "Input environmental dataset", paste the full filepath to a netcdf (.nc) file (e.g. from NASA AppEEARS).
