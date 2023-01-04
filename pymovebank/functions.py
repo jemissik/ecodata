@@ -1,6 +1,9 @@
 """Python functions for data subsetting and file conversion.
 See the notebooks in the examples section for demos of how these are used."""
+from __future__ import annotations
 
+import re
+import numpy as np
 import glob
 import fiona
 import geopandas as gpd
@@ -12,7 +15,6 @@ from pathlib import Path
 from shapely.geometry import Polygon
 import cartopy.crs as ccrs
 import geoviews as gv
-from dataprep.clean import clean_headers
 
 
 import warnings
@@ -592,3 +594,91 @@ def get_file_len(filepath):
     with fiona.open(filepath) as f:
         flen = len(f)
     return flen
+
+
+def clean_headers(
+    df,
+    report=True,
+):
+    """
+    Function to clean column headers (column names).
+
+    Read more in the :ref:`User Guide <clean_headers_user_guide>`.
+
+    Parameters
+    ----------
+    df
+        Dataframe from which column names are to be cleaned.
+    report
+        If True, output the summary report. Otherwise, no report is outputted.
+
+        (default: True)
+    """
+    # Store original column names for creating cleaning report
+    orig_columns = df.columns.astype(str).tolist()
+
+    df = df.rename(columns=lambda col: _convert_case(col))
+
+    df.columns = _rename_duplicates(df.columns)
+
+    # Count the number of changed column names
+    new_columns = df.columns.astype(str).tolist()
+    cleaned = [1 if new_columns[i] != orig_columns[i] else 0 for i in range(len(orig_columns))]
+    stats = {"cleaned": sum(cleaned)}
+
+    # Output a report describing the result of clean_headers
+    if report:
+        _create_report(stats, len(df.columns))
+
+    return df
+
+def _convert_case(name):
+    """
+    Convert case style of a column name.
+
+    Parameters
+    ----------
+    name
+        Column name.
+    case
+        The desired case style of the column name.
+    """
+    NULL_VALUES = {np.nan, "", None}
+    if name in NULL_VALUES:
+        name = "header"
+
+    string = re.sub(r"[!()*+\,\-./:;<=>?[\]^_{|}~]", " ", name)
+    string = re.sub(r"[\'\"\`]", "", string)
+
+    words = re.sub(r"([A-Z][a-z]+)", r" \1", re.sub(r"([A-Z]+|[0-9]+|\W+)", r" \1", string)).split()
+
+    name = "_".join(words).lower()
+
+    return name
+
+def _rename_duplicates(names):
+    """
+    Rename duplicated column names to append a number at the end.
+    """
+    sep = "_"
+
+    names = list(names)
+    counts = {}
+
+    for i, col in enumerate(names):
+        cur_count = counts.get(col, 0)
+        if cur_count > 0:
+            names[i] = f"{col}{sep}{cur_count}"
+        counts[col] = cur_count + 1
+
+    return names
+
+def _create_report(stats: dict[str, int], ncols: int) -> None:
+    """
+    Describe what was done in the cleaning process.
+    """
+    print("Column Headers Cleaning Report:")
+    if stats["cleaned"] > 0:
+        nclnd = stats["cleaned"]
+        pclnd = round(nclnd / ncols * 100, 2)
+        print(f"\t{nclnd} values cleaned ({pclnd}%)")
