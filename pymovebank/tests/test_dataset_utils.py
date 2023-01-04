@@ -1,9 +1,7 @@
 import pymovebank
 import pytest
 
-def test_that_test_data_bundle_installs():
-
-    pymovebank.install_test_datasets()
+def test_that_test_data_bundle_installs(install_test_data):
 
     # Files that should be in the test dataset
     data_files = {
@@ -21,10 +19,9 @@ def test_that_test_data_bundle_installs():
 
     assert data_files.issubset(pymovebank.available())
 
-def test_that_installing_test_bundle_works_if_already_installed():
+def test_that_installing_test_bundle_works_if_already_installed(install_test_data):
 
-    # Run the install method twice
-    pymovebank.install_test_datasets()
+    # Run the install method again
     pymovebank.install_test_datasets()
 
 @pytest.mark.skip(reason="Needs updating for new test datasets")
