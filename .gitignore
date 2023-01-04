@@ -20,6 +20,9 @@ scripts/pymovebank-*.sh
 #small datasets (for now)
 pymovebank/datasets/small_datasets/*
 
+#test datasets
+pymovebank/datasets/test_datasets/*
+
 # App notebooks
 apps/notebooks/*
 

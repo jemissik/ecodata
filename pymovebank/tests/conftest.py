@@ -1,6 +1,7 @@
 import pytest
 import panel as pn
 import time
+import pymovebank
 from pymovebank.app.apps import applications
 
 
@@ -27,3 +28,8 @@ def serve_apps(port, apps):
         server.stop()
     except AssertionError:
         pass  # tests may already close this
+
+
+@pytest.fixture(scope="session")
+def install_test_data():
+    pymovebank.install_test_datasets()
