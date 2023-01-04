@@ -54,3 +54,15 @@ using Anaconda Navigator's graphical interface.
 that it is recommended to use `conda` instead of `pip` to install the required
 packages for pymovebank. If you use `pip` the dependencies might not be installed
 correctly. See [here](https://geopandas.org/en/stable/getting_started/install.html#installing-with-pip) for more information.
+
+
+## Install the test data bundle
+
+To install the test data bundle:
+
+```python
+import pymovebank as pmv
+pmv.install_test_datasets()
+```
+
+The test data bundle can also be downloaded directly [here](https://drive.google.com/drive/folders/1eAqSKblWpM5kqqEByf6YaiRWywZFMKvJ?usp=sharing)
