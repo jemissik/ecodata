@@ -22,7 +22,7 @@ maxdepth: 2
 ---
 installation
 environment_files
-user_guide
+user_guide/index
 ```
 
 # Indices and tables
