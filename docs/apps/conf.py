@@ -18,6 +18,6 @@ sys.path.insert(0, os.path.abspath("../../pymovebank/"))
 
 # -- Project information -----------------------------------------------------
 
-project = "PyMovebank"
+project = "ECODATA Apps"
 copyright = "2023, Justine Missik"
 author = "Justine Missik"
