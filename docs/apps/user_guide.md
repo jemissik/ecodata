@@ -1,14 +1,15 @@
-# Tracks explorer
+# User guide
+## Tracks explorer
 
 ![tracks_explorer](images/tracks_explorer.png)
-## App features
+### App features
 
 - Visualize Movebank tracks data using either an aggregated point density map (good for visualizing patterns) or a
 standard plot of all points. Can select from a variety of map tiles to use as a background.
 - Automatically generate a spatial frame around the track points and prepare a .geojson file that can be used in the
 NASA AppEEARS interface to extract remote sensing products for the research area.
 
-## Using the app
+### Using the app
 1. Under "Select File", paste the full filepath to a .csv file of Movebank track data. In the current version, this .csv
 file needs to use Movebank's format.
 2. Click "Load data". An interactive map will appear of your dataset, where you can pan/zoom to explore the dataset.
@@ -22,7 +23,7 @@ boundary shape to a convex hull using the widgets in the sidebar.
 location/file name before you save the file.
 
 
-## Requesting environmental data from NASA AppEEARS
+### Requesting environmental data from NASA AppEEARS
 
 Once you have a .geojson file from the Tracks Explorer app, you can submit a request for NASA data.
 - Go to [NASA AppEEARS](https://appeears.earthdatacloud.nasa.gov). You will need to make an account to request data.
@@ -31,11 +32,11 @@ Once you have a .geojson file from the Tracks Explorer app, you can submit a req
 - In the new request page, you can upload the .geojson file, select a date range, and select the data layers you want.
 - In "Output options" at the bottom of the page, select “NetCDF-4” as the file format and “Geographic” as the projection.
 
-# Gridded data explorer
+## Gridded data explorer
 
 ![gridded_data_explorer](images/gridded_data_explorer.png)
 
-## Using the app
+### Using the app
 1. Under "Input environmental dataset", paste the full filepath to a netcdf (.nc) file (e.g. from NASA AppEEARS).
 2. Click "Load data". The app will auto-detect the variables for time, latitude, and longitude in the dataset. If your
 dataset has variable names the auto-detection doesn't recognize, you can specify them manually.
@@ -57,9 +58,9 @@ dataset".
 statistics". A table of the summary statistics will appear, and you have the option to save this table to a .csv file.
 
 
-# Subsetter
+## Subsetter
 
-## Using the app
+### Using the app
 
 1. Paste the full filepath to a GIS dataset (e.g., a shapefile or filegeodatabase).
 2. There are three options for subsetting: specifying bounding box coordinates, providing a movebank track dataset (in
@@ -70,11 +71,11 @@ uncheck the box for "Show plot of subset".
 3. Change the name of the output file if you wish, then click "Create subset". A file will be saved for the subsetted
 dataset, and a plot will appear unless you turned the plotting option off.
 
-# Movie maker
+## Movie maker
 
 The movie maker app is a simple utility to make a video from a stack of frames.
 
-## Using the app
+### Using the app
 1. Paste the full path to the folder of the frames.
 2. Select the frame rate for the video (frames per second).
 3. Change the output filename if you want.
