@@ -14,6 +14,10 @@ Within ECODATA-Prepare,
 
 - The **Movie Maker** app produces an animation file out of a stack of static maps which were produced by the ECODATA-Animate program.
 
+## Python package
+
+The functions underlying the ECODATA-Prepare apps can also be used directly as a python package (i.e. without the GUI inferface). The package documentation is [here](https://pymovebank.readthedocs.io).
+
 # Contents
 
 ```{toctree}
