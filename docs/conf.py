@@ -1,29 +1,8 @@
-# Configuration file for the Sphinx documentation builder.
-#
-# This file only contains a selection of the most common options. For a full
-# list see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
-
-# -- Path setup --------------------------------------------------------------
-
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath(".."))
-sys.path.insert(0, os.path.abspath("../pymovebank/"))
-from pathlib import Path
-
-
-# -- Project information -----------------------------------------------------
-
-project = "PyMovebank"
-copyright = "2022, Justine Missik"
-author = "Justine Missik"
-
+# Projects sharing this configuration file
+multiproject_projects = {
+    "package": {},
+    "apps": {}
+}
 
 # -- General configuration ---------------------------------------------------
 
@@ -31,17 +10,12 @@ author = "Justine Missik"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "multiproject",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",  # Create neat summary tables for modules/classes/methods etc
     "sphinx.ext.napoleon",
-    "sphinx.ext.githubpages",
     "sphinx.ext.todo",
     'myst_nb',
-    # "nbsphinx",
-    # "nbsphinx_link",
-    # "matplotlib.sphinxext.plot_directive",
-    # 'm2r2'
-    # "myst_parser",
 ]
 
 pygments_style='default'
@@ -74,10 +48,7 @@ todo_include_todos = True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
-# html_theme = "sphinx_book_theme"
-# html_theme = 'press'
-# html_theme = 'alabaster'
+
 html_theme = 'pydata_sphinx_theme'
 
 # Add any paths that contain custom static files (such as style sheets) here,

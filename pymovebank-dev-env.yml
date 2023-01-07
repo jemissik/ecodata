@@ -45,6 +45,7 @@ dependencies:
   - pytest
   - requests
   - sphinx_book_theme
+  - sphinx-multiproject
   - wget
   - click
   - build

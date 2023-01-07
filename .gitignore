@@ -37,6 +37,7 @@ build/
 docs/_build/
 #docs autosummary
 docs/_autosummary/
+docs/package/_autosummary
 
 *jupyter_execute
 

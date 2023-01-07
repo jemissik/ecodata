@@ -1,3 +1,5 @@
+# Installing the apps
+
 See below for steps to install and run the ECODATA-Prepare apps. For **Mac/Linux**, you will run the commands below from the built-in Mac "Terminal" application, or any other terminal app. For **Windows**, you will install Anaconda and then run the commands below using the Anaconda Powershell Prompt. You can launch this by searching for "Anaconda Powershell" in the start menu, or by launching Anaconda Navigator and looking for "Powershell Prompt" in the home screen.
 
 **Note:** The apps are still under development, and installation will be simplified soon!
@@ -98,4 +100,3 @@ conda activate pmv
 pip uninstall pymovebank
 pip install git+https://github.com/jemissik/pymovebank.git@main
 ```
-
