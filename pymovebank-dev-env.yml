@@ -44,6 +44,7 @@ dependencies:
   - pydata_sphinx_theme
   - pytest
   - sphinx_book_theme
+  - sphinx-multiproject
   - click
   - build
   - awesome-panel-extensions==20221019.2
