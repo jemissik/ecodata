@@ -9,7 +9,7 @@ dependencies:
 - geopandas
 - matplotlib
 - pandas
-- shapely<1.8.2
+- shapely<2.0
 - xarray
 - dask
 - netCDF4
@@ -22,7 +22,6 @@ dependencies:
 - pyviz::datashader
 - pyviz::geoviews
 - conda-forge::geocube
-- dataprep
 - conda-forge::ffmpeg
 - anaconda::git
 - conda-forge::gdown

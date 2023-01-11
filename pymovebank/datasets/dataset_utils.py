@@ -9,7 +9,6 @@ from pathlib import Path
 import requests
 import wget
 import gdown
-from datasize import DataSize
 
 __all__ = ["available", "get_path", "install_roads_dataset"]
 
@@ -148,10 +147,9 @@ def install_roads_dataset():
         # Get size of requested file
         filesize = requests.head(roads_url).headers["Content-Length"]
         print()
+        in_GB = int(filesize) / (1000**3)
         response = input(
-            "The download is {:.2GB}. Do you want to proceed? [y/n]".format(
-                DataSize(filesize + "B")
-            )
+            "The download is {:.2f}. Do you want to proceed? [y/n]".format(in_GB)
         )
         if response.lower() == "y":
             print(

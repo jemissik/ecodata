@@ -11,7 +11,7 @@ dependencies:
 - pandas
 - pip
 - python=3.9
-- shapely<1.8.2
+- shapely<2.0
 - xarray
 - dask
 - netCDF4
@@ -27,26 +27,24 @@ dependencies:
 - bokeh::jupyter_bokeh  # Enables interactive widgets in vscode
 - conda-forge::geocube
 # - pyviz::spatialpandas
-- dataprep
 - jupytext
 - nodejs>=14
 - conda-forge::ffmpeg
 - anaconda::git
 - conda-forge::gdown
+- conda-forge::python-wget
+- requests
 # - conda-forge::jupyterlab
 - pip:
   # - spatialpandas
   - black
   - conda-merge
-  - datasize
   - isort
   - myst-nb
   - pydata_sphinx_theme
   - pytest
-  - requests
   - sphinx_book_theme
   - sphinx-multiproject
-  - wget
   - click
   - build
   - awesome-panel-extensions==20221019.2
