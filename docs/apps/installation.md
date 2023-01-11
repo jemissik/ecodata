@@ -17,7 +17,7 @@ See below for steps to install and run the ECODATA-Prepare apps. For **Mac/Linux
 
 ## Preparing the Python environment and installing ECODATA-Prepare
 
-3. Download the environment file for your operating system [available here](https://pymovebank.readthedocs.io/en/main/apps/environment_files.html). This file specifies instructions about Python packages used by the apps, and can be deleted following installation.
+3. [Download the conda environment file here](../../environment-clean-build.yml). This file specifies the Python package requirements used by the apps, and can be deleted following installation.
 
 4. Open a terminal (for Windows, use Anaconda Powershell).
 
@@ -40,15 +40,15 @@ See below for steps to install and run the ECODATA-Prepare apps. For **Mac/Linux
 
     Mode                LastWriteTime       Length Name
     ----                -------------       ------ ----
-    -a----      11/30/2022  12:38 PM        23470 environment-win-lock.yml
+    -a----      11/30/2022  12:38 PM        23470 environment-clean-build.yml
     ```
 
 If your directory has many files, replace "ls" with "ls -lt" to sort files by the time they were last modified.
 
-7. Install the environment (note that if your environment file is not called "environment-win-lock.yml", you need to replace this name with the actual name of your file):
+7. Install the environment (note that if your environment file is not called "environment-clean-build.yml", you need to replace this name with the actual name of your file):
 
     ```bash
-    conda env create --file environment-win-lock.yml --name pmv
+    conda env create --file environment-clean-build.yml --name pmv
     ```
 
     This will download all of the packages for the application, so it may take some time to finish, depending on your internet speed. Once the environment is successfully created, the terminal output should look something like:
@@ -65,7 +65,7 @@ If your directory has many files, replace "ls" with "ls -lt" to sort files by th
     #   $ conda deactivate
     ```
 
-    If there were issues with the installation, try using the "All platforms" environment file instead.
+    If there were issues with the installation, you can try using the locked environment file for your operating system instead, [available here](https://pymovebank.readthedocs.io/en/main/apps/environment_files.html)
 
 8. After the Python environment is completed, you need to install the ECODATA-Prepare application itself. From the terminal, run:
 

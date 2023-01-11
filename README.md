@@ -1,6 +1,8 @@
 # Pymovebank
 
-Check out [PyMovebank's documentation](https://pymovebank.readthedocs.io/en/latest/)!
+Check out the documentation!
+[Apps documentation](http://ecodata-apps.readthedocs.io/)
+[Package documentation](https://pymovebank.readthedocs.io/)!
 
 **Note**: Pymovebank is in the early stages of development, and any feedback is welcome! If you have any suggestions or feature requests, enounter any bugs, or come across places where the documentation is unclear, please [submit a Gitub issue](https://github.com/jemissik/pymovebank/issues)!
 
