@@ -21,3 +21,10 @@ sys.path.insert(0, os.path.abspath("../../pymovebank/"))
 project = "ECODATA Apps"
 copyright = "2023, Justine Missik"
 author = "Justine Missik"
+
+html_context = {
+    "github_user": "jemissik",
+    "github_repo": "pymovebank",
+    "github_version": "develop",
+    "doc_path": "docs/apps",
+}
