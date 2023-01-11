@@ -28,6 +28,7 @@ installation
 environment_files
 user_guide/index
 support
+developer_guide
 ```
 
 # Indices and tables
