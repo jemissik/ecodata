@@ -27,3 +27,4 @@ dependencies:
 - conda-forge::gdown
 - conda-forge::python-wget
 - requests
+- pip
