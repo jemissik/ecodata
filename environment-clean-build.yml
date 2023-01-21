@@ -27,6 +27,3 @@ dependencies:
 - conda-forge::gdown
 - conda-forge::python-wget
 - requests
-- pip
-- pip:
-    - awesome-panel-extensions==20221019.2

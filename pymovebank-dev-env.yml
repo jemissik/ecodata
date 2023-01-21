@@ -47,7 +47,6 @@ dependencies:
   - sphinx-multiproject
   - click
   - build
-  - awesome-panel-extensions==20221019.2
   - git+https://github.com/madeline-scyphers/panel-jstree.git
   - -e . --install-option="--no-deps"
 name: pmv-dev

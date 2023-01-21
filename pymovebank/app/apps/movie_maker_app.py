@@ -8,6 +8,7 @@ import panel as pn
 import param
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
 from pymovebank.panel_utils import param_widget, templater, register_view
+from pymovebank.app.application import Application
 
 logger = logging.getLogger(__file__)
 
@@ -82,7 +83,7 @@ class MovieMaker(param.Parameterized):
             stop_loading_spinner(self.view)
 
 
-@register_view()
+@register_view(app=Application.from_filename())
 def view(app):
     return templater(app.template, main=[MovieMaker().view])
 

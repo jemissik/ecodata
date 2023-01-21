@@ -9,5 +9,4 @@ channels:
   - https://conda.anaconda.org/pyviz/
   - https://conda.anaconda.org/conda-forge/
 
-#environment_file: ../pymovebank-env.yml
-environment: pmv
+environment_file: ../environment-clean-build.yml
