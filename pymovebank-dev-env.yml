@@ -41,7 +41,8 @@ dependencies:
   - conda-merge
   - isort
   - myst-nb
-  - pydata_sphinx_theme
+  - sphinx<6.0
+  - pydata_sphinx_theme<0.12.0
   - pytest
   - sphinx_book_theme
   - sphinx-multiproject
