@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import param
 import panel as pn
 import functools
@@ -8,14 +9,27 @@ import os
 import shlex
 from pathlib import Path
 from typing import Callable, Sequence, Union
+import inspect
+
+from functools import wraps
+from pathlib import Path
+from pymovebank.app.config import extension
+from pymovebank.app.assets import get_link_list_html, list_links_html, menu_fast_html
 
 from tkinter import Tk, filedialog
 
 Servable = Union[Callable, pn.viewable.Viewable]
 
 IS_WINDOWS = os.name == "nt"
+links = []
 
 logger = logging.getLogger(__file__)
+
+
+# all registered apps need to be imported to pymovebank.app.apps. this is because
+# when the apps dict is imported, then it imports each app,
+# which registers them
+applications = {}
 
 
 def param_widget(panel_widget):
@@ -128,26 +142,24 @@ def templater(
 
     return template
 
-
-import inspect
-from functools import wraps
-from pathlib import Path
-from pymovebank.app.config import extension
-
-# all registered apps need to be imported to pymovebank.app.apps. this is because
-# when the apps dict is imported, then it imports each app,
-# which registers them
-applications = {}
-
-
 def register_view(*ext_args, url=None, **ext_kw):
     url = url or Path(inspect.stack()[1].filename).stem  # file name of calling file
+    app = extension(*ext_args, url=url, **ext_kw)
+    if app.category == "Dashboard" or app.category == "Dashboards":
+        print(app.name, app.url)
+        link = get_link_list_html({"url": app.url, "name": app.name})
+        links.append(link)
     def inner(view):
         @wraps(view)
-        def wrapped_app(*args, **kwargs):
-            app = extension(url=url, *ext_args, **ext_kw)
+        def wrapper(*args, **kwargs):
 
-            return view(app, *args, **kwargs)
-        applications[url] = wrapped_app
-        return wrapped_app
+            template = view(app, *args, **kwargs)
+
+            list_html = {"dashboard_links": list_links_html(links)}
+            template.sidebar_footer = menu_fast_html(accent=template.accent_base_color, jinja_subs=list_html)
+            return template
+        app.view = wrapper
+        applications[url] = app
+
+        return wrapper
     return inner

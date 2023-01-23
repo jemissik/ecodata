@@ -1,11 +1,6 @@
-"""## The Home Page of awesome-panel.org"""
-# pylint: disable=wrong-import-position, ungrouped-imports, wrong-import-order
 import panel as pn
 
 from pymovebank.panel_utils import templater, register_view
-
-# pylint: enable=wrong-import-position, ungrouped-imports, wrong-import-order
-
 
 def _add_sections():
     pn.pane.Markdown("# Home page test!").servable()

@@ -28,4 +28,3 @@ dependencies:
 - pip
 - pip:
     - git+https://github.com/jemissik/pymovebank.git@develop
-    - awesome-panel-extensions==20221019.2
