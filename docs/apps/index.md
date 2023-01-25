@@ -10,7 +10,7 @@ Within ECODATA-Prepare,
 
 - The [**Gridded Data Explorer App**](user_guide/gridded_data_explorer) allows you to interpolate and subset the temporal and spatial resolutions of environmental data in the form of a temporal stack (or single static map) NetCDF file. It can also read in several other data formats (which could be resaved as NetCDF). You can also read GIS polygons as shapefiles and mask the environmental data outside or inside the polygons. It subsequently calculates data summaries by period and polygon.
 
-- The [**Subsetter App**](https://ecodata-apps.readthedocs.io/en/latest/user_guide/subsetter.html) allows you to clip relevant features out of large GIS files.
+- The [**Subsetter App**](user_guide/subsetter) allows you to clip relevant features out of large GIS files.
 
 - The [**Movie Maker App**](https://ecodata-apps.readthedocs.io/en/latest/user_guide/movie_maker.html) produces an animation file out of a stack of static maps which were produced by the ECODATA-Animate program.
 
