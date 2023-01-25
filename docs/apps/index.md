@@ -12,7 +12,7 @@ Within ECODATA-Prepare,
 
 - The [**Subsetter App**](user_guide/subsetter) allows you to clip relevant features out of large GIS files.
 
-- The [**Movie Maker App**](https://ecodata-apps.readthedocs.io/en/latest/user_guide/movie_maker.html) produces an animation file out of a stack of static maps which were produced by the ECODATA-Animate program.
+- The [**Movie Maker App**](user_guide/movie_maker) produces an animation file out of a stack of static maps which were produced by the ECODATA-Animate program.
 
 We recommend the following workflow (you can skip any steps you don't need):
 1. Use the [Tracks Explorer App](https://ecodata-apps.readthedocs.io/en/latest/user_guide/tracks_explorer.html#) to create a .geojson file that defines the area of interest based on your tracking data.
