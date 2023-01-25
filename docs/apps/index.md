@@ -17,7 +17,7 @@ Within ECODATA-Prepare,
 We recommend the following workflow (you can skip any steps you don't need):
 1. Use the [Tracks Explorer App](user_guide/tracks_explorer) to create a .geojson file that defines the area of interest based on your tracking data.
 2. Use this file to [request environmental data from NASA AppEEARS](request-nasa-data) to use in subsequent animations or analysis.
-3. Use the [Gridded Data Explorer App](https://ecodata-apps.readthedocs.io/en/latest/user_guide/gridded_data_explorer.html) to review and further process the environmental data received from NASA AppEEARS.
+3. Use the [Gridded Data Explorer App](user_guide/gridded_data_explorer) to review and further process the environmental data received from NASA AppEEARS.
 4. Use the [Subsetter App](https://ecodata-apps.readthedocs.io/en/latest/user_guide/subsetter.html) to extract relevant features from very large datasets (for example, global vector GIS data products for features like roads, water bodies or protected areas) to use in subsequent animations or analysis.
 5. Use [ECODATA-Animate](https://ecodata-animate.readthedocs.io/en/latest/) to combine your tracking data, environmental data, subsetted vector layers, and other information, configure viewing options, and create a set of images to use as frames for an animation or for further exploration and analysis.
 6. Use the [Movie Maker App](https://ecodata-apps.readthedocs.io/en/latest/user_guide/movie_maker.html) to create an animation from the output of ECODATA-Animate.
