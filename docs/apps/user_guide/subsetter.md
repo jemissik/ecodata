@@ -19,6 +19,6 @@ With the Subsetter App, you can
 
 **Bounding Geometry:** Provide the full filepath, including the filename, for a file (.geojson, .shp or .gdb) defining a polygon. This could include output of the [Tracks Explorer App](https://ecodata-apps.readthedocs.io/en/latest/user_guide/tracks_explorer.html).
 
-3. For any of the options above, decide whether to clip features that overlap with the edge of the spatial area defined in the previous step. Uncheck "Clip features at boundary edge" to retain complete polygons that overlap with the boundary edge.
+3. For any of the options above, decide whether to clip features that overlap with the edge of the spatial area defined in the previous step. Uncheck "Clip features at boundary edge" to retain complete lines or polygons that overlap with the boundary edge.
 By default, the app will plot the data subset once it is created, along with the geometry that was used to create the subsetting boundary, and the actual geometry that was used to define the subset. If you don’t want to plot the dataset, uncheck “Show plot of subset”.
 4. Change the name of the output file and specify a filepath if you wish. Then click "Create subset". A shapefile will be saved for the subsetted dataset, and a plot will appear unless you turned the plotting option off.
