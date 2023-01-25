@@ -14,7 +14,7 @@ With the Tracks Explorer App, you can
 *Data from Hebblewhite and Merrill, study [Hebblewhite Alberta-BC Wolves](https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study209824313)*
 
 1. If you haven't already, download a local copy of the tracking data you want to use, in Movebank's .csv format. It is possible to subset or combine data from different studies.
-2. [Launch the Tracks Explorer App.](https://ecodata-apps.readthedocs.io/en/latest/user_guide/index.html#getting_started)
+2. [Launch the Tracks Explorer App.](index)
 3. Under "Select File", paste the full filepath to a .csv file of tracking data, including the file name. In the current version, this .csv file needs to use Movebank's format. An example filepath is "/Users/myname/MovebankData/wolves.csv".
 4. Click "Load data". An interactive map will appear of your dataset, where you can pan/zoom to explore the dataset. If a map does not load, view the status message. The message "Error.. Check options and try again" likely indicates that your filepath is incorrect.
 5. You can change the background map tile using the drop-down menu in the sidebar.
