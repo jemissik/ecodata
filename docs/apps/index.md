@@ -15,7 +15,7 @@ Within ECODATA-Prepare,
 - The [**Movie Maker App**](user_guide/movie_maker) produces an animation file out of a stack of static maps which were produced by the ECODATA-Animate program.
 
 We recommend the following workflow (you can skip any steps you don't need):
-1. Use the [Tracks Explorer App](https://ecodata-apps.readthedocs.io/en/latest/user_guide/tracks_explorer.html#) to create a .geojson file that defines the area of interest based on your tracking data.
+1. Use the [Tracks Explorer App](user_guide/tracks_explorer) to create a .geojson file that defines the area of interest based on your tracking data.
 2. Use this file to [request environmental data from NASA AppEEARS](https://ecodata-apps.readthedocs.io/en/latest/user_guide/tracks_explorer.html#requesting-environmental-data-from-nasa) to use in subsequent animations or analysis.
 3. Use the [Gridded Data Explorer App](https://ecodata-apps.readthedocs.io/en/latest/user_guide/gridded_data_explorer.html) to review and further process the environmental data received from NASA AppEEARS.
 4. Use the [Subsetter App](https://ecodata-apps.readthedocs.io/en/latest/user_guide/subsetter.html) to extract relevant features from very large datasets (for example, global vector GIS data products for features like roads, water bodies or protected areas) to use in subsequent animations or analysis.
