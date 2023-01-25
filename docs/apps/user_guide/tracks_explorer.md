@@ -22,6 +22,7 @@ With the Tracks Explorer App, you can
 7. A boundary for the tracks dataset is shown on the map in red. The default option uses a rectangular boundary with a buffer size of 0.1 (scale relative to the extent of the tracks). You can adjust the buffer size or change the boundary shape to a convex hull using the widgets in the sidebar.
 8. To save the boundary to a .geojson file, scroll down and if needed, edit the file name and location under "Output file". Then simply click the "Save extent" button.
 
+(request-nasa-data)=
 ## Requesting environmental data from NASA
 
 You can use a .geojson file from the Tracks Explorer app to submit a request for environmental data from NASA's Application for Extracting and Exploring Analysis Ready Samples (AρρEEARS) service. 
