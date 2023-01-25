@@ -9,11 +9,12 @@ Before using this program, download a local copy of the tracking data you want t
 Follow the instructions below to launch the program. A window will open on your default web browser, showing the app gallery. The apps are running locally at localhost:5006. *Note: Anaconda gives no indication the command is running. There may be a short wait (10+ seconds) before the window opens.*
 
 When it opens, it will display the main panel, showing the four apps. Click on an app to launch it. From there, you can navigate between apps within the interface, or switch between them by pasting these URLs in your browser window:
-http://localhost:5006: main panel
-http://localhost:5006/tracks_explorer_app: Tracks Explorer App
-http://localhost:5006/gridded_data_explorer_app: Gridded Data Explorer App
-http://localhost:5006/subsetter_app: Subsetter App
-http://localhost:5006/movie_maker_app: Movie Maker App
+
+* Main app gallery: <http://localhost:5006>
+* Tracks Explorer App: <http://localhost:5006>
+* Gridded Data Explorer App: <http://localhost:5006/gridded_data_explorer_app>
+* Subsetter App: <http://localhost:5006/subsetter_app>
+* Movie Maker App: <http://localhost:5006/movie_maker_app>
 
 ### Launch in Windows
 
