@@ -4,7 +4,7 @@ ECODATA-Prepare is a set of four Python-based apps to read, process, and create 
 
 ## Getting started
 
-Before using this program, download a local copy of the tracking data you want to use, in Movebank’s .csv format. It is possible to subset or combine data from different studies. Read the [installation instructions](https://ecodata-apps.readthedocs.io/en/latest/installation.html) to install or update the program.
+Before using this program, download a local copy of the tracking data you want to use, in Movebank’s .csv format. It is possible to subset or combine data from different studies. Read the [installation instructions](../installation) to install or update the program.
 
 Follow the instructions below to launch the program. A window will open on your default web browser, showing the app gallery. The apps are running locally at localhost:5006. *Note: Anaconda gives no indication the command is running. There may be a short wait (10+ seconds) before the window opens.*
 
