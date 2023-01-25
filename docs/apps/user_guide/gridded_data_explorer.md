@@ -12,7 +12,9 @@ With the Gridded Data Explorer App, you can
 
 ## Using the app
 
-Throughout the App, scroll down to view status messages indicating application progress and next steps.  
+```{tip}
+Throughout the App, scroll down to view status messages indicating application progress and next steps.
+```
 1. Under "Input environmental dataset", paste the full filepath to a netcdf (.nc) file received from NASA AppEEARS ([see instructions](request-nasa-data)) or any other source. The filepath should include the file name. An example filepath is "/Users/myname/RS_Data/NDVI.nc".
 2. Click "Load data". If it is able to read the file, the app will load available variables from the file into dropdown lists for Latitude, Longitude, Time and Variable of interest, and will attempt to select the correct variables automatically. If nothing happens, you might need to correct the filepath.
 3. If the app does not assign the correct variable names from the file, you can specify them manually by clicking on the field and selecting from the dropdown list.
