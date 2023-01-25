@@ -38,7 +38,7 @@ python -m pymovebank.app
 
 ![ecodata-prepare_panel](../images/ecodata-prepare_panel.png)
 
-
+## Apps
 ```{toctree}
 ---
 maxdepth: 2
