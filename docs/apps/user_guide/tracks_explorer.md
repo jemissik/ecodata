@@ -27,7 +27,7 @@ With the Tracks Explorer App, you can
 
 You can use a .geojson file from the Tracks Explorer app to submit a request for environmental data from NASA's Application for Extracting and Exploring Analysis Ready Samples (AρρEEARS) service. 
 1. Go to NASA AppEEARS: <https://appeears.earthdatacloud.nasa.gov/> 
-2. These data are free, but you will need an EarthData account to request data. Register at https://urs.earthdata.nasa.gov/users/new, and then sign in with your EarthData account. 
+2. These data are free, but you will need an EarthData account to request data. Register at <https://urs.earthdata.nasa.gov/users/new>, and then sign in with your EarthData account. 
 3. In the top menu bar, click "Extract > Area".
 4. Click "Start new request". The interface looks like this:
 
