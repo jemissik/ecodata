@@ -4,13 +4,12 @@ build:
   os: "ubuntu-20.04"
   tools:
     python: "mambaforge-4.10"
+  jobs:
+    post_install:
+    - conda list
 
 conda:
   environment: pymovebank-dev-env.yml
-
-jobs:
-post_install:
-  - conda list
 
 # Build all downloadable formats
 formats: all
