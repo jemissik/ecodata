@@ -2,7 +2,9 @@
 
 See below for steps to install and run the ECODATA-Prepare apps. For **Mac/Linux**, you will run the commands below from the built-in Mac "Terminal" application, or any other terminal app. For **Windows**, you will install Anaconda and then run the commands below using the Anaconda Powershell Prompt. You can launch this by searching for "Anaconda Powershell" in the start menu, or by launching Anaconda Navigator and looking for "Powershell Prompt" in the home screen.
 
-**Note:** The apps are still under development, and installation will be simplified soon!
+```{note}
+The apps are still under development, and installation will be simplified soon!
+```
 
 ## Installing Anaconda
 
@@ -65,7 +67,8 @@ If your directory has many files, replace "ls" with "ls -lt" to sort files by th
     #   $ conda deactivate
     ```
 
-    If there were issues with the installation, you can try using the locked environment file for your operating system instead, [available here](https://pymovebank.readthedocs.io/en/main/apps/environment_files.html)
+    If there were issues with the installation, you can try using the locked environment file for your operating system instead: [Windows](../../environment-win-lock.yml) | [Intel Mac](../../environment-x86-lock.yml) | [M1 Mac](../../environment-m1-lock.yml)
+
 
 8. After the Python environment is completed, you need to install the ECODATA-Prepare application itself. From the terminal, run:
 
