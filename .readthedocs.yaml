@@ -7,3 +7,10 @@ build:
 
 conda:
   environment: pymovebank-dev-env.yml
+
+jobs:
+post_install:
+  - conda list
+
+# Build all downloadable formats
+formats: all
