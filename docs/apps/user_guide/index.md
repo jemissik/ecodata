@@ -21,8 +21,10 @@ When it opens, it will display the main panel, showing the four apps. Click on a
 - Open Anaconda PowerShell.
 - Copy-paste the below code into the prompt window, and press Enter:
 
+```bash
 conda activate pmv
 python -m pymovebank.app
+```
 
 ### Launch on Mac
 
@@ -34,7 +36,9 @@ python -m pymovebank.app
 - Hit the play button and select "Open Terminal".
 - A Terminal window will open. Enter the following and hit Return:
 
+```bash
 python -m pymovebank.app
+```
 
 ![ecodata-prepare_panel](../images/ecodata-prepare_panel.png)
 
