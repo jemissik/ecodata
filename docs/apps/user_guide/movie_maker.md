@@ -1,4 +1,4 @@
-# Movie maker
+# Movie Maker
 
 ![movie_maker](../images/movie_maker.png)
 
