@@ -35,7 +35,6 @@ The functions underlying the ECODATA-Prepare apps can also be used directly as a
 maxdepth: 2
 ---
 installation
-environment_files
 user_guide/index
 support
 developer_guide
