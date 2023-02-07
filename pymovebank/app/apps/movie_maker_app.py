@@ -74,7 +74,8 @@ class MovieMaker(param.Parameterized):
         try:
             make_mp4_from_frames(self.frames_dir.value, self.output_file.value,
                                  frame_rate=self.frame_rate.value)
-            self.status_text = f"Movie saved to: {Path(self.output_file.value).resolve()}"
+            output_path = Path(self.output_file.value).resolve()
+            assert output_path.exists()
         except Exception as e:
             msg = 'Error creating movie....'
             logger.warning(msg + f":\n{e!r}")
