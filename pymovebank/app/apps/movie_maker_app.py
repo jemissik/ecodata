@@ -76,6 +76,8 @@ class MovieMaker(param.Parameterized):
                                  frame_rate=self.frame_rate.value)
             output_path = Path(self.output_file.value).resolve()
             assert output_path.exists()
+            self.status_text = f"Movie saved to: {Path(self.output_file.value).resolve()}"
+
         except Exception as e:
             msg = 'Error creating movie....'
             logger.warning(msg + f":\n{e!r}")

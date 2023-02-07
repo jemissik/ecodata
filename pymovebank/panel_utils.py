@@ -115,14 +115,34 @@ def split_shell_command(cmd: str):
     """
     return shlex.split(cmd, posix=not IS_WINDOWS)
 
+def sanitize_filepath(filepath: str):
+    """
+    Sanitize filepath string using pathlib.
+    Makes sure spaces, special characters, etc are escaped
+
+    Parameters
+    ----------
+    filepath : str
+        File path to sanitize
+
+    Returns
+    -------
+    str
+        Sanitized filepath
+    """
+
+    return str(Path(filepath).resolve())
+
 
 def make_mp4_from_frames(frames_dir, output_file, frame_rate):
-    frames_pattern = Path(frames_dir) / 'Frame%d.png'
-    cmd = f"""ffmpeg -framerate {frame_rate} -i {frames_pattern}
+    frames_pattern = Path(frames_dir).resolve() / 'Frame%d.png'
+    output_path = sanitize_filepath(output_file)
+    cmd = f"""ffmpeg -framerate {frame_rate} -i '{frames_pattern}'
     -vf pad='width=ceil(iw/2)*2:height=ceil(ih/2)*2'
-    -c:v libx264 -pix_fmt yuv420p -y {output_file}"""
+    -c:v libx264 -pix_fmt yuv420p -y '{output_path}'"""
 
     subprocess.run(split_shell_command(cmd))
+    print("ffmpeg done!")
 
 def templater(
         template: pn.template.BaseTemplate,
