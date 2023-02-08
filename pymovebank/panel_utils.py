@@ -7,6 +7,7 @@ import logging
 import subprocess
 import os
 import shlex
+import shutil
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Sequence, Union, TypeVar
@@ -140,16 +141,20 @@ def sanitize_filepath(filepath: str):
 
 def make_mp4_from_frames(frames_dir, output_file, frame_rate):
     frames_pattern = "Frame%d.png"
-    output_path = sanitize_filepath(output_file)
+    temp_output_file = 'output.mp4'
+    output_file = Path(sanitize_filepath(output_file))
 
     with cd_and_cd_back():
         os.chdir(Path(frames_dir).resolve())
         cmd = f"""ffmpeg -framerate {frame_rate} -i {frames_pattern}
-        -vf pad="width=ceil(iw/2)*2:height=ceil(ih/2)*2"
-        -c:v libx264 -pix_fmt yuv420p -y "{output_path}" """
+        -vf pad='width=ceil(iw/2)*2:height=ceil(ih/2)*2'
+        -c:v libx264 -pix_fmt yuv420p -y {temp_output_file} """
 
         subprocess.run(split_shell_command(cmd))
         print("ffmpeg done!")
+
+        shutil.move(temp_output_file, output_file)
+
 
 def templater(
         template: pn.template.BaseTemplate,
