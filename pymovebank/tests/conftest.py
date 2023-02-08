@@ -10,10 +10,10 @@ PORT = [6000]
 
 test_data_dir = pymovebank.datasets.dataset_utils._module_path / "test_datasets"
 test_frames_dir = test_data_dir / "animation_test_frames"
-test_frames_dir_weird = test_data_dir / "animation ? test frames"
+test_frames_dir_weird = test_data_dir / "animation & test & frames"
 
 test_output_dir = pymovebank.datasets.dataset_utils._module_path / "test_datasets" / "output"
-test_output_dir_weird = pymovebank.datasets.dataset_utils._module_path / "test_datasets" / "output ? weird"
+test_output_dir_weird = pymovebank.datasets.dataset_utils._module_path / "test_datasets" / "output & weird"
 
 @pytest.fixture
 def port():
