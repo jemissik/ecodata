@@ -9,7 +9,8 @@ from pymovebank.tests.conftest import test_frames_dir, test_frames_dir_weird, te
                          ([test_frames_dir, test_output_dir], [test_frames_dir_weird, test_output_dir_weird]))
 def test_that_movie_maker_runs(install_test_data, make_test_frame_dirs, frames_dir, output_dir):
 
-    print(f"frames dir: {frames_dir}")
+    print(f"frames dir: {frames_dir!r}")
+    print(frames_dir.exists())
 
     output_dir.mkdir(exist_ok=True)
 

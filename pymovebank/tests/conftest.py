@@ -47,7 +47,7 @@ def install_test_data():
 @pytest.fixture
 def make_test_frame_dirs(install_test_data):
     data_path = install_test_data
-    print(f"fixture_data_path: {data_path}")
+    print(f"fixture_data_path: {data_path!r}")
 
     # Copy the input test frames to a new directory with a weird filepath
     # For testing weird filepaths are handled correctly
