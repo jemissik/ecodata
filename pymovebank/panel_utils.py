@@ -136,24 +136,35 @@ def sanitize_filepath(filepath: str):
         Sanitized filepath
     """
 
-    return str(Path(filepath).resolve())
+    return str(Path(filepath).absolute().resolve())
 
 
 def make_mp4_from_frames(frames_dir, output_file, frame_rate):
     frames_pattern = "Frame%d.png"
     temp_output_file = 'output.mp4'
-    output_file = Path(sanitize_filepath(output_file))
+
+    frames_dir_sanitized = Path(frames_dir).absolute().resolve()
+
+    if Path(output_file).root == "":
+        output_file = frames_dir_sanitized / output_file
+    else:
+        output_file = Path(sanitize_filepath(output_file))
 
     with cd_and_cd_back():
-        os.chdir(Path(frames_dir).resolve())
+        print("Moving to frames directory...")
+        os.chdir(frames_dir_sanitized)
+        print(f'In directory: {os.getcwd()}')
         cmd = f"""ffmpeg -framerate {frame_rate} -i {frames_pattern}
         -vf pad='width=ceil(iw/2)*2:height=ceil(ih/2)*2'
         -c:v libx264 -pix_fmt yuv420p -y {temp_output_file} """
 
         subprocess.run(split_shell_command(cmd))
         print("ffmpeg done!")
+        print(f"Target output file: {output_file}")
 
         shutil.move(temp_output_file, output_file)
+
+    return output_file
 
 
 def templater(
