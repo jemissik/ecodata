@@ -7,9 +7,12 @@ import logging
 import subprocess
 import os
 import shlex
+import shutil
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, Sequence, Union
+from typing import Callable, Sequence, Union, TypeVar
 import inspect
+
 
 from functools import wraps
 from pathlib import Path
@@ -21,6 +24,8 @@ from tkinter import Tk, filedialog
 Servable = Union[Callable, pn.viewable.Viewable]
 
 IS_WINDOWS = os.name == "nt"
+PathLike = TypeVar("PathLike", str, os.PathLike)
+
 links = []
 
 logger = logging.getLogger(__file__)
@@ -115,14 +120,52 @@ def split_shell_command(cmd: str):
     """
     return shlex.split(cmd, posix=not IS_WINDOWS)
 
+def sanitize_filepath(filepath: str):
+    """
+    Sanitize filepath string using pathlib.
+    Makes sure spaces, special characters, etc are escaped
+
+    Parameters
+    ----------
+    filepath : str
+        File path to sanitize
+
+    Returns
+    -------
+    str
+        Sanitized filepath
+    """
+
+    return str(Path(filepath).absolute().resolve())
+
 
 def make_mp4_from_frames(frames_dir, output_file, frame_rate):
-    frames_pattern = Path(frames_dir) / 'Frame%d.png'
-    cmd = f"""ffmpeg -framerate {frame_rate} -i {frames_pattern}
-    -vf pad='width=ceil(iw/2)*2:height=ceil(ih/2)*2'
-    -c:v libx264 -pix_fmt yuv420p -y {output_file}"""
+    frames_pattern = "Frame%d.png"
+    temp_output_file = 'output.mp4'
 
-    subprocess.run(split_shell_command(cmd))
+    frames_dir_sanitized = Path(frames_dir).absolute().resolve()
+
+    if Path(output_file).root == "":
+        output_file = frames_dir_sanitized / output_file
+    else:
+        output_file = Path(sanitize_filepath(output_file))
+
+    with cd_and_cd_back():
+        print("Moving to frames directory...")
+        os.chdir(frames_dir_sanitized)
+        print(f'In directory: {os.getcwd()}')
+        cmd = f"""ffmpeg -framerate {frame_rate} -i {frames_pattern}
+        -vf pad='width=ceil(iw/2)*2:height=ceil(ih/2)*2'
+        -c:v libx264 -pix_fmt yuv420p -y {temp_output_file} """
+
+        subprocess.run(split_shell_command(cmd))
+        print("ffmpeg done!")
+        print(f"Target output file: {output_file}")
+
+        shutil.move(temp_output_file, output_file)
+
+    return output_file
+
 
 def templater(
         template: pn.template.BaseTemplate,
@@ -163,3 +206,41 @@ def register_view(*ext_args, url=None, **ext_kw):
 
         return wrapper
     return inner
+
+
+@contextmanager
+def cd_and_cd_back(path: PathLike = None):
+    """Context manager that will return to the starting directory
+    when the context manager exits, regardless of what directory
+    changes happen between start and end.
+    Parameters
+    ==========
+    path
+        If supplied, will change directory to this path at the start of the
+        context manager (it will "cd" to this path before "cd" back to the
+        original directory)
+    Examples
+    ========
+    >>> starting_dir = os.getcwd()
+    ... with cd_and_cd_back():
+    ...     # with do some things that change the directory
+    ...     os.chdir("..")
+    ... # When we exit the context manager (dedent) we go back to the starting directory
+    ... ending_dir = os.getcwd()
+    ... assert starting_dir == ending_dir
+    >>> starting_dir = os.getcwd()
+    ... path_to_change_to = ".."
+    ... with cd_and_cd_back(path=path_to_change_to):
+    ...     # with do some things inside the context manager
+    ...     ...
+    ... # When we exit the context manager (dedent) we go back to the starting directory
+    ... ending_dir = os.getcwd()
+    ... assert starting_dir == ending_dir
+    """
+    cwd = os.getcwd()
+    try:
+        if path:
+            os.chdir(path)
+        yield
+    finally:
+        os.chdir(cwd)

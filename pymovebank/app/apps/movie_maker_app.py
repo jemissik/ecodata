@@ -72,9 +72,11 @@ class MovieMaker(param.Parameterized):
         self.status_text = 'Creating movie...'
         start_loading_spinner(self.view)
         try:
-            make_mp4_from_frames(self.frames_dir.value, self.output_file.value,
+            output_file = make_mp4_from_frames(self.frames_dir.value, self.output_file.value,
                                  frame_rate=self.frame_rate.value)
-            self.status_text = f"Movie saved to: {Path(self.output_file.value).resolve()}"
+            assert output_file.exists()
+            self.status_text = f"Movie saved to: {output_file}"
+
         except Exception as e:
             msg = 'Error creating movie....'
             logger.warning(msg + f":\n{e!r}")
