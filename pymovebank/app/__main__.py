@@ -8,6 +8,6 @@ from pymovebank.app.apps import applications
 
 if __name__ == "__main__":
     pn.serve(
-        {url: app.view for url, app in applications.items()},
+        {url: view for url, view in applications.items()},
         port=5006
     )

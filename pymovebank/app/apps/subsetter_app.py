@@ -189,7 +189,7 @@ class Subsetter(param.Parameterized):
             stop_loading_spinner(self.view)
 
 
-@register_view(app=Application.from_filename())
+@register_view()
 def view(app):
     viewer = Subsetter()
     return templater(app.template, main=[viewer.view])
