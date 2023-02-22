@@ -18,8 +18,8 @@ import inspect
 
 from functools import wraps
 from pathlib import Path
-from pymovebank.app.config import extension
-from pymovebank.app.assets import get_link_list_html, list_links_html, menu_fast_html
+from ecodata.app.config import extension
+from ecodata.app.assets import get_link_list_html, list_links_html, menu_fast_html
 
 from tkinter import Tk, filedialog
 
@@ -33,7 +33,7 @@ links = []
 logger = logging.getLogger(__file__)
 
 
-# all registered apps need to be imported to pymovebank.app.apps. this is because
+# all registered apps need to be imported to ecodata.app.apps. this is because
 # when the apps dict is imported, then it imports each app,
 # which registers them
 applications = {}

@@ -7,7 +7,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.14.0
 #   kernelspec:
-#     display_name: Python 3.9.13 ('pmv-dev')
+#     display_name: Python 3.9.13 ('eco-dev')
 #     language: python
 #     name: python3
 # ---
@@ -15,7 +15,7 @@
 # %%
 
 import geopandas as gpd
-import pymovebank as pmv
+import ecodata as eco
 import xarray as xr
 import hvplot.xarray  # noqa
 import hvplot.pandas  # noqa
@@ -28,9 +28,9 @@ from pathlib import Path
 
 from panel.reactive import ReactiveHTML, Viewable
 
-from pymovebank.app.application import Application
-from pymovebank.plotting import plot_gridded_data, plot_avg_timeseries
-from pymovebank.panel_utils import param_widget, try_catch, templater, register_view
+from ecodata.app.application import Application
+from ecodata.plotting import plot_gridded_data, plot_avg_timeseries
+from ecodata.panel_utils import param_widget, try_catch, templater, register_view
 
 
 class HTML_WidgetBox(ReactiveHTML):
@@ -372,7 +372,7 @@ class GriddedDataExplorer(param.Parameterized):
     def update_ds(self):
         if self.ds_raw is not None:
             self.status_text = "Updating..."
-            _ds = pmv.select_time_range(self.ds_raw, time_var=self.timevar.value,
+            _ds = eco.select_time_range(self.ds_raw, time_var=self.timevar.value,
                                         start_time=self.date_range.value[0], end_time=self.date_range.value[1])
             kwargs = {}
             for time_unit, range_widget, selection_widget in zip(self.time_units, self.range_widgets, self.selection_widgets):
@@ -382,10 +382,10 @@ class GriddedDataExplorer(param.Parameterized):
                     if getattr(self.range_widgets[range_widget], 'visible'):
                         range_values = getattr(self.range_widgets[range_widget], 'value')
                         kwargs[range_widget] = (int(range_values[0]), int(range_values[1]))
-            _ds = pmv.select_time_cond(_ds, time_var=self.timevar.value, **kwargs)
+            _ds = eco.select_time_cond(_ds, time_var=self.timevar.value, **kwargs)
 
             if self.poly is not None:
-                _ds = pmv.select_spatial(_ds, boundary=self.poly, invert=self.selection_type.value)
+                _ds = eco.select_spatial(_ds, boundary=self.poly, invert=self.selection_type.value)
             self.ds = _ds
             self.status_text = "Applied updated filters"
         else:
@@ -404,7 +404,7 @@ class GriddedDataExplorer(param.Parameterized):
     @param.depends("rs_time.value", watch=True)
     def resample_time(self):
         self.status_text = "Resampling..."
-        self.ds = pmv.resample_time(self.ds, timevar=self.timevar.value,
+        self.ds = eco.resample_time(self.ds, timevar=self.timevar.value,
                                     time_quantity=self.rs_time_quantity.value, time_unit=self.rs_time_unit.value)
         self.status_text = "Dataset resampled"
 
@@ -412,7 +412,7 @@ class GriddedDataExplorer(param.Parameterized):
     @param.depends("rs_space.value", watch=True)
     def resample_space(self):
         self.status_text = "Calculating..."
-        self.ds = pmv.coarsen_dataset(self.ds, n_window={self.latvar.value:self.space_coarsen_factor.value,
+        self.ds = eco.coarsen_dataset(self.ds, n_window={self.latvar.value:self.space_coarsen_factor.value,
                                                         self.lonvar.value:self.space_coarsen_factor.value})
         self.status_text = "Aggregation completed."
 
@@ -486,7 +486,7 @@ class GriddedDataExplorer(param.Parameterized):
             time_list = select_list.copy()
             time_list.remove('polygon')
             poly = self.poly.reset_index()
-            result = pmv.groupby_poly_time(vector_data=poly,
+            result = eco.groupby_poly_time(vector_data=poly,
                                             vector_var='index',
                                             ds=self.ds,
                                             ds_var=self.zvar.value,
@@ -497,7 +497,7 @@ class GriddedDataExplorer(param.Parameterized):
             self.stats = result
 
         else:
-            result = pmv.groupby_multi_time(ds=self.ds,
+            result = eco.groupby_multi_time(ds=self.ds,
                                             var=self.zvar.value,
                                             time=self.timevar.value,
                                             groupby_vars=select_list)

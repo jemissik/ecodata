@@ -48,4 +48,4 @@ dependencies:
   - build
   - git+https://github.com/madeline-scyphers/panel-jstree.git
   - -e . --install-option="--no-deps"
-name: pmv-dev
+name: eco-dev

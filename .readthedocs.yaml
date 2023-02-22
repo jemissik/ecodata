@@ -9,7 +9,7 @@ build:
     - conda list
 
 conda:
-  environment: pymovebank-dev-env.yml
+  environment: ecodata-dev-env.yml
 
 # Build all downloadable formats
 formats: all

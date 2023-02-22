@@ -2,18 +2,18 @@ import pytest
 import panel as pn
 import time
 import shutil
-import pymovebank
-from pymovebank.app.apps import applications
+import ecodata
+from ecodata.app.apps import applications
 
 
 PORT = [6000]
 
-test_data_dir = pymovebank.datasets.dataset_utils._module_path / "test_datasets"
+test_data_dir = ecodata.datasets.dataset_utils._module_path / "test_datasets"
 test_frames_dir = test_data_dir / "animation_test_frames"
 test_frames_dir_weird = test_data_dir / "animation & test & frames"
 
-test_output_dir = pymovebank.datasets.dataset_utils._module_path / "test_datasets" / "output"
-test_output_dir_weird = pymovebank.datasets.dataset_utils._module_path / "test_datasets" / "output & weird"
+test_output_dir = ecodata.datasets.dataset_utils._module_path / "test_datasets" / "output"
+test_output_dir_weird = ecodata.datasets.dataset_utils._module_path / "test_datasets" / "output & weird"
 
 @pytest.fixture
 def port():
@@ -39,9 +39,9 @@ def serve_apps(port, apps):
 
 @pytest.fixture(scope="session")
 def install_test_data():
-    pymovebank.install_test_datasets()
+    ecodata.install_test_datasets()
 
-    return pymovebank.datasets.dataset_utils._module_path / "test_datasets"
+    return ecodata.datasets.dataset_utils._module_path / "test_datasets"
 
 
 @pytest.fixture

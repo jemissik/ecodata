@@ -26,7 +26,7 @@ For help, [submit a GitHub issue](https://ecodata-apps.readthedocs.io/en/latest/
 
 ## Python package
 
-The functions underlying the ECODATA-Prepare apps can also be used directly as a python package (i.e. without the GUI inferface). The package documentation is [here](https://pymovebank.readthedocs.io).
+The functions underlying the ECODATA-Prepare apps can also be used directly as a python package (i.e. without the GUI inferface). The package documentation is [here](https://ecodata.readthedocs.io).
 
 # Contents
 

@@ -1,4 +1,4 @@
-name: pmv
+name: eco
 channels:
 - pyviz
 - conda-forge

@@ -14,15 +14,15 @@
 import logging
 
 # %% pycharm={"name": "#%%\n"}
-import pymovebank as pmv
+import ecodata as eco
 import hvplot.xarray  # noqa
 import hvplot.pandas  # noqa
 import panel as pn
 
 import param
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
-from pymovebank.panel_utils import param_widget, try_catch, templater, register_view
-from pymovebank.app.application import Application
+from ecodata.panel_utils import param_widget, try_catch, templater, register_view
+from ecodata.app.application import Application
 
 logger = logging.getLogger(__file__)
 
@@ -170,13 +170,13 @@ class Subsetter(param.Parameterized):
         start_loading_spinner(self.view)
         try:
             args = self.get_args_from_widgets()
-            subset = pmv.subset_data(**args)
+            subset = eco.subset_data(**args)
             if len(subset['subset']) == 0:
                 self.status_text = "No features in subset"
             else:
                 self.status_text = 'Subset created!'
                 if self.show_plot.value:
-                    plot = pmv.plot_subset(**subset)
+                    plot = eco.plot_subset(**subset)
                     self.view[self.view_objects['plot']] = pn.pane.Matplotlib(plot)
                 else:
                     self.view[self.view_objects['plot']] = pn.pane.Markdown(' ## Subset saved to output directory')

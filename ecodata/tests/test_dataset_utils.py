@@ -1,4 +1,4 @@
-import pymovebank
+import ecodata
 import pytest
 
 def test_that_test_data_bundle_installs(install_test_data):
@@ -17,12 +17,12 @@ def test_that_test_data_bundle_installs(install_test_data):
         "public_caribou_roads"
     }
 
-    assert data_files.issubset(pymovebank.available())
+    assert data_files.issubset(ecodata.available())
 
 def test_that_installing_test_bundle_works_if_already_installed(install_test_data):
 
     # Run the install method again
-    pymovebank.install_test_datasets()
+    ecodata.install_test_datasets()
 
 @pytest.mark.skip(reason="Needs updating for new test datasets")
 def test_that_valid_dataset_returns_correct_path():
@@ -30,11 +30,11 @@ def test_that_valid_dataset_returns_correct_path():
     dataset = "Y2Y_Region_Boundary"
 
     # When get_path is called
-    path = pymovebank.get_path(dataset)
+    path = ecodata.get_path(dataset)
 
     # path is correct
     correct_path = str(
-        pymovebank.datasets.dataset_utils._module_path / "small_datasets" / dataset
+        ecodata.datasets.dataset_utils._module_path / "small_datasets" / dataset
     )
     assert path == correct_path
 
@@ -46,4 +46,4 @@ def test_that_invalid_dataset_raises_error():
     # When get_path is called
     # ValueError is raised
     with pytest.raises((ValueError, TypeError)):
-        pymovebank.get_path(invalid_dataset)
+        ecodata.get_path(invalid_dataset)

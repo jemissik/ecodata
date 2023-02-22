@@ -1,4 +1,4 @@
-name: pmv-x86
+name: eco-x86
 channels:
   - anaconda
   - defaults

@@ -1,5 +1,5 @@
 """
-Datasets for pymovebank
+Datasets for ecodata
 """
 
 import os
@@ -54,7 +54,7 @@ def _update_dict_available():
 
 def available():
     """
-    Get the list of available datasets installed in pymovebank.datasets
+    Get the list of available datasets installed in ecodata.datasets
     """
     _update_dict_available()
     return list(_dict_available.keys())
@@ -62,12 +62,12 @@ def available():
 
 def get_path(dataset):
     """
-    Get the path to the datasets installed in pymovebank.datasets.
+    Get the path to the datasets installed in ecodata.datasets.
 
     Parameters
     ----------
     dataset : str
-        The name of the dataset. See ``pymovebank.data.available`` for
+        The name of the dataset. See ``ecodata.data.available`` for
         all options.
     """
     if dataset in available():
@@ -84,8 +84,8 @@ def get_path(dataset):
 
 def install_dataset(data_path):
     """
-    Install a dataset in the pymovebank. This function copies the dataset to the data directory of the installed
-    pymovebank module, so that it will be accessible as a dataset in ``pymovebank.datasets.available``
+    Install a dataset in the ecodata. This function copies the dataset to the data directory of the installed
+    ecodata module, so that it will be accessible as a dataset in ``ecodata.datasets.available``
 
     Parameters
     ----------
@@ -184,7 +184,7 @@ def _remove_temp_downloads():
     """
     download_path = Path(_module_path) / "user_datasets/temp_downloads"
     if os.path.exists(download_path) and os.listdir(download_path):
-        print("Found partially downloaded files in pymovebank.datasets.")
+        print("Found partially downloaded files in ecodata.datasets.")
         while True:
             response = input(
                 "Do you want to delete these files before you download a new dataset? [y/n]"

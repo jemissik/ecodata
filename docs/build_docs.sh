@@ -1,4 +1,4 @@
-# Run from pymovebank directory, not this directory
+# Run from ecodata directory, not this directory
 # Builds both the apps and package docs
 
 rm -rf docs/_build

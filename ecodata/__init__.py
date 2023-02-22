@@ -1,17 +1,17 @@
 """
-pymovebank package
+ecodata package
 """
 
 try:
-    from pymovebank.__version__ import version
+    from ecodata.__version__ import version
 
     __version__ = version
 except ImportError:
     # Package not installed
     __version__ = "0.0.0"
 
-from pymovebank.datasets import *
-from pymovebank.functions import (
+from ecodata.datasets import *
+from ecodata.functions import (
     get_crs,
     get_extent,
     get_file_info,
@@ -31,7 +31,7 @@ from pymovebank.functions import (
     bbox2poly,
 )
 
-from pymovebank.xr_tools import (
+from ecodata.xr_tools import (
     detect_varnames,
     get_time_res,
     thin_dataset,
@@ -44,5 +44,5 @@ from pymovebank.xr_tools import (
     groupby_poly_time,
 )
 
-import pymovebank.plotting
-import pymovebank.panel_utils
+import ecodata.plotting
+import ecodata.panel_utils

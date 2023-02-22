@@ -5,10 +5,10 @@ from urllib.parse import urlsplit
 
 
 import panel as pn
-from pymovebank.app.application import Application
+from ecodata.app.application import Application
 from panel.template import FastGridTemplate, FastListTemplate
 
-from pymovebank.app.assets import FAST_CSS
+from ecodata.app.assets import FAST_CSS
 
 SITE = "Movement Data Aggregator"
 

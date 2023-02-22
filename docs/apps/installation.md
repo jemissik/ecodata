@@ -50,7 +50,7 @@ If your directory has many files, replace "ls" with "ls -lt" to sort files by th
 7. Install the environment (note that if your environment file is not called "environment-clean-build.yml", you need to replace this name with the actual name of your file):
 
     ```bash
-    conda env create --file environment-clean-build.yml --name pmv
+    conda env create --file environment-clean-build.yml --name eco
     ```
 
     This will download all of the packages for the application, so it may take some time to finish, depending on your internet speed. Once the environment is successfully created, the terminal output should look something like:
@@ -60,7 +60,7 @@ If your directory has many files, replace "ls" with "ls -lt" to sort files by th
     #
     # To activate this environment, use
     #
-    #   $ conda activate pmv
+    #   $ conda activate eco
     #
     # To deactivate an active environment, use
     #
@@ -73,8 +73,8 @@ If your directory has many files, replace "ls" with "ls -lt" to sort files by th
 8. After the Python environment is completed, you need to install the ECODATA-Prepare application itself. From the terminal, run:
 
     ```bash
-    conda activate pmv
-    pip install git+https://github.com/jemissik/pymovebank.git@main
+    conda activate eco
+    pip install git+https://github.com/jemissik/ecodata.git@main
     ```
 
 
@@ -83,8 +83,8 @@ If your directory has many files, replace "ls" with "ls -lt" to sort files by th
 Launch the ECODATA-Prepare apps using the command below. For **Mac/Linux**, you will run the command below from the built-in Mac “Terminal” application, or any other terminal app. For **Windows**, you will run the command using the Anaconda Powershell Prompt. If this is not already open, find it by searching for "Anaconda Powershell" in the start menu, or by launching Anaconda Navigator and looking for "Powershell Prompt" in the home screen.
 
 ```bash
-conda activate pmv
-python -m pymovebank.app
+conda activate eco
+python -m ecodata.app
 ```
 
 A window will open on your default web browser, showing the main app gallery page (the apps are running locally at ``localhost:5006``). There may be a short wait the first time you launch the apps, or the first time you launch after an update.
@@ -99,7 +99,7 @@ Keep the terminal application you used to launch the program open while running 
 If there are new updates to the apps, you can update your version of the apps by running the command below:
 
 ```bash
-conda activate pmv
-pip uninstall pymovebank
-pip install git+https://github.com/jemissik/pymovebank.git@main
+conda activate eco
+pip uninstall ecodata
+pip install git+https://github.com/jemissik/ecodata.git@main
 ```

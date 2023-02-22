@@ -33,7 +33,7 @@ jobs:
         with:
             miniforge-variant: Mambaforge
             miniforge-version: latest
-            activate-environment: pmv
+            activate-environment: eco
             environment-file: environment-clean-build.yml
             use-mamba: true
 
@@ -43,5 +43,5 @@ jobs:
           cd ~
           pwd
           ls
-          pip install git+https://github.com/jemissik/pymovebank.git@${{ github.sha }}
-          python -c 'import pymovebank; print(pymovebank.available()); import pymovebank.app.apps.tracks_explorer_app'
+          pip install git+https://github.com/jemissik/ecodata.git@${{ github.sha }}
+          python -c 'import ecodata; print(ecodata.available()); import ecodata.app.apps.tracks_explorer_app'

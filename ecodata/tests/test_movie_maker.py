@@ -1,8 +1,8 @@
 import pytest
 
 from pathlib import Path
-from pymovebank.panel_utils import make_mp4_from_frames
-from pymovebank.tests.conftest import test_frames_dir, test_frames_dir_weird, test_output_dir, test_output_dir_weird
+from ecodata.panel_utils import make_mp4_from_frames
+from ecodata.tests.conftest import test_frames_dir, test_frames_dir_weird, test_output_dir, test_output_dir_weird
 
 
 @pytest.mark.parametrize('frames_dir,output_dir',

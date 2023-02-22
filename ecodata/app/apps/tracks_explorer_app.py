@@ -33,11 +33,11 @@ import panel as pn
 import param
 from pathlib import Path
 
-import pymovebank as pmv
-from pymovebank.plotting import map_tile_options, plot_tracks_with_tiles
-from pymovebank.panel_utils import param_widget, try_catch, templater, register_view
-from pymovebank.app.models import PMVCard, FileSelector
-from pymovebank.app.application import Application
+import ecodata as eco
+from ecodata.plotting import map_tile_options, plot_tracks_with_tiles
+from ecodata.panel_utils import param_widget, try_catch, templater, register_view
+from ecodata.app.models import PMVCard, FileSelector
+from ecodata.app.application import Application
 
 # from panel_jstree.widgets.jstree import FileTree
 
@@ -47,7 +47,7 @@ class TracksExplorer(param.Parameterized):
     load_tracks_button = param_widget(pn.widgets.Button(button_type='primary', name='Load data'))
     tracksfile = param_widget(pn.widgets.TextInput(placeholder='Select a file...', name='Track file'))
 
-    # filetree = param_widget(FileTree("/Users/jmissik/Desktop/repos.nosync/pymovebank/pymovebank/datasets/user_datasets", select_multiple=False))
+    # filetree = param_widget(FileTree("/Users/jmissik/Desktop/repos.nosync/ecodata/ecodata/datasets/user_datasets", select_multiple=False))
     # file_selector = param_widget(FileSelector("~", root_directory="/"))
 
     tracks = param.ClassSelector(class_=gpd.GeoDataFrame, precedence=-1)
@@ -88,7 +88,7 @@ class TracksExplorer(param.Parameterized):
         self.load_tracks_button.name = 'Load data'
         self.tracksfile.name = 'Track file'
         # self.filetree.name = 'Track file'
-        # self.filetree = FileTree("/Users/jmissik/Desktop/repos.nosync/pymovebank/pymovebank/datasets/user_datasets", select_multiple=False)
+        # self.filetree = FileTree("/Users/jmissik/Desktop/repos.nosync/ecodata/ecodata/datasets/user_datasets", select_multiple=False)
         self.output_fname.name = 'Output file'
         # self.output_file_button.name = 'Choose output file'
         self.save_tracks_extent_button.name = 'Save extent'
@@ -140,9 +140,9 @@ class TracksExplorer(param.Parameterized):
             val = self.tracksfile.value# or self.filetree.value[0]
             # val = self.file_selector.value[0]
             self.file_card.collapsed = True
-            tracks = pmv.read_track_data(val)
+            tracks = eco.read_track_data(val)
             self.status_text = "Track file loaded"
-            self.tracks_extent = pmv.get_tracks_extent(tracks,
+            self.tracks_extent = eco.get_tracks_extent(tracks,
                                                        boundary_shape=self.tracks_boundary_shape.value,
                                                        buffer=self.tracks_buffer.value)
             self.tracks = tracks
@@ -167,7 +167,7 @@ class TracksExplorer(param.Parameterized):
     @try_catch()
     @param.depends("boundary_update.value", watch=True)
     def update_tracks_extent(self):
-        self.tracks_extent = pmv.get_tracks_extent(self.tracks, boundary_shape=self.tracks_boundary_shape.value,
+        self.tracks_extent = eco.get_tracks_extent(self.tracks, boundary_shape=self.tracks_boundary_shape.value,
                                                        buffer=self.tracks_buffer.value)
 
     # @param.depends("output_file_button.value", watch=True)

@@ -1,4 +1,4 @@
-name: pmv
+name: eco
 channels:
 - pyviz
 - conda-forge
@@ -27,4 +27,4 @@ dependencies:
 - conda-forge::gdown
 - pip
 - pip:
-    - git+https://github.com/jemissik/pymovebank.git@develop
+    - git+https://github.com/jemissik/ecodata.git@develop

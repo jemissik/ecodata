@@ -1,5 +1,5 @@
 from pathlib import Path
-from pymovebank.panel_utils import make_mp4_from_frames, split_shell_command, try_catch
+from ecodata.panel_utils import make_mp4_from_frames, split_shell_command, try_catch
 
 import logging
 
@@ -7,8 +7,8 @@ import panel as pn
 
 import param
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
-from pymovebank.panel_utils import param_widget, templater, register_view
-from pymovebank.app.application import Application
+from ecodata.panel_utils import param_widget, templater, register_view
+from ecodata.app.application import Application
 
 logger = logging.getLogger(__file__)
 

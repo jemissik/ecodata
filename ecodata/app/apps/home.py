@@ -1,6 +1,6 @@
 import panel as pn
 
-from pymovebank.panel_utils import templater, register_view
+from ecodata.panel_utils import templater, register_view
 
 def _add_sections():
     pn.pane.Markdown("# Home page test!").servable()
