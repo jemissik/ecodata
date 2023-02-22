@@ -25,19 +25,20 @@
 #
 #
 
-# %%
-import geopandas as gpd
-import hvplot.xarray  # noqa
-import hvplot.pandas  # noqa
-import panel as pn
-import param
 from pathlib import Path
 
+# %%
+import geopandas as gpd
+import hvplot.pandas  # noqa
+import hvplot.xarray  # noqa
+import panel as pn
+import param
+
 import ecodata as eco
-from ecodata.plotting import map_tile_options, plot_tracks_with_tiles
-from ecodata.panel_utils import param_widget, try_catch, templater, register_view
-from ecodata.app.models import PMVCard, FileSelector
 from ecodata.app.application import Application
+from ecodata.app.models import FileSelector, PMVCard
+from ecodata.panel_utils import param_widget, register_view, templater, try_catch
+from ecodata.plotting import map_tile_options, plot_tracks_with_tiles
 
 # from panel_jstree.widgets.jstree import FileTree
 

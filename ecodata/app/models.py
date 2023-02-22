@@ -3,21 +3,15 @@ from __future__ import annotations
 import os
 import pathlib
 from collections import OrderedDict
+from typing import AnyStr, ClassVar, Optional, Type
 
+import panel as pn
+import param
+from panel.io import PeriodicCallback
+from panel.layout import Column, Divider, ListPanel, Row
+from panel.util import fullpath
 from panel.viewable import Layoutable
 from panel.widgets.input import TextInput
-from panel.util import fullpath
-from panel.layout import (
-    Column, Divider, ListPanel, Row,
-)
-from panel.io import PeriodicCallback
-
-from typing import (
-    AnyStr, ClassVar, Optional, Type,
-)
-
-import param
-import panel as pn
 
 from ecodata.app import config
 

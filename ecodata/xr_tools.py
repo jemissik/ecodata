@@ -2,13 +2,14 @@
 Operations and functions for xarray datasets (gridded environmental datasets)
 """
 
-import pandas as pd
+from pathlib import Path
+
 import numpy as np
-import xarray as xr
+import pandas as pd
 import rioxarray  # noqa
+import xarray as xr
 from geocube.api.core import make_geocube
 from pyproj.crs import CRS
-from pathlib import Path
 
 
 def detect_varnames(ds):

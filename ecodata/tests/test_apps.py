@@ -1,6 +1,8 @@
-import requests
-import pytest
 from sys import platform
+
+import pytest
+import requests
+
 
 @pytest.mark.skipif(platform == "linux" or platform == "linux2", reason = "needs update")
 def test_server_has_every_app(serve_apps, port, apps):

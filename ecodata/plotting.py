@@ -1,5 +1,5 @@
-import hvplot.xarray  # noqa
 import hvplot.pandas  # noqa
+import hvplot.xarray  # noqa
 
 map_tile_options = [None,
                     'CartoDark',

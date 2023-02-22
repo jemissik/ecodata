@@ -6,9 +6,9 @@ import os
 import shutil
 from pathlib import Path
 
+import gdown
 import requests
 import wget
-import gdown
 
 __all__ = ["available", "get_path", "install_roads_dataset"]
 

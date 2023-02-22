@@ -1,5 +1,7 @@
-import ecodata
 import pytest
+
+import ecodata
+
 
 def test_that_test_data_bundle_installs(install_test_data):
 

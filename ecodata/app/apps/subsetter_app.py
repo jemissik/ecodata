@@ -13,16 +13,16 @@
 # ---
 import logging
 
-# %% pycharm={"name": "#%%\n"}
-import ecodata as eco
-import hvplot.xarray  # noqa
 import hvplot.pandas  # noqa
+import hvplot.xarray  # noqa
 import panel as pn
-
 import param
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
-from ecodata.panel_utils import param_widget, try_catch, templater, register_view
+
+# %% pycharm={"name": "#%%\n"}
+import ecodata as eco
 from ecodata.app.application import Application
+from ecodata.panel_utils import param_widget, register_view, templater, try_catch
 
 logger = logging.getLogger(__file__)
 

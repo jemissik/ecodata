@@ -1,6 +1,7 @@
 import panel as pn
 
-from ecodata.panel_utils import templater, register_view
+from ecodata.panel_utils import register_view, templater
+
 
 def _add_sections():
     pn.pane.Markdown("# Home page test!").servable()

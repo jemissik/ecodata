@@ -1,27 +1,24 @@
 from __future__ import annotations
 
-from urllib.parse import urlsplit
-
-import param
-import panel as pn
 import functools
+import inspect
 import logging
-import subprocess
 import os
 import shlex
 import shutil
+import subprocess
 from contextlib import contextmanager
-from pathlib import Path
-from typing import Callable, Sequence, Union, TypeVar
-import inspect
-
-
 from functools import wraps
 from pathlib import Path
-from ecodata.app.config import extension
-from ecodata.app.assets import get_link_list_html, list_links_html, menu_fast_html
-
 from tkinter import Tk, filedialog
+from typing import Callable, Sequence, TypeVar, Union
+from urllib.parse import urlsplit
+
+import panel as pn
+import param
+
+from ecodata.app.assets import get_link_list_html, list_links_html, menu_fast_html
+from ecodata.app.config import extension
 
 Servable = Union[Callable, pn.viewable.Viewable]
 

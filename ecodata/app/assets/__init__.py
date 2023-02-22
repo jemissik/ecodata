@@ -7,7 +7,6 @@ from typing import Union
 import jinja2
 import panel as pn
 
-
 PATH = pathlib.Path(__file__).parent
 
 MAIN_MENU = (PATH / "main_menu.html").read_text(encoding="utf8")

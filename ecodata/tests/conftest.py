@@ -1,10 +1,11 @@
-import pytest
-import panel as pn
-import time
 import shutil
+import time
+
+import panel as pn
+import pytest
+
 import ecodata
 from ecodata.app.apps import applications
-
 
 PORT = [6000]
 

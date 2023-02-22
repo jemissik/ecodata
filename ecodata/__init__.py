@@ -10,39 +10,37 @@ except ImportError:
     # Package not installed
     __version__ = "0.0.0"
 
+import ecodata.panel_utils
+import ecodata.plotting
 from ecodata.datasets import *
 from ecodata.functions import (
+    bbox2poly,
+    clip_tracks_timerange,
+    combine_studies,
+    geotif2nc,
     get_crs,
     get_extent,
     get_file_info,
     get_file_len,
     get_geometry,
-    grib2nc,
-    geotif2nc,
-    subset_data,
     get_tracks_extent,
-    plot_subset_interactive,
-    plot_subset,
-    read_track_data,
-    read_ref_data,
+    grib2nc,
     merge_tracks_ref,
-    combine_studies,
-    clip_tracks_timerange,
-    bbox2poly,
+    plot_subset,
+    plot_subset_interactive,
+    read_ref_data,
+    read_track_data,
+    subset_data,
 )
-
 from ecodata.xr_tools import (
+    coarsen_dataset,
     detect_varnames,
     get_time_res,
-    thin_dataset,
-    coarsen_dataset,
-    select_spatial,
-    select_time_range,
-    select_time_cond,
-    resample_time,
     groupby_multi_time,
     groupby_poly_time,
+    resample_time,
+    select_spatial,
+    select_time_cond,
+    select_time_range,
+    thin_dataset,
 )
-
-import ecodata.plotting
-import ecodata.panel_utils

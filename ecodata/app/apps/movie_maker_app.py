@@ -1,14 +1,19 @@
-from pathlib import Path
-from ecodata.panel_utils import make_mp4_from_frames, split_shell_command, try_catch
-
 import logging
+from pathlib import Path
 
 import panel as pn
-
 import param
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
-from ecodata.panel_utils import param_widget, templater, register_view
+
 from ecodata.app.application import Application
+from ecodata.panel_utils import (
+    make_mp4_from_frames,
+    param_widget,
+    register_view,
+    split_shell_command,
+    templater,
+    try_catch,
+)
 
 logger = logging.getLogger(__file__)
 

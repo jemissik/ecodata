@@ -2,22 +2,21 @@
 See the notebooks in the examples section for demos of how these are used."""
 from __future__ import annotations
 
-import re
-import numpy as np
 import glob
+import re
+import warnings
+from pathlib import Path
+
+import cartopy.crs as ccrs
 import fiona
 import geopandas as gpd
-import pandas as pd
-import xarray as xr
-import rioxarray  # noqa
-import matplotlib.pyplot as plt
-from pathlib import Path
-from shapely.geometry import Polygon
-import cartopy.crs as ccrs
 import geoviews as gv
-
-
-import warnings
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import rioxarray  # noqa
+import xarray as xr
+from shapely.geometry import Polygon
 
 warnings.filterwarnings("ignore", message="Geometry is in a geographic CRS")
 

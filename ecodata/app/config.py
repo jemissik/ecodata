@@ -3,11 +3,10 @@
 from typing import Optional, Union
 from urllib.parse import urlsplit
 
-
 import panel as pn
-from ecodata.app.application import Application
 from panel.template import FastGridTemplate, FastListTemplate
 
+from ecodata.app.application import Application
 from ecodata.app.assets import FAST_CSS
 
 SITE = "Movement Data Aggregator"

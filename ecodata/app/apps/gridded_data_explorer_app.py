@@ -14,23 +14,23 @@
 
 # %%
 
-import geopandas as gpd
-import ecodata as eco
-import xarray as xr
-import hvplot.xarray  # noqa
-import hvplot.pandas  # noqa
-import geoviews as gv
-import panel as pn
-import pandas as pd
-import param
 import datetime as dt
 from pathlib import Path
 
+import geopandas as gpd
+import geoviews as gv
+import hvplot.pandas  # noqa
+import hvplot.xarray  # noqa
+import pandas as pd
+import panel as pn
+import param
+import xarray as xr
 from panel.reactive import ReactiveHTML, Viewable
 
+import ecodata as eco
 from ecodata.app.application import Application
-from ecodata.plotting import plot_gridded_data, plot_avg_timeseries
-from ecodata.panel_utils import param_widget, try_catch, templater, register_view
+from ecodata.panel_utils import param_widget, register_view, templater, try_catch
+from ecodata.plotting import plot_avg_timeseries, plot_gridded_data
 
 
 class HTML_WidgetBox(ReactiveHTML):
