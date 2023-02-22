@@ -26,7 +26,6 @@ dependencies:
 - pyviz::geoviews
 - bokeh::jupyter_bokeh  # Enables interactive widgets in vscode
 - conda-forge::geocube
-# - pyviz::spatialpandas
 - jupytext
 - nodejs>=14
 - conda-forge::ffmpeg
@@ -34,11 +33,15 @@ dependencies:
 - conda-forge::gdown
 - conda-forge::python-wget
 - requests
-# - conda-forge::jupyterlab
+- conda-forge::jupyter
 - pip:
   - black
   - conda-merge
   - isort
+  - invoke
+  - flake8
+  - flakeheaven>=3.0.0
+  - black==22.6.0
   - myst-nb
   - sphinx>=4.4,<6  # <6 b/c pydata (<=0.12) doesn't work with sphinx 6
   - pydata-sphinx-theme<0.12.0  # pydata 0.12 has a flyout menu bug

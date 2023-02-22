@@ -1,10 +1,11 @@
-import pytest
-import panel as pn
-import time
 import shutil
+import time
+
+import panel as pn
+import pytest
+
 import ecodata
 from ecodata.app.apps import applications
-
 
 PORT = [6000]
 
@@ -14,6 +15,7 @@ test_frames_dir_weird = test_data_dir / "animation & test & frames"
 
 test_output_dir = ecodata.datasets.dataset_utils._module_path / "test_datasets" / "output"
 test_output_dir_weird = ecodata.datasets.dataset_utils._module_path / "test_datasets" / "output & weird"
+
 
 @pytest.fixture
 def port():
@@ -29,7 +31,7 @@ def apps():
 @pytest.fixture()
 def serve_apps(port, apps):
     server = pn.serve(apps, port=port, threaded=True, show=False)
-    time.sleep(1) # Wait for server to start
+    time.sleep(1)  # Wait for server to start
     yield server
     try:
         server.stop()

@@ -2,23 +2,24 @@
 Operations and functions for xarray datasets (gridded environmental datasets)
 """
 
-import pandas as pd
+from pathlib import Path
+
 import numpy as np
-import xarray as xr
+import pandas as pd
 import rioxarray  # noqa
+import xarray as xr
 from geocube.api.core import make_geocube
 from pyproj.crs import CRS
-from pathlib import Path
 
 
 def detect_varnames(ds):
-    matched_vars = dict(timevar = None,
-                    latvar = None,
-                    lonvar = None)
+    matched_vars = dict(timevar=None, latvar=None, lonvar=None)
 
-    label_options = dict(time_options = ['time', 'timestamp', 'Time'],
-                        lat_options = ['lat', 'latitude', 'Latitude'],
-                        lon_options = ['lon', 'long', 'longitude', 'Longitude'])
+    label_options = dict(
+        time_options=["time", "timestamp", "Time"],
+        lat_options=["lat", "latitude", "Latitude"],
+        lon_options=["lon", "long", "longitude", "Longitude"],
+    )
 
     # Variables in dataset
     dataset_vars = set(list(ds.coords) + list(ds))
@@ -33,7 +34,7 @@ def detect_varnames(ds):
     return matched_vars, dataset_vars, unmatched_vars
 
 
-def get_time_res(ds, timevar='time'):
+def get_time_res(ds, timevar="time"):
     """
     Detect time resolution of a dataset, calculated as the average diff of the time array
 
@@ -49,7 +50,7 @@ def get_time_res(ds, timevar='time'):
     pandas.Timedelta
         Time resolution of the dataset
     """
-    return pd.Timedelta(ds[timevar].diff(dim='time').mean().values)
+    return pd.Timedelta(ds[timevar].diff(dim="time").mean().values)
 
 
 def thin_dataset(dataset, n_thin, outfile=None):
@@ -91,7 +92,7 @@ def thin_dataset(dataset, n_thin, outfile=None):
     return ds_thinned
 
 
-def coarsen_dataset(dataset, n_window, boundary='trim', outfile=None, **kwargs):
+def coarsen_dataset(dataset, n_window, boundary="trim", outfile=None, **kwargs):
     """
     Coarsen a dataset by performing block aggregation. Supports aggregation along
     multiple dimensions.
@@ -190,7 +191,7 @@ def select_spatial(ds, boundary, invert=False, crs=None, **kwargs):
     return ds_subset
 
 
-def select_time_range(ds, time_var='time', start_time=None, end_time=None):
+def select_time_range(ds, time_var="time", start_time=None, end_time=None):
     """
     Create a subset of a dataset based on a time range.
 
@@ -216,17 +217,18 @@ def select_time_range(ds, time_var='time', start_time=None, end_time=None):
     return ds_subset
 
 
-def select_time_cond(ds,
-                     time_var='time',
-                     years=None,
-                     months=None,
-                     daysofyear=None,
-                     hours=None,
-                     year_range = None,
-                     month_range = None,
-                     dayofyear_range = None,
-                     hour_range = None
-                     ):
+def select_time_cond(
+    ds,
+    time_var="time",
+    years=None,
+    months=None,
+    daysofyear=None,
+    hours=None,
+    year_range=None,
+    month_range=None,
+    dayofyear_range=None,
+    hour_range=None,
+):
     """
     Create a subset of a dataset including certain years, months, days of year, or hours of day.
 
@@ -254,8 +256,8 @@ def select_time_cond(ds,
         Range of julian days of year to be selected, given as a list containing the start day of year and the end day of
         year (e.g., [144,204]). Both endpoints will be included in the selection. By default None.
     hour_range : list, optional
-        Range of hours of day to be selected, given as a list containing the start hour and the end hour (e.g., [11,13]).
-        Both endpoints will be included in the selection. By default None.
+        Range of hours of day to be selected, given as a list containing the start hour and the end hour
+        (e.g., [11,13]). Both endpoints will be included in the selection. By default None.
 
     Returns
     -------
@@ -269,7 +271,7 @@ def select_time_cond(ds,
     # Helper to combine selection list (e.g. years) with range list (e.g. year_range)
     def combine_selection(selection_list, range_list):
         selection_list = selection_list or []
-        range_array = np.arange(range_list[0], range_list[1]+1) if range_list else []
+        range_array = np.arange(range_list[0], range_list[1] + 1) if range_list else []
         return np.union1d(selection_list, range_array)
 
     # Create filters for each variable (year, month, dayofyear, hour)
@@ -284,12 +286,12 @@ def select_time_cond(ds,
     time_selection = np.all(filters, axis=0)
 
     # Apply time filter
-    ds_subset = ds.sel({time_var:time_selection})
+    ds_subset = ds.sel({time_var: time_selection})
 
     return ds_subset
 
 
-def resample_time(ds, timevar='time', time_quantity=1, time_unit='day', interp_irreg=False):
+def resample_time(ds, timevar="time", time_quantity=1, time_unit="day", interp_irreg=False):
     """
     Convert a dataset to a new time resolution. Uses interpolation for upsampling and mean for downsampling.
 
@@ -327,7 +329,7 @@ def resample_time(ds, timevar='time', time_quantity=1, time_unit='day', interp_i
     # Use mean for downsampling
     elif resample_freq > ds_freq:
         if interp_irreg and ((resample_freq % ds_freq) != pd.Timedelta(0)):
-            #Find greatest common divisor of the two time frequencies
+            # Find greatest common divisor of the two time frequencies
             gcd = np.gcd(resample_freq, ds_freq)
             ds_resampled = ds.resample({timevar: gcd}).interpolate().resample({timevar: resample_freq}).mean()
         else:
@@ -336,7 +338,7 @@ def resample_time(ds, timevar='time', time_quantity=1, time_unit='day', interp_i
     return ds_resampled
 
 
-def groupby_multi_time(ds, var, time='time', groupby_vars=None):
+def groupby_multi_time(ds, var, time="time", groupby_vars=None):
     """
     Groupby stats for multiple time groupings.
     Returns a dataset with summary statistics (count, min, max, mean, std, quantiles).
@@ -363,27 +365,31 @@ def groupby_multi_time(ds, var, time='time', groupby_vars=None):
     da = ds[var]
 
     grouped_index = pd.MultiIndex.from_arrays(
-        [getattr(da[time].dt, groupby_var).values for groupby_var in groupby_vars], names=groupby_vars)
+        [getattr(da[time].dt, groupby_var).values for groupby_var in groupby_vars], names=groupby_vars
+    )
 
-    da.coords['grouped_time_index'] = ('time', grouped_index)
+    da.coords["grouped_time_index"] = ("time", grouped_index)
 
-    grouped = da.groupby('grouped_time_index')
+    grouped = da.groupby("grouped_time_index")
 
-    result = xr.Dataset({
-        'count': grouped.count(...),
-        'mean':grouped.mean(...),
-        'std':grouped.std(...),
-        'min':grouped.min(...),
-        '25%':grouped.quantile(0.25, dim=...).drop_vars('quantile'),
-        '50%':grouped.quantile(0.50, dim=...).drop_vars('quantile'),
-        '75%':grouped.quantile(0.75, dim=...).drop_vars('quantile'),
-        'max':grouped.max(...),
-                         })
+    result = xr.Dataset(
+        {
+            "count": grouped.count(...),
+            "mean": grouped.mean(...),
+            "std": grouped.std(...),
+            "min": grouped.min(...),
+            "25%": grouped.quantile(0.25, dim=...).drop_vars("quantile"),
+            "50%": grouped.quantile(0.50, dim=...).drop_vars("quantile"),
+            "75%": grouped.quantile(0.75, dim=...).drop_vars("quantile"),
+            "max": grouped.max(...),
+        }
+    )
     return result
 
 
-def groupby_poly_time(vector_data, vector_var, ds, ds_var, latvar='latitude',
-                      lonvar='longitude', timevar='time', groupby_vars=None):
+def groupby_poly_time(
+    vector_data, vector_var, ds, ds_var, latvar="latitude", lonvar="longitude", timevar="time", groupby_vars=None
+):
     """
     Groupby stats for a multi groupby including polygons and time variables.
     Returns summary statistics for the variable of interest.
@@ -420,18 +426,18 @@ def groupby_poly_time(vector_data, vector_var, ds, ds_var, latvar='latitude',
     gc = make_geocube(vector_data=vector_data, like=ds)
 
     # Add vector data as a coordinate of the dataset
-    ds2 = ds.assign_coords({'polygon':([latvar, lonvar], gc[vector_var].values)})
+    ds2 = ds.assign_coords({"polygon": ([latvar, lonvar], gc[vector_var].values)})
 
     # Apply the time groupings for each polygon
     # TODO This approach should be updated when xarray's multi groupby is added
     poly_results = []
-    for group in ds2.groupby('polygon'):
+    for group in ds2.groupby("polygon"):
         res = groupby_multi_time(group[1], var=ds_var, groupby_vars=groupby_vars)
-        res = res.assign_coords({'polygon': group[0]})
+        res = res.assign_coords({"polygon": group[0]})
         poly_results.append(res)
-    result = xr.concat(poly_results, dim='polygon').to_dataframe()
+    result = xr.concat(poly_results, dim="polygon").to_dataframe()
     index_levels = groupby_vars.copy()
-    index_levels.insert(0,'polygon')
+    index_levels.insert(0, "polygon")
     result = result.reorder_levels(index_levels).sort_index()
-    result = result[['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max']]
+    result = result[["count", "mean", "std", "min", "25%", "50%", "75%", "max"]]
     return result

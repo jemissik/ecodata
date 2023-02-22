@@ -1,6 +1,8 @@
-import ecodata as eco
-import click
 from pathlib import Path
+
+import click
+
+import ecodata as eco
 
 
 @click.command()

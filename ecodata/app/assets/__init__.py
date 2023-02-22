@@ -7,7 +7,6 @@ from typing import Union
 import jinja2
 import panel as pn
 
-
 PATH = pathlib.Path(__file__).parent
 
 MAIN_MENU = (PATH / "main_menu.html").read_text(encoding="utf8")
@@ -25,7 +24,7 @@ pn.state.cache["cached"] = {}
 CACHE = pn.state.cache["cached"]
 
 
-def menu_fast_html(accent: str = "#1f77b4", jinja_subs = None) -> str:
+def menu_fast_html(accent: str = "#1f77b4", jinja_subs=None) -> str:
     """Combines the specific app_html to other html into a fast html menu"""
 
     menu = MAIN_MENU.replace("#1f77b4".format(), accent)

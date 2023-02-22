@@ -7,7 +7,4 @@ import panel as pn
 from ecodata.app.apps import applications
 
 if __name__ == "__main__":
-    pn.serve(
-        {url: view for url, view in applications.items()},
-        port=5006
-    )
+    pn.serve({url: view for url, view in applications.items()}, port=5006)

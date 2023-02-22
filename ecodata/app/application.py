@@ -1,16 +1,23 @@
 from __future__ import annotations
+
 import inspect
 from pathlib import Path
 from urllib.parse import urlsplit
+
 import param
 
 
 def name_from_url(url):
-    name = (urlsplit(url).path  # extract path from url (the part after .com, .org, etc
-        .strip("/")  # depending on url structure can come with leading / so we remove
+    name = (
+        urlsplit(url)
+        .path.strip(  # extract path from url (the part after .com, .org, etc
+            "/"
+        )  # depending on url structure can come with leading / so we remove
         .split("/")[0]  # if path is multipart, we split and only take first (if not this does no change)
-        .replace("-", " ").replace("_", " ")  # replace - and _ with space
-        .title())  # turn to title case
+        .replace("-", " ")
+        .replace("_", " ")  # replace - and _ with space
+        .title()
+    )  # turn to title case
     return name
 
 

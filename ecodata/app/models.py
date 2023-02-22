@@ -1,23 +1,16 @@
 from __future__ import annotations
 
 import os
-import pathlib
 from collections import OrderedDict
+from typing import AnyStr, ClassVar, Optional, Type
 
+import panel as pn
+import param
+from panel.io import PeriodicCallback
+from panel.layout import Column, Divider, ListPanel, Row
+from panel.util import fullpath
 from panel.viewable import Layoutable
 from panel.widgets.input import TextInput
-from panel.util import fullpath
-from panel.layout import (
-    Column, Divider, ListPanel, Row,
-)
-from panel.io import PeriodicCallback
-
-from typing import (
-    AnyStr, ClassVar, Optional, Type,
-)
-
-import param
-import panel as pn
 
 from ecodata.app import config
 
@@ -41,9 +34,7 @@ class PMVCard(pn.Card):
         A valid CSS color to apply to the header text.""",
     )
 
-    header_css_classes = param.List(
-        ["card-header-custom"],
-        doc="""CSS classes to apply to the header element.""")
+    header_css_classes = param.List(["card-header-custom"], doc="""CSS classes to apply to the header element.""")
 
 
 class PMVCardDark(pn.Card):
@@ -65,9 +56,7 @@ class PMVCardDark(pn.Card):
         A valid CSS color to apply to the header text.""",
     )
 
-    header_css_classes = param.List(
-        ["card-header-custom"],
-        doc="""CSS classes to apply to the header element.""")
+    header_css_classes = param.List(["card-header-custom"], doc="""CSS classes to apply to the header element.""")
 
 
 class KeyWatcher(pn.reactive.ReactiveHTML):
@@ -79,17 +68,19 @@ class KeyWatcher(pn.reactive.ReactiveHTML):
     <div id="wrapper">${watched}</div>
     """
 
-    _dom_events = {'wrapper': ['keyup']}
+    _dom_events = {"wrapper": ["keyup"]}
 
     def _wrapper_keyup(self, e):
-        try:  # Mouse click events seemingly also get passed, but don't follow the same data structure, throwing an exception when trying to grab the 'key' key
-            if e.data['key'] == self.key:
+        # Mouse click events seemingly also get passed, but don't follow the same data structure,
+        # throwing an exception when trying to grab the 'key' key
+        try:
+            if e.data["key"] == self.key:
                 self.value += 1
         except Exception:
             pass
 
     def on_click(self, callback):
-        return self.param.watch(callback, 'value', onlychanged=False)
+        return self.param.watch(callback, "value", onlychanged=False)
 
 
 class FileSelector(pn.widgets.CompositeWidget):
@@ -104,70 +95,96 @@ class FileSelector(pn.widgets.CompositeWidget):
     >>> FileSelector(directory='~', file_pattern='*.png')
     """
 
-    directory = param.String(default=os.getcwd(), doc="""
-        The directory to explore.""")
+    directory = param.String(
+        default=os.getcwd(),
+        doc="""
+        The directory to explore.""",
+    )
 
-    file_pattern = param.String(default='*', doc="""
-        A glob-like pattern to filter the files.""")
+    file_pattern = param.String(
+        default="*",
+        doc="""
+        A glob-like pattern to filter the files.""",
+    )
 
-    only_files = param.Boolean(default=False, doc="""
-        Whether to only allow selecting files.""")
+    only_files = param.Boolean(
+        default=False,
+        doc="""
+        Whether to only allow selecting files.""",
+    )
 
-    margin = param.Parameter(default=(5, 10, 20, 10), doc="""
+    margin = param.Parameter(
+        default=(5, 10, 20, 10),
+        doc="""
         Allows to create additional space around the component. May
         be specified as a two-tuple of the form (vertical, horizontal)
-        or a four-tuple (top, right, bottom, left).""")
+        or a four-tuple (top, right, bottom, left).""",
+    )
 
-    show_hidden = param.Boolean(default=False, doc="""
+    show_hidden = param.Boolean(
+        default=False,
+        doc="""
         Whether to show hidden files and directories (starting with
-        a period).""")
+        a period).""",
+    )
 
-    size = param.Integer(default=10, doc="""
+    size = param.Integer(
+        default=10,
+        doc="""
         The number of options shown at once (note this is the only
-        way to control the height of this widget)""")
+        way to control the height of this widget)""",
+    )
 
-    refresh_period = param.Integer(default=None, doc="""
+    refresh_period = param.Integer(
+        default=None,
+        doc="""
         If set to non-None value indicates how frequently to refresh
-        the directory contents in milliseconds.""")
+        the directory contents in milliseconds.""",
+    )
 
-    root_directory = param.String(default=None, doc="""
+    root_directory = param.String(
+        default=None,
+        doc="""
         If set, overrides directory parameter as the root directory
-        beyond which users cannot navigate.""")
+        beyond which users cannot navigate.""",
+    )
 
-    value = param.List(default=[], doc="""
-        List of selected files.""")
+    value = param.List(
+        default=[],
+        doc="""
+        List of selected files.""",
+    )
 
     _composite_type: ClassVar[Type[ListPanel]] = Column
 
     def __init__(self, directory: AnyStr | os.PathLike | None = None, **params):
         if directory is not None:
-            params['directory'] = fullpath(directory)
-        if 'root_directory' in params:
-            root = params['root_directory']
-            params['root_directory'] = fullpath(root)
-        if params.get('width') and params.get('height') and 'sizing_mode' not in params:
-            params['sizing_mode'] = None
+            params["directory"] = fullpath(directory)
+        if "root_directory" in params:
+            root = params["root_directory"]
+            params["root_directory"] = fullpath(root)
+        if params.get("width") and params.get("height") and "sizing_mode" not in params:
+            params["sizing_mode"] = None
 
         super().__init__(**params)
 
         self.error = None  # allows errors from os to be accessed outside Model
 
         # Set up layout
-        layout = {p: getattr(self, p) for p in Layoutable.param
-                  if p not in ('name', 'height', 'margin') and getattr(self, p) is not None}
-        sel_layout = dict(layout, sizing_mode='stretch_both', height=None, margin=0)
-        self._control_button = pn.widgets.Button(name='Select File')
+        layout = {
+            p: getattr(self, p)
+            for p in Layoutable.param
+            if p not in ("name", "height", "margin") and getattr(self, p) is not None
+        }
+        sel_layout = dict(layout, sizing_mode="stretch_both", height=None, margin=0)
+        self._control_button = pn.widgets.Button(name="Select File")
 
         self._selector = pn.widgets.MultiSelect(size=self.size, **sel_layout)
-        self._directory = TextInput(value=self.directory, margin=(5, 10), width_policy='max')
-        self._nav_bar = Row(
-
-            self._directory,
-            **dict(layout, width=None, margin=0, width_policy='max')
-        )
+        self._directory = TextInput(value=self.directory, margin=(5, 10), width_policy="max")
+        self._nav_bar = Row(self._directory, **dict(layout, width=None, margin=0, width_policy="max"))
         self._composite[:] = [self._control_button]
         # self._composite[:] = [self._nav_bar, Divider(margin=0), self._selector, Divider(margin=0)]
-        self.link(self._selector, size='size')
+        self.link(self._selector, size="size")
 
         # Set up state
         self._stack = []
@@ -180,12 +197,12 @@ class FileSelector(pn.widgets.CompositeWidget):
         self._enter = KeyWatcher(watched=self._directory, key="Enter")
         self._enter.on_click(self._dir_change)
         self._control_button.on_click(self._update_layout)
-        self.link(self._directory, directory='value')
-        self._selector.param.watch(self._update_value, 'value')
-        self._directory.param.watch(self._dir_change, 'value')
-        self._selector.param.watch(self._select, 'value')
+        self.link(self._directory, directory="value")
+        self._selector.param.watch(self._update_value, "value")
+        self._directory.param.watch(self._dir_change, "value")
+        self._selector.param.watch(self._select, "value")
         self._periodic = PeriodicCallback(callback=self._refresh, period=self.refresh_period or 0)
-        self.param.watch(self._update_periodic, 'refresh_period')
+        self.param.watch(self._update_periodic, "refresh_period")
         if self.refresh_period:
             self._periodic.start()
 
@@ -207,8 +224,13 @@ class FileSelector(pn.widgets.CompositeWidget):
             self._composite[:] = [self._control_button]
         else:
             self._control_button.name = "Close"
-            self._composite[:] = [self._nav_bar, Divider(margin=0), self._selector, Divider(margin=0),
-                                  self._control_button]
+            self._composite[:] = [
+                self._nav_bar,
+                Divider(margin=0),
+                self._selector,
+                Divider(margin=0),
+                self._control_button,
+            ]
         self._expanded = not self._expanded
 
     def _update_value(self, event: param.parameterized.Event):
@@ -224,7 +246,7 @@ class FileSelector(pn.widgets.CompositeWidget):
             self._directory.value = self._cwd
             return
 
-        relpath = event.new[0].replace('📁', '')
+        relpath = event.new[0].replace("📁", "")
         sel = fullpath(os.path.join(self._cwd, relpath))
         if os.path.isdir(sel):
             self._directory.value = sel
@@ -242,9 +264,7 @@ class FileSelector(pn.widgets.CompositeWidget):
             self._directory.value = path
         self._update_files()
 
-    def _update_files(
-            self, event: Optional[param.parameterized.Event] = None, refresh: bool = False
-    ):
+    def _update_files(self, event: Optional[param.parameterized.Event] = None, refresh: bool = False):
         path = fullpath(self._directory.value)
 
         if refresh:
@@ -271,8 +291,7 @@ class FileSelector(pn.widgets.CompositeWidget):
             elif os.path.isfile(check):
                 files.append(s)
 
-        paths = [p for p in sorted(dirs) + sorted(files)
-                 if self.show_hidden or not os.path.basename(p).startswith('.')]
+        paths = [p for p in sorted(dirs) + sorted(files) if self.show_hidden or not os.path.basename(p).startswith(".")]
 
         paths.insert(0, "..")
         abbreviated = ["⬆️ Go Out ⬆️"]

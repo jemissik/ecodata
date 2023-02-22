@@ -1,27 +1,24 @@
 from __future__ import annotations
 
-from urllib.parse import urlsplit
-
-import param
-import panel as pn
 import functools
+import inspect
 import logging
-import subprocess
 import os
 import shlex
 import shutil
+import subprocess
 from contextlib import contextmanager
-from pathlib import Path
-from typing import Callable, Sequence, Union, TypeVar
-import inspect
-
-
 from functools import wraps
 from pathlib import Path
-from ecodata.app.config import extension
-from ecodata.app.assets import get_link_list_html, list_links_html, menu_fast_html
-
 from tkinter import Tk, filedialog
+from typing import Callable, Sequence, TypeVar, Union
+from urllib.parse import urlsplit
+
+import panel as pn
+import param
+
+from ecodata.app.assets import get_link_list_html, list_links_html, menu_fast_html
+from ecodata.app.config import extension
 
 Servable = Union[Callable, pn.viewable.Viewable]
 
@@ -66,12 +63,13 @@ def select_file():
         filepath selected from the file dialog
     """
     root = Tk()
-    root.attributes('-topmost', True)
+    root.attributes("-topmost", True)
     root.withdraw()
     f = filedialog.askopenfilename(multiple=False)
 
     if f:
         return f
+
 
 def select_output(initial_dir=None, initial_file=None, extension=None):
     """
@@ -92,10 +90,9 @@ def select_output(initial_dir=None, initial_file=None, extension=None):
         filepath for the output file
     """
     root = Tk()
-    root.attributes('-topmost', True)
+    root.attributes("-topmost", True)
     root.withdraw()
-    f = filedialog.asksaveasfilename(initialdir = initial_dir,
-                                     initialfile=initial_file, defaultextension=extension)
+    f = filedialog.asksaveasfilename(initialdir=initial_dir, initialfile=initial_file, defaultextension=extension)
     if f:
         return f
 
@@ -106,10 +103,12 @@ def try_catch(msg="Error... Check options and try again"):
         def tru_dec(self, *args, **kwargs):
             try:
                 return func(self, *args, **kwargs)
-            except Exception as e:
+            except Exception:
                 logging.exception(msg)
                 self.status_text = msg
+
         return tru_dec
+
     return inner
 
 
@@ -121,6 +120,7 @@ def split_shell_command(cmd: str):
     It also works for posix and windows systems appropriately
     """
     return shlex.split(cmd, posix=not IS_WINDOWS)
+
 
 def sanitize_filepath(filepath: str):
     """
@@ -143,7 +143,7 @@ def sanitize_filepath(filepath: str):
 
 def make_mp4_from_frames(frames_dir, output_file, frame_rate):
     frames_pattern = "Frame%d.png"
-    temp_output_file = 'output.mp4'
+    temp_output_file = "output.mp4"
 
     frames_dir_sanitized = Path(frames_dir).absolute().resolve()
 
@@ -155,7 +155,7 @@ def make_mp4_from_frames(frames_dir, output_file, frame_rate):
     with cd_and_cd_back():
         print("Moving to frames directory...")
         os.chdir(frames_dir_sanitized)
-        print(f'In directory: {os.getcwd()}')
+        print(f"In directory: {os.getcwd()}")
         cmd = f"""ffmpeg -framerate {frame_rate} -i {frames_pattern}
         -vf pad='width=ceil(iw/2)*2:height=ceil(ih/2)*2'
         -c:v libx264 -pix_fmt yuv420p -y {temp_output_file} """
@@ -170,10 +170,10 @@ def make_mp4_from_frames(frames_dir, output_file, frame_rate):
 
 
 def templater(
-        template: pn.template.BaseTemplate,
-        main: Servable | Sequence[Servable] = (),
-        sidebar: Servable | Sequence[Servable] = (),
-        header: Servable | Sequence[Servable] = (),
+    template: pn.template.BaseTemplate,
+    main: Servable | Sequence[Servable] = (),
+    sidebar: Servable | Sequence[Servable] = (),
+    header: Servable | Sequence[Servable] = (),
 ):
     main = main if isinstance(main, Sequence) else [main]
     sidebar = sidebar if isinstance(sidebar, Sequence) else [sidebar]
@@ -192,11 +192,16 @@ def register_view(*ext_args, url=None, name=None, **ext_kw):
     # grab url of as filename of calling file if not supplied
     url = url or Path(inspect.stack()[1].filename).stem  # file name of calling file
     # grab name for app from url
-    name = name or (urlsplit(url).path  # extract path from url (the part after .com, .org, etc
-            .strip("/")  # depending on url structure can come with leading / so we remove
-            .split("/")[0]  # if path is multipart, we split and only take first (if not this does no change)
-            .replace("-", " ").replace("_", " ")  # replace - and _ with space
-            .title())
+    name = name or (
+        urlsplit(url)
+        .path.strip(  # extract path from url (the part after .com, .org, etc
+            "/"
+        )  # depending on url structure can come with leading / so we remove
+        .split("/")[0]  # if path is multipart, we split and only take first (if not this does no change)
+        .replace("-", " ")
+        .replace("_", " ")  # replace - and _ with space
+        .title()
+    )
 
     # create and append links at definition/compile time so all apps have the same links
     link = get_link_list_html({"url": url, "name": name})
@@ -217,6 +222,7 @@ def register_view(*ext_args, url=None, name=None, **ext_kw):
 
         applications[url] = wrapper
         return wrapper
+
     return inner
 
 

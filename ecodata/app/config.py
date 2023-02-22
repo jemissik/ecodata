@@ -3,11 +3,10 @@
 from typing import Optional, Union
 from urllib.parse import urlsplit
 
-
 import panel as pn
-from ecodata.app.application import Application
 from panel.template import FastGridTemplate, FastListTemplate
 
+from ecodata.app.application import Application
 from ecodata.app.assets import FAST_CSS
 
 SITE = "Movement Data Aggregator"
@@ -63,11 +62,16 @@ def extension(
         pn.extension(*args, sizing_mode=sizing_mode, raw_css=raw_css, **kwargs)
 
     if not app:
-        name = (urlsplit(url).path  # extract path from url (the part after .com, .org, etc
-                .strip("/")  # depending on url structure can come with leading / so we remove
-                .split("/")[0]  # if path is multipart, we split and only take first (if not this does no change)
-                .replace("-", " ").replace("_", " ")  # replace - and _ with space
-                .title())  # turn to title case
+        name = (
+            urlsplit(url)
+            .path.strip(  # extract path from url (the part after .com, .org, etc
+                "/"
+            )  # depending on url structure can come with leading / so we remove
+            .split("/")[0]  # if path is multipart, we split and only take first (if not this does no change)
+            .replace("-", " ")
+            .replace("_", " ")  # replace - and _ with space
+            .title()
+        )  # turn to title case
         app = Application(name=name, url=url)
 
     if isinstance(template, pn.template.BaseTemplate):
