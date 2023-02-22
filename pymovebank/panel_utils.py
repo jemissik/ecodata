@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 import param
 import panel as pn
 import functools
@@ -185,25 +187,35 @@ def templater(
 
     return template
 
-def register_view(*ext_args, url=None, **ext_kw):
+
+def register_view(*ext_args, url=None, name=None, **ext_kw):
+    # grab url of as filename of calling file if not supplied
     url = url or Path(inspect.stack()[1].filename).stem  # file name of calling file
-    app = extension(*ext_args, url=url, **ext_kw)
-    if app.category == "Dashboard" or app.category == "Dashboards":
-        print(app.name, app.url)
-        link = get_link_list_html({"url": app.url, "name": app.name})
-        links.append(link)
+    # grab name for app from url
+    name = name or (urlsplit(url).path  # extract path from url (the part after .com, .org, etc
+            .strip("/")  # depending on url structure can come with leading / so we remove
+            .split("/")[0]  # if path is multipart, we split and only take first (if not this does no change)
+            .replace("-", " ").replace("_", " ")  # replace - and _ with space
+            .title())
+
+    # create and append links at definition/compile time so all apps have the same links
+    link = get_link_list_html({"url": url, "name": name})
+    links.append(link)
+
     def inner(view):
         @wraps(view)
         def wrapper(*args, **kwargs):
 
+            # create app and template at run time so that each is a fresh app
+            # to prevent bleed over effects where to stack on top of each other
+            app = extension(*ext_args, url=url, name=name, **ext_kw)
             template = view(app, *args, **kwargs)
 
             list_html = {"dashboard_links": list_links_html(links)}
             template.sidebar_footer = menu_fast_html(accent=template.accent_base_color, jinja_subs=list_html)
             return template
-        app.view = wrapper
-        applications[url] = app
 
+        applications[url] = wrapper
         return wrapper
     return inner
 

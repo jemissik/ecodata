@@ -531,7 +531,7 @@ class GriddedDataExplorer(param.Parameterized):
         self.status_text = f'File saved to: {outfile}'
 
 
-@register_view(app=Application.from_filename())
+@register_view()
 def view(app):
     viewer = GriddedDataExplorer()
     return templater(app.template, main=[viewer.figs_with_widget, viewer.view], sidebar=[viewer.sidebar])

@@ -227,7 +227,7 @@ class TracksExplorer(param.Parameterized):
         self.status_text = "Plot created!"
 
 
-@register_view(app=Application.from_filename())
+@register_view()
 def view(app):
     viewer = TracksExplorer()
     return templater(app.template, main=[viewer.view], sidebar=[viewer.options_col])
