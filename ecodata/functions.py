@@ -21,9 +21,11 @@ from shapely.geometry import Polygon
 warnings.filterwarnings("ignore", message="Geometry is in a geographic CRS")
 
 # Add KML support for fiona
-fiona.drvsupport.supported_drivers['kml'] = 'rw'
-fiona.drvsupport.supported_drivers['KML'] = 'rw'
-fiona.drvsupport.supported_drivers['LIBKML'] = 'rw'
+fiona.drvsupport.supported_drivers["kml"] = "rw"
+fiona.drvsupport.supported_drivers["KML"] = "rw"
+fiona.drvsupport.supported_drivers["LIBKML"] = "rw"
+
+TRACK_CRS = "EPSG:4326"
 
 
 def grib2nc(filein, fileout):
@@ -65,14 +67,14 @@ def geotif2nc(data_dir, fileout):
     """
 
     # Get a list of the tif files in the data directory
-    filenames = glob.glob(str(Path(data_dir) / '*.tif'))
+    filenames = glob.glob(str(Path(data_dir) / "*.tif"))
 
     # Create the time index from the filenames
-    time = xr.Variable('time', time_index_from_filenames(filenames))
+    time = xr.Variable("time", time_index_from_filenames(filenames))
 
     # Concatenate to one dataset, and make sure it's sorted by time
     ds = xr.concat([xr.open_rasterio(f) for f in filenames], dim=time)
-    ds = ds.sortby('time')
+    ds = ds.sortby("time")
 
     # Save dataset to netcdf
     ds.to_netcdf(fileout)
@@ -80,11 +82,10 @@ def geotif2nc(data_dir, fileout):
     return ds
 
 
-
 def time_index_from_filenames(filenames):
-    '''Helper function to create a pandas DatetimeIndex from MODIS filenames
-       Note: this currently only works for MODIS filenames in the format:
-       MOD13A1.006__500m_16_days_NDVI_doy2021017_aid0001.tif'''
+    """Helper function to create a pandas DatetimeIndex from MODIS filenames
+    Note: this currently only works for MODIS filenames in the format:
+    MOD13A1.006__500m_16_days_NDVI_doy2021017_aid0001.tif"""
     return pd.DatetimeIndex([pd.to_datetime(f[-19:-12], format="%Y%j") for f in filenames])
 
 
@@ -170,7 +171,8 @@ def subset_data(
     # Check that one and only one of the subsetting options was specified
     if sum([item is not None for item in [bbox, track_points, bounding_geom]]) != 1:
         raise TypeError(
-            "subset_data: Must specify one and only one of the subsetting options bbox, track_points, or bounding_shp")
+            "subset_data: Must specify one and only one of the subsetting options bbox, track_points, or bounding_shp"
+        )
 
     # Check that if "mask" option was used, then bounding_geom is not None
     if boundary_type == "mask" and bounding_geom is None:
@@ -187,7 +189,6 @@ def subset_data(
     else:
 
         # Get feature geometry for track_points case
-        track_crs = "EPSG:4326"
         if track_points is not None:
             gdf_track = read_track_data(track_points, dissolve=False)
             feature_geom = gdf_track.dissolve()  # Dissolve points to a single geometry
@@ -209,9 +210,7 @@ def subset_data(
         # Adjust boundary with the buffer
         if buffer != 0:
             tot_bounds = boundary.geometry.total_bounds
-            buffer_scale = max(
-                [abs(tot_bounds[2] - tot_bounds[0]), abs(tot_bounds[3] - tot_bounds[1])]
-            )
+            buffer_scale = max([abs(tot_bounds[2] - tot_bounds[0]), abs(tot_bounds[3] - tot_bounds[1])])
             boundary = boundary.buffer(buffer * buffer_scale)
 
         # Read and subset
@@ -226,41 +225,42 @@ def subset_data(
     # Write new data to file if output path was specified
     if outfile is not None:
         outfile = Path(outfile)
-        if outfile.suffix == '.shp':
-            outdir = (outfile.parent / outfile.stem)
+        if outfile.suffix == ".shp":
+            outdir = outfile.parent / outfile.stem
             outdir.mkdir(exist_ok=True)
 
             # Drop any datetime columns since this isn't supported in shapefiles
-            gdf = gdf.select_dtypes(exclude=['datetime64[ns]'])
+            gdf = gdf.select_dtypes(exclude=["datetime64[ns]"])
 
             gdf.to_file(outdir / outfile.name)
         else:
             gdf.to_file(outfile)
     output = dict(subset=gdf, boundary=boundary)
     if track_points:
-        output['track_points'] = gdf_track
+        output["track_points"] = gdf_track
     elif bounding_geom:
-        output['bounding_geom'] = gdf_features
+        output["bounding_geom"] = gdf_features
     return output
 
-def get_tracks_extent(tracks, boundary_shape='rectangular', buffer=0):
+
+def get_tracks_extent(tracks, boundary_shape="rectangular", buffer=0):
     # get boundary
-    if boundary_shape == 'rectangular':
+    if boundary_shape == "rectangular":
         boundary = tracks.dissolve().envelope
-    if boundary_shape == 'convex_hull':
+    if boundary_shape == "convex_hull":
         boundary = tracks.dissolve().convex_hull
 
-    #apply buffer
+    # apply buffer
     if buffer != 0:
         tot_bounds = boundary.geometry.total_bounds
-        buffer_scale = max(
-            [abs(tot_bounds[2] - tot_bounds[0]), abs(tot_bounds[3] - tot_bounds[1])]
-        )
+        buffer_scale = max([abs(tot_bounds[2] - tot_bounds[0]), abs(tot_bounds[3] - tot_bounds[1])])
         boundary = boundary.buffer(buffer * buffer_scale, cap_style=2, join_style=2)
         return gpd.GeoDataFrame(geometry=boundary)
 
-def plot_subset_interactive(subset, boundary, bounding_geom=None, track_points=None,
-                            datashade_tracks=False, projection = ccrs.PlateCarree()):
+
+def plot_subset_interactive(
+    subset, boundary, bounding_geom=None, track_points=None, datashade_tracks=False, projection=ccrs.PlateCarree()
+):
     """
     Plots the results of the subset_data function in an interactive plot using
     hvplot/geoviews.
@@ -294,31 +294,36 @@ def plot_subset_interactive(subset, boundary, bounding_geom=None, track_points=N
     subset_geom_type = set(pd.unique(subset.geom_type))
 
     # Use hvplot for points
-    if subset_geom_type.issubset({'Point', 'MultiPoint'}):
-        subset_plot = subset.hvplot.points(hover=False, geo=True,
-                                 projection=projection)
+    if subset_geom_type.issubset({"Point", "MultiPoint"}):
+        subset_plot = subset.hvplot.points(hover=False, geo=True, projection=projection)
     # Use geoviews for paths
-    if subset_geom_type.issubset({'LineString', 'MultiLineString'}):
-        subset_plot = gv.Path(subset).opts(projection=projection, color='k')
+    if subset_geom_type.issubset({"LineString", "MultiLineString"}):
+        subset_plot = gv.Path(subset).opts(projection=projection, color="k")
     # TODO: Add polygon option
     else:
-        raise TypeError(
-            "plot_subset_interactive: Geometry type of the subset is not supported."
-        )
+        raise TypeError("plot_subset_interactive: Geometry type of the subset is not supported.")
 
     plot = boundary_plot * subset_plot
-
 
     # Plot for bounding_geom
     if bounding_geom is not None:
         bounding_geom_plot = bounding_geom.to_crs(subset.crs).hvplot(geo=True, alpha=0.3)
         plot = bounding_geom_plot * plot
 
-    #Plot for track points
+    # Plot for track points
     if track_points is not None:
-        track_plot = track_points.hvplot.points('location_long', 'location_lat',
-                                 hover=False, geo=True, datashade = datashade_tracks, dynspread=True,
-                                 projection=projection, color = 'r', cmap='Reds', project=True)
+        track_plot = track_points.hvplot.points(
+            "location_long",
+            "location_lat",
+            hover=False,
+            geo=True,
+            datashade=datashade_tracks,
+            dynspread=True,
+            projection=projection,
+            color="r",
+            cmap="Reds",
+            project=True,
+        )
         plot = plot * track_plot
 
     return plot
@@ -346,12 +351,12 @@ def plot_subset(subset, boundary, bounding_geom=None, track_points=None):
     """
     plt.ioff()
     fig, ax = plt.subplots()
-    boundary.plot(ax=ax, color='c', alpha=0.4)
-    subset.plot(ax=ax, color='b', linewidth=0.75)
+    boundary.plot(ax=ax, color="c", alpha=0.4)
+    subset.plot(ax=ax, color="b", linewidth=0.75)
     if bounding_geom is not None:
-        bounding_geom.to_crs(subset.crs).plot(ax=ax, color='r')
+        bounding_geom.to_crs(subset.crs).plot(ax=ax, color="r")
     if track_points is not None:
-        track_points.to_crs(subset.crs).plot(ax = ax, color = 'r', marker='.', alpha = 0.4)
+        track_points.to_crs(subset.crs).plot(ax=ax, color="r", marker=".", alpha=0.4)
     return fig
 
 
@@ -395,10 +400,8 @@ def read_track_data(filein, dissolve=False):
     track_df = clean_headers(pd.read_csv(filein), report=False)
     track_gdf = gpd.GeoDataFrame(
         track_df,
-        geometry=gpd.points_from_xy(
-            track_df["location_long"], track_df["location_lat"]
-        ),
-        crs="EPSG:4326",
+        geometry=gpd.points_from_xy(track_df["location_long"], track_df["location_lat"]),
+        crs=TRACK_CRS,
     )
     if dissolve:
         track_gdf = track_gdf.dissolve()
@@ -449,14 +452,12 @@ def merge_tracks_ref(track_data, ref_data):
         Raised if track_data and/or reference data do not contain the deployment_id column
     """
 
-    if ('deployment_id' in track_data.columns) and ('deployment_id' in ref_data.columns):
-        merged_data = pd.merge(track_data, ref_data, on='deployment_id', how='left', suffixes=(None, "_ref"))
-        cols_to_drop = [c for c in merged_data.columns if '_ref' in c]
+    if ("deployment_id" in track_data.columns) and ("deployment_id" in ref_data.columns):
+        merged_data = pd.merge(track_data, ref_data, on="deployment_id", how="left", suffixes=(None, "_ref"))
+        cols_to_drop = [c for c in merged_data.columns if "_ref" in c]
         merged_data = merged_data.drop(columns=cols_to_drop)
     else:
-        raise KeyError(
-            "merge_tracks_ref: both track_data and ref_data must contain deployment_id."
-        )
+        raise KeyError("merge_tracks_ref: both track_data and ref_data must contain deployment_id.")
     return merged_data
 
 
@@ -470,7 +471,7 @@ def combine_studies(studies):
             studies_to_concat.append(study)
 
         all_studies = pd.concat(studies_to_concat)
-        all_studies = gpd.GeoDataFrame(all_studies, geometry=all_studies.geometry, crs="EPSG:4326")
+        all_studies = gpd.GeoDataFrame(all_studies, geometry=all_studies.geometry, crs=TRACK_CRS)
 
     return all_studies
 
@@ -496,6 +497,7 @@ def clip_tracks_timerange(df, df2):
     mask = (df.timestamp >= tmin) & (df.timestamp <= tmax)
 
     return df.loc[mask]
+
 
 def get_extent(filepath):
     """
@@ -631,6 +633,7 @@ def clean_headers(
 
     return df
 
+
 def _convert_case(name):
     """
     Convert case style of a column name.
@@ -655,6 +658,7 @@ def _convert_case(name):
 
     return name
 
+
 def _rename_duplicates(names):
     """
     Rename duplicated column names to append a number at the end.
@@ -671,6 +675,7 @@ def _rename_duplicates(names):
         counts[col] = cur_count + 1
 
     return names
+
 
 def _create_report(stats: dict[str, int], ncols: int) -> None:
     """

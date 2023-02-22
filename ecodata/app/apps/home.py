@@ -11,6 +11,7 @@ def _add_sections():
 def view(app):
     return templater(app.template, main=[pn.pane.Markdown("# Select an App on the Left")])
 
+
 if __name__ == "__main__":
     pn.serve({"home": view})
 

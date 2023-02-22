@@ -85,7 +85,8 @@ exclude = [
     "build",
     "dist",
     "tests",
-    "venv"
+    "venv",
+    ".ipynb_checkpoints"
 ]
 
 # list of plugins and rules for them

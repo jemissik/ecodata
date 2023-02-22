@@ -16,24 +16,20 @@ _module_path = Path(__file__).parent
 
 _dict_available = {}
 
+
 def _update_dict_available():
 
     if (_module_path / "user_datasets").exists():
         _user_datasets_paths = [
             f
             for f in (_module_path / "user_datasets").iterdir()
-            if not (
-                str(f.name).startswith(".")
-                or str(f.name).startswith("__")
-                or str(f.name) == "temp_downloads"
-            )
+            if not (str(f.name).startswith(".") or str(f.name).startswith("__") or str(f.name) == "temp_downloads")
         ]
         _user_datasets_names = [f.name for f in _user_datasets_paths]
 
     else:
         _user_datasets_paths = [None]
         _user_datasets_names = [None]
-
 
     if (_module_path / "test_datasets").exists():
         _test_datasets_paths = [
@@ -51,6 +47,7 @@ def _update_dict_available():
     _dict_available = dict(zip(_user_datasets_names, _user_datasets_paths)) | dict(
         zip(_test_datasets_names, _test_datasets_paths)
     )
+
 
 def available():
     """
@@ -82,6 +79,7 @@ def get_path(dataset):
         msg += "Available datasets are {}".format(", ".join(available()))
         raise ValueError(msg)
 
+
 def install_dataset(data_path):
     """
     Install a dataset in the ecodata. This function copies the dataset to the data directory of the installed
@@ -94,7 +92,7 @@ def install_dataset(data_path):
     """
 
     user_data_path = Path(data_path)
-    installed_filepath = (_module_path / "test_datasets" / user_data_path.name)
+    installed_filepath = _module_path / "test_datasets" / user_data_path.name
 
     if user_data_path.is_dir():
         shutil.copytree(user_data_path, installed_filepath)
@@ -107,7 +105,7 @@ def install_test_datasets():
     Install the bundle of test datasets
     """
 
-    url = 'https://drive.google.com/drive/folders/1eAqSKblWpM5kqqEByf6YaiRWywZFMKvJ?usp=sharing'
+    url = "https://drive.google.com/drive/folders/1eAqSKblWpM5kqqEByf6YaiRWywZFMKvJ?usp=sharing"
     install_path = Path(_module_path) / "test_datasets"
 
     # Delete the test data bundle if it exists
@@ -115,7 +113,7 @@ def install_test_datasets():
 
     try:
         install_path.mkdir(exist_ok=True)
-        downloaded_files = gdown.download_folder(url, output=str(install_path))
+        gdown.download_folder(url, output=str(install_path))
         print("Installed test datasets.")
     except BaseException as e:
         print(f"\nFailed to install datasets because of {e!r}")
@@ -138,9 +136,7 @@ def install_roads_dataset():
     # Remove any partially downloaded datasets
     _remove_temp_downloads()
 
-    roads_url = (
-        "https://dataportaal.pbl.nl/downloads/GRIP4/GRIP4_Region1_vector_shp.zip"
-    )
+    roads_url = "https://dataportaal.pbl.nl/downloads/GRIP4/GRIP4_Region1_vector_shp.zip"
 
     # Confirm user wants to proceed with download
     while True:
@@ -148,13 +144,9 @@ def install_roads_dataset():
         filesize = requests.head(roads_url).headers["Content-Length"]
         print()
         in_GB = int(filesize) / (1000**3)
-        response = input(
-            "The download is {:.2f}. Do you want to proceed? [y/n]".format(in_GB)
-        )
+        response = input("The download is {:.2f}. Do you want to proceed? [y/n]".format(in_GB))
         if response.lower() == "y":
-            print(
-                "Installing North America roads dataset. It's a large download and will take a few mintues..."
-            )
+            print("Installing North America roads dataset. It's a large download and will take a few mintues...")
             install_path = Path(_module_path) / "user_datasets"
             install_path.mkdir(exist_ok=True)
 
@@ -186,9 +178,7 @@ def _remove_temp_downloads():
     if os.path.exists(download_path) and os.listdir(download_path):
         print("Found partially downloaded files in ecodata.datasets.")
         while True:
-            response = input(
-                "Do you want to delete these files before you download a new dataset? [y/n]"
-            )
+            response = input("Do you want to delete these files before you download a new dataset? [y/n]")
             if response.lower() == "y":
                 shutil.rmtree(download_path)
                 print("Removed files.")

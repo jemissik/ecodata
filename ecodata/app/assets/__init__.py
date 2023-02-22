@@ -24,7 +24,7 @@ pn.state.cache["cached"] = {}
 CACHE = pn.state.cache["cached"]
 
 
-def menu_fast_html(accent: str = "#1f77b4", jinja_subs = None) -> str:
+def menu_fast_html(accent: str = "#1f77b4", jinja_subs=None) -> str:
     """Combines the specific app_html to other html into a fast html menu"""
 
     menu = MAIN_MENU.replace("#1f77b4".format(), accent)
