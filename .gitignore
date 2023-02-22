@@ -10,18 +10,18 @@ test_notebooks/
 movebank_credentials.txt
 
 #large datasets
-pymovebank/datasets/large_datasets/*
-pymovebank/datasets/user_datasets/*
+ecodata/datasets/large_datasets/*
+ecodata/datasets/user_datasets/*
 
 # conda constructor installables
-scripts/pymovebank-*.pkg
-scripts/pymovebank-*.sh
+scripts/ecodata-*.pkg
+scripts/ecodata-*.sh
 
 #small datasets (for now)
-pymovebank/datasets/small_datasets/*
+ecodata/datasets/small_datasets/*
 
 #test datasets
-pymovebank/datasets/test_datasets/*
+ecodata/datasets/test_datasets/*
 
 # App notebooks
 apps/notebooks/*

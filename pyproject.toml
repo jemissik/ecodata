@@ -3,7 +3,7 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pymovebank"
+name = "ecodata"
 dynamic = ["version"]
 description = ""
 classifiers = [
@@ -27,13 +27,13 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["pymovebank"]
+packages = ["ecodata"]
 
 [tool.setuptools_scm]
-write_to = "pymovebank/__version__.py"
+write_to = "ecodata/__version__.py"
 
 [tool.setuptools.package-data]
-"pymovebank.datasets" = [
+"ecodata.datasets" = [
     "small_datasets/*.csv",
     "small_datasets/*.gdb/*",
     "small_datasets/*.shp",

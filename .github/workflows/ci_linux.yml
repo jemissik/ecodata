@@ -33,8 +33,8 @@ jobs:
         with:
             miniforge-variant: Mambaforge
             miniforge-version: latest
-            activate-environment: pmv-dev
-            environment-file: ./pymovebank-dev-env.yml
+            activate-environment: eco-dev
+            environment-file: ./ecodata-dev-env.yml
             use-mamba: true
 
       - name: Run tests

@@ -14,17 +14,17 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath("../.."))
-sys.path.insert(0, os.path.abspath("../../pymovebank/"))
+sys.path.insert(0, os.path.abspath("../../ecodata/"))
 
 # -- Project information -----------------------------------------------------
 
-project = "PyMovebank"
+project = "ecodata"
 copyright = "2023, Justine Missik"
 author = "Justine Missik"
 
 html_context = {
     "github_user": "jemissik",
-    "github_repo": "pymovebank",
+    "github_repo": "ecodata",
     "github_version": "develop",
     "doc_path": "docs/package",
 }

@@ -1,0 +1,51 @@
+channels:
+- pyviz
+- conda-forge
+- defaults
+dependencies:
+- cartopy
+- geopandas
+- ipykernel
+- ipython
+- matplotlib
+- pandas
+- pip
+- python=3.9
+- shapely<2.0
+- xarray
+- dask
+- netCDF4
+- bottleneck
+- cfgrib
+- rasterio
+- pyinstaller
+- conda-forge::rioxarray
+- pyviz::hvplot
+- pyviz::panel
+- pyviz::datashader
+- pyviz::geoviews
+- bokeh::jupyter_bokeh  # Enables interactive widgets in vscode
+- conda-forge::geocube
+# - pyviz::spatialpandas
+- jupytext
+- nodejs>=14
+- conda-forge::ffmpeg
+- anaconda::git
+- conda-forge::gdown
+- conda-forge::python-wget
+- requests
+# - conda-forge::jupyterlab
+- pip:
+  - black
+  - conda-merge
+  - isort
+  - myst-nb
+  - sphinx>=4.4,<6  # <6 b/c pydata (<=0.12) doesn't work with sphinx 6
+  - pydata-sphinx-theme<0.12.0  # pydata 0.12 has a flyout menu bug
+  - pytest
+  - sphinx-multiproject
+  - click
+  - build
+  - git+https://github.com/madeline-scyphers/panel-jstree.git
+  - -e . --install-option="--no-deps"
+name: eco-dev

@@ -1,4 +1,4 @@
-name: pymovebank
+name: ecodata
 version: X
 installer_type: all
 post_install: post_install.sh  # [unix]

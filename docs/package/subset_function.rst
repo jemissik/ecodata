@@ -1,5 +1,5 @@
 Subsetting function
 ===================
-.. currentmodule:: pymovebank.functions
+.. currentmodule:: ecodata.functions
 
 .. autofunction:: subset_data

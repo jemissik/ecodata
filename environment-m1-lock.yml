@@ -1,4 +1,4 @@
-name: pmv-clean
+name: eco-clean
 channels:
   - anaconda
   - pyviz
@@ -350,4 +350,4 @@ dependencies:
   - pip:
     - awesome-panel-extensions==20221019.2
     - lxml==4.9.1
-prefix: /Users/jmissik/miniconda3/envs/pmv-clean
+prefix: /Users/jmissik/miniconda3/envs/eco-clean

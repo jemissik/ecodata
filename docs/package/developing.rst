@@ -3,31 +3,31 @@ Developer guide
 
 Installation options
 --------------------
-* To install pymovebank in editable mode::
+* To install ecodata in editable mode::
 
-        conda env create --file pymovebank-dev-env.yml
+        conda env create --file ecodata-dev-env.yml
 
 * To do a full install (not editable):
 
-  * Create a clean build environment (including only pymovebank's requirements, not pymovebank)::
+  * Create a clean build environment (including only ecodata's requirements, not ecodata)::
 
-        conda env create --file pymovebank-clean-build-env.yml
+        conda env create --file ecodata-clean-build-env.yml
 
-  * If you want to keep a copy of the clean environment, make a new copy where pymovebank will be installed::
+  * If you want to keep a copy of the clean environment, make a new copy where ecodata will be installed::
 
-        conda create --clone pmv-build-clean --name pmv-build
-        conda activate pmv-build
+        conda create --clone eco-build-clean --name eco-build
+        conda activate eco-build
 
-  * build and install pymovebank (must be in the repository's root directory)::
+  * build and install ecodata (must be in the repository's root directory)::
 
         python -m build
-        pip install dist/pymovebank-0.0.0.tar.gz
+        pip install dist/ecodata-0.0.0.tar.gz
 
 
 Using pyinstaller
 -----------------
 
-* pymovebank must be actually installed (can't use editable mode). Follow the instructions for the full install above.
+* ecodata must be actually installed (can't use editable mode). Follow the instructions for the full install above.
 * run pyinstaller for the subsetting script::
 
         pyinstaller subset_script.spec --clean

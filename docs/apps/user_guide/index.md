@@ -24,14 +24,14 @@ When it opens, it will display the main panel, showing the four apps. Click on a
 - Copy-paste the below code into the prompt window, and press Enter:
 
 ```bash
-conda activate pmv
-python -m pymovebank.app
+conda activate eco
+python -m ecodata.app
 ```
 
 ### Launch on Mac
 
 - Open Anaconda Navigator.
-- Navigate to "pmv".
+- Navigate to "eco".
 
 ![anaconda_navigator](../images/anaconda_navigator.png)
 
@@ -39,7 +39,7 @@ python -m pymovebank.app
 - A Terminal window will open. Enter the following and hit Return:
 
 ```bash
-python -m pymovebank.app
+python -m ecodata.app
 ```
 
 ![ecodata-prepare_panel](../images/ecodata-prepare_panel.png)
