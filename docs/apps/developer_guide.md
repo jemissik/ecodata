@@ -26,3 +26,23 @@ You may have to click "Show details" next to where it says "All checks have pass
 
 ### Versions of the docs
 - Read the Docs builds multiple versions of the documentation (for different branches of the repository). In the bottom corner of the docs pages, there is a box indicating which version you are viewing. You can click on that box to pick a different version.
+
+
+### Developer installation
+
+1. Clone the repository, and navigate to the root directory of the cloned repo
+2. Create the conda environment for the package:
+
+    ```
+    conda env create --file ecodata-env.yml --name eco-dev
+    ```
+3. Activate the `eco-dev` environment (this will install the package in editable mode):
+
+    ```
+    conda activate eco-dev
+    ```
+4. With the `eco-dev` environment activated, install the additional dev requirements (needed for docs, testing, code style, etc):
+
+    ```
+    conda env update --name eco-dev --file ecodata-dev-env.yml --prune
+    ```
