@@ -26,6 +26,4 @@ dependencies:
 - conda-forge::ffmpeg
 - anaconda::git
 - conda-forge::gdown
-- conda-forge::python-wget
-- requests
 - pip

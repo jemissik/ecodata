@@ -13,30 +13,34 @@ except ImportError:
 import ecodata.panel_utils  # noqa
 import ecodata.plotting  # noqa
 from ecodata.datasets import *  # noqa
-from ecodata.functions import bbox2poly  # noqa
-from ecodata.functions import clip_tracks_timerange  # noqa
-from ecodata.functions import combine_studies  # noqa
-from ecodata.functions import geotif2nc  # noqa
-from ecodata.functions import get_crs  # noqa
-from ecodata.functions import get_extent  # noqa
-from ecodata.functions import get_file_info  # noqa
-from ecodata.functions import get_file_len  # noqa
-from ecodata.functions import get_geometry  # noqa
-from ecodata.functions import get_tracks_extent  # noqa
-from ecodata.functions import grib2nc  # noqa
-from ecodata.functions import merge_tracks_ref  # noqa
-from ecodata.functions import plot_subset  # noqa
-from ecodata.functions import plot_subset_interactive  # noqa
-from ecodata.functions import read_ref_data  # noqa
-from ecodata.functions import read_track_data  # noqa
-from ecodata.functions import subset_data  # noqa
-from ecodata.xr_tools import coarsen_dataset  # noqa
-from ecodata.xr_tools import detect_varnames  # noqa
-from ecodata.xr_tools import get_time_res  # noqa
-from ecodata.xr_tools import groupby_multi_time  # noqa
-from ecodata.xr_tools import groupby_poly_time  # noqa
-from ecodata.xr_tools import resample_time  # noqa
-from ecodata.xr_tools import select_spatial  # noqa
-from ecodata.xr_tools import select_time_cond  # noqa
-from ecodata.xr_tools import select_time_range  # noqa
-from ecodata.xr_tools import thin_dataset  # noqa
+from ecodata.functions import (
+    bbox2poly,  # noqa
+    clip_tracks_timerange,  # noqa
+    combine_studies,  # noqa
+    geotif2nc,  # noqa
+    get_crs,  # noqa
+    get_extent,  # noqa
+    get_file_info,  # noqa
+    get_file_len,  # noqa
+    get_geometry,  # noqa
+    get_tracks_extent,  # noqa
+    grib2nc,  # noqa
+    merge_tracks_ref,  # noqa
+    plot_subset,  # noqa
+    plot_subset_interactive,  # noqa
+    read_ref_data,  # noqa
+    read_track_data,  # noqa
+    subset_data,  # noqa
+)
+from ecodata.xr_tools import (
+    coarsen_dataset,  # noqa
+    detect_varnames,  # noqa
+    get_time_res,  # noqa
+    groupby_multi_time,  # noqa
+    groupby_poly_time,  # noqa
+    resample_time,  # noqa
+    select_spatial,  # noqa
+    select_time_cond,  # noqa
+    select_time_range,  # noqa
+    thin_dataset,  # noqa
+)

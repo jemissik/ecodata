@@ -10,8 +10,11 @@ DEV_ENV = Path(__file__).resolve().parent / "ecodata-dev-env.yml"
 # ex) PyTorch is pytorch on conda, but listed as torch on PyPI
 # also if you are installing a pkg from a git rep, you should remap it
 # to "git+https/etc": "pkg_name @ git+https/etc"
-pkg_renames = {"git+https://github.com/madeline-scyphers/panel-jstree.git":
-                   "panel-jstree @ git+https://github.com/madeline-scyphers/panel-jstree.git"}
+pkg_renames = {
+    "git+https://github.com/madeline-scyphers/panel-jstree.git": (
+        "panel-jstree @ git+https://github.com/madeline-scyphers/panel-jstree.git"
+    )
+}
 
 
 # list of any packages in your environment files you don't want to include
@@ -19,11 +22,7 @@ pkg_renames = {"git+https://github.com/madeline-scyphers/panel-jstree.git":
 # (example, numpy<=42)
 # You should also not include any packages that aren't python packages
 # such as nodejs, git, GDAL, etc.
-pkgs_to_exclude = [
-    "ffmpeg",
-    "git",
-    "nodejs>=14"
-]
+pkgs_to_exclude = ["ffmpeg", "git", "nodejs>=14"]
 
 
 def remove_non_pkgs(pkg: str):
