@@ -7,8 +7,6 @@ import shutil
 from pathlib import Path
 
 import gdown
-import requests
-import wget
 
 __all__ = ["available", "get_path", "install_roads_dataset"]
 
@@ -119,55 +117,55 @@ def install_test_datasets():
         print(f"\nFailed to install datasets because of {e!r}")
 
 
-def install_roads_dataset():
-    """
-    Install the Region 1 (North America) GRIP roads dataset in shapefile format.
+# def install_roads_dataset():
+#     """
+#     Install the Region 1 (North America) GRIP roads dataset in shapefile format.
 
-    References
-    ----------
-    Meijer, J.R., Huijbegts, M.A.J., Schotten, C.G.J. and Schipper, A.M. (2018):
-    Global patterns of current and future road infrastructure. Environmental Research
-    Letters, 13-064006. Data is available at www.globio.info
+#     References
+#     ----------
+#     Meijer, J.R., Huijbegts, M.A.J., Schotten, C.G.J. and Schipper, A.M. (2018):
+#     Global patterns of current and future road infrastructure. Environmental Research
+#     Letters, 13-064006. Data is available at www.globio.info
 
-    .. todo::
-        - Add option to download the global dataset in gdb format instead
-    """
+#     .. todo::
+#         - Add option to download the global dataset in gdb format instead
+#     """
 
-    # Remove any partially downloaded datasets
-    _remove_temp_downloads()
+#     # Remove any partially downloaded datasets
+#     _remove_temp_downloads()
 
-    roads_url = "https://dataportaal.pbl.nl/downloads/GRIP4/GRIP4_Region1_vector_shp.zip"
+#     roads_url = "https://dataportaal.pbl.nl/downloads/GRIP4/GRIP4_Region1_vector_shp.zip"
 
-    # Confirm user wants to proceed with download
-    while True:
-        # Get size of requested file
-        filesize = requests.head(roads_url).headers["Content-Length"]
-        print()
-        in_GB = int(filesize) / (1000**3)
-        response = input("The download is {:.2f}. Do you want to proceed? [y/n]".format(in_GB))
-        if response.lower() == "y":
-            print("Installing North America roads dataset. It's a large download and will take a few mintues...")
-            install_path = Path(_module_path) / "user_datasets"
-            install_path.mkdir(exist_ok=True)
+#     # Confirm user wants to proceed with download
+#     while True:
+#         # Get size of requested file
+#         filesize = requests.head(roads_url).headers["Content-Length"]
+#         print()
+#         in_GB = int(filesize) / (1000**3)
+#         response = input("The download is {:.2f}. Do you want to proceed? [y/n]".format(in_GB))
+#         if response.lower() == "y":
+#             print("Installing North America roads dataset. It's a large download and will take a few mintues...")
+#             install_path = Path(_module_path) / "user_datasets"
+#             install_path.mkdir(exist_ok=True)
 
-            # Run wget from temp downloads directory
-            download_path = install_path / "temp_downloads"
-            download_path.mkdir(exist_ok=True)
-            os.chdir(download_path)
-            try:
-                filename = wget.download(roads_url, out=str(install_path))
-                filepath = install_path / Path(filename)
-                print("Installed dataset at: " + str(filepath))
-            except BaseException as e:
-                download_path = Path(_module_path) / "user_datasets/temp_downloads"
-                shutil.rmtree(download_path)
-                print(f"\nFailed to download dataset because of {e!r}")
-            break
-        elif response.lower() == "n":
-            print("Download cancelled.")
-            break
-        else:
-            print("Invalid answer. Please answer [y/n]")
+#             # Run wget from temp downloads directory
+#             download_path = install_path / "temp_downloads"
+#             download_path.mkdir(exist_ok=True)
+#             os.chdir(download_path)
+#             try:
+#                 filename = wget.download(roads_url, out=str(install_path))
+#                 filepath = install_path / Path(filename)
+#                 print("Installed dataset at: " + str(filepath))
+#             except BaseException as e:
+#                 download_path = Path(_module_path) / "user_datasets/temp_downloads"
+#                 shutil.rmtree(download_path)
+#                 print(f"\nFailed to download dataset because of {e!r}")
+#             break
+#         elif response.lower() == "n":
+#             print("Download cancelled.")
+#             break
+#         else:
+#             print("Invalid answer. Please answer [y/n]")
 
 
 def _remove_temp_downloads():
