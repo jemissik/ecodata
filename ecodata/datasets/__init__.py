@@ -10,5 +10,3 @@ from ecodata.datasets.dataset_utils import (
     install_dataset,  # noqa
     install_test_datasets,
 )
-
-# from ecodata.datasets.dataset_utils import install_roads_dataset  # noqa
