@@ -6,6 +6,10 @@ import pytest
 
 import ecodata
 from ecodata.app.apps import applications
+from ecodata.app.apps.tracks_explorer_app import TracksExplorer
+from ecodata.app.apps.gridded_data_explorer_app import GriddedDataExplorer
+from ecodata.app.apps.subsetter_app import Subsetter
+
 
 PORT = [6000]
 
@@ -56,3 +60,19 @@ def make_test_frame_dirs(install_test_data):
     shutil.copytree(test_frames_dir, test_frames_dir_weird, dirs_exist_ok=True)
 
     return test_frames_dir_weird
+
+
+
+@pytest.fixture
+def track_explorer():
+    return TracksExplorer()
+
+
+@pytest.fixture
+def gridded_data_explorer():
+    return GriddedDataExplorer()
+
+
+@pytest.fixture
+def subsetter():
+    return Subsetter()
