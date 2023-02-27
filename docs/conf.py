@@ -1,3 +1,5 @@
+from multiproject.utils import get_project
+
 # Projects sharing this configuration file
 multiproject_projects = {
     "package": {},
@@ -16,6 +18,27 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.todo",
     'myst_nb',
+]
+
+multiproject_projects = {
+    "package": {
+        "use_config_file": False,
+        "config": {
+            "project": "ECODATA",
+        },
+    },
+    "apps": {
+        "use_config_file": False,
+        "config": {
+            "project": "ECODATA Apps",
+        },
+    },
+}
+
+docset = get_project(multiproject_projects)
+
+locale_dirs = [
+    f"{docset}/locale/",
 ]
 
 pygments_style='default'
@@ -61,4 +84,13 @@ html_theme_options = {
     #   "show_nav_level": 4,
     "use_edit_page_button": True,
 
+}
+
+html_context = {
+    # Fix the "edit on" links.
+    "conf_py_path": f"/docs/{docset}/",
+    "display_github": True, # Integrate GitHub
+    "github_user": "jemissik", # Username
+    "github_repo": "ecodata", # Repo name
+    "github_version": "develop", # Version
 }
