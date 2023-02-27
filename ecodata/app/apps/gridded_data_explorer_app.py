@@ -1,19 +1,3 @@
-# ---
-# jupyter:
-#   jupytext:
-#     text_representation:
-#       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
-#       jupytext_version: 1.14.0
-#   kernelspec:
-#     display_name: Python 3.9.13 ('eco-dev')
-#     language: python
-#     name: python3
-# ---
-
-# %%
-
 import datetime as dt
 from pathlib import Path
 
@@ -46,7 +30,6 @@ class HTML_WidgetBox(ReactiveHTML):
         super().__init__(object=object, **params)
 
 
-# %%
 class GriddedDataExplorer(param.Parameterized):
 
     # TODO replace with new file selector
@@ -60,6 +43,9 @@ class GriddedDataExplorer(param.Parameterized):
     zvar = param_widget(pn.widgets.Select(options=[], name="Variable of interest", sizing_mode="fixed"))
     update_varnames = param_widget(
         pn.widgets.Button(button_type="primary", name="Update variable names", align="end", sizing_mode="fixed")
+    )
+    disable_plotting_button = param_widget(
+        pn.widgets.Toggle(button_type="primary", name="Disable plotting", align="end", sizing_mode="fixed")
     )
 
     polyfile = param_widget(pn.widgets.TextInput(placeholder="Select a file...", name="Polygon file"))
@@ -81,24 +67,6 @@ class GriddedDataExplorer(param.Parameterized):
             end=dt.date.today(),
         )
     )
-
-    # year_range = param_widget(pn.widgets.EditableRangeSlider(name='Year range', step=1, format='0',))
-    # month_range = param_widget(pn.widgets.EditableRangeSlider(name='Month range', step=1, format='0', ))
-    # dayofyear_range = param_widget(pn.widgets.EditableRangeSlider( step=1, format='0',))
-    # hour_range = param_widget(pn.widgets.EditableRangeSlider(name='Hour range', step=1, format='0'))
-    # year_selection = param_widget(pn.widgets.MultiChoice(name='Years'))
-    # month_selection = param_widget(pn.widgets.MultiChoice(name='Months'))
-    # dayofyear_selection = param_widget(pn.widgets.MultiChoice())
-    # hour_selection = param_widget(pn.widgets.MultiChoice(name='Hours'))
-
-    # add_year_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
-    # reset_year = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
-    # add_month_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
-    # reset_month = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
-    # add_doy_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
-    # reset_doy = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
-    # add_hour_range = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
-    # reset_hour = param_widget(pn.widgets.Button(button_type='primary', sizing_mode='fixed', align='end'))
 
     # Polygon selection
     selection_type = param_widget(
@@ -190,6 +158,7 @@ class GriddedDataExplorer(param.Parameterized):
         # Reset names for panel widgets
         self.filein.name = "File path"
         self.load_data_button.name = "Load data"
+        self.disable_plotting_button.name = "Disable plotting"
         self.timevar.name = "Time"
         self.latvar.name = "Latitude"
         self.lonvar.name = "Longitude"
@@ -236,22 +205,11 @@ class GriddedDataExplorer(param.Parameterized):
         self.stats_fname.name = "Output file for statistics"
         self.save_stats.name = "Save statistics"
 
-        # Widget groups
-        # self.filein_widgets = pn.Row(self.filein, self.load_data_button)
-        # # self.file_card = pn.Card(self.filein,
-        # #                          self.load_data_button,
-        # #                          title="Select File",
-        # #                          )
-        # self.varname_widgets = pn.Column(
-        #     pn.Row( self.latvar, self.lonvar),
-        #     pn.Row(self.timevar, self.zvar, ),
-        #     pn.Row(self.update_varnames)
-        # )
         self.file_input_card = pn.Card(
             self.filein,
             pn.Row(self.latvar, self.lonvar),
             pn.Row(self.timevar, self.zvar),
-            pn.Row(self.load_data_button, self.update_varnames),
+            pn.Row(self.disable_plotting_button, self.load_data_button, self.update_varnames),
             title="Input environmental dataset file",
             width_policy="max",
         )
@@ -320,7 +278,7 @@ class GriddedDataExplorer(param.Parameterized):
     @try_catch()
     @param.depends("update_varnames.value", watch=True)
     def update_selection_widgets(self):
-        if self.ds_raw is not None:
+        if self.ds_raw is not None and not self.disable_plotting_button.value:
             self.status_text = "Updating widgets"
 
             self.date_range = pn.widgets.DateRangeSlider(
@@ -506,9 +464,14 @@ class GriddedDataExplorer(param.Parameterized):
         self.alert.object = self.status_text
 
     @try_catch()
-    @param.depends("ds", "update_varnames.value", "poly", watch=True)
+    @param.depends("ds", "update_varnames.value", "disable_plotting_button.value", "poly", watch=True)
     def update_plot_view(self):
-        if all([self.timevar.value, self.latvar.value, self.lonvar.value, self.zvar.value]):
+        self.ds_pane.object = self.ds
+
+        if self.disable_plotting_button.value:
+            self.figs_with_widget[:] = [("Data", self.ds_pane)]
+
+        elif all([self.timevar.value, self.latvar.value, self.lonvar.value, self.zvar.value]):
             self.status_text = "Creating plot"
             width = 500
             ds_plot = plot_gridded_data(
@@ -550,7 +513,6 @@ class GriddedDataExplorer(param.Parameterized):
             self.plot_col.objects = [plot, widget, ds_ts_plot]
             # self.plot_col.objects = [pn.Row(plot, widget), ds_ts_plot]
             # self.ts_pane.object = ds_ts_plot
-            self.ds_pane.object = self.ds
             # self.ts_widget = widget
 
             self.figs_with_widget[:] = [
