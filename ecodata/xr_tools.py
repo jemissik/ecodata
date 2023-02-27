@@ -441,3 +441,19 @@ def groupby_poly_time(
     result = result.reorder_levels(index_levels).sort_index()
     result = result[["count", "mean", "std", "min", "25%", "50%", "75%", "max"]]
     return result
+
+
+def set_time_encoding_modis(ds):
+    """
+    Change the time encoding of a dataset to the encoding used in MODIS data (days since 2000-01-01).
+    This is so that the time encoding datasets will be able to be read by MATLAB app
+    (which can't read different encodings).
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset for which the encodings will be modified. This function will modify the encoding format in place.
+    """
+    modis_encoding = {'units': 'days since 2000-01-01', 'calendar': 'julian'}
+    for key in modis_encoding:
+        ds.time.encoding[key] = modis_encoding[key]
