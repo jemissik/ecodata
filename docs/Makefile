@@ -6,7 +6,9 @@
 SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = .
-BUILDDIR      = _build
+# Put your default project here.
+PROJECT ?= package
+BUILDDIR = _build/$(PROJECT)
 
 # Put it first so that "make" without argument is like "make help".
 help:
