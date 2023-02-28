@@ -1,3 +1,12 @@
+from multiproject.utils import get_project
+
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.abspath("../ecodata/"))
+
+
 # Projects sharing this configuration file
 multiproject_projects = {
     "package": {},
@@ -5,6 +14,9 @@ multiproject_projects = {
 }
 
 # -- General configuration ---------------------------------------------------
+copyright = "2023, Justine Missik"
+author = "Justine Missik"
+
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -16,6 +28,27 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.todo",
     'myst_nb',
+]
+
+multiproject_projects = {
+    "package": {
+        "use_config_file": False,
+        "config": {
+            "project": "ECODATA",
+        },
+    },
+    "apps": {
+        "use_config_file": False,
+        "config": {
+            "project": "ECODATA Apps",
+        },
+    },
+}
+
+docset = get_project(multiproject_projects)
+
+locale_dirs = [
+    f"{docset}/locale/",
 ]
 
 pygments_style='default'
@@ -61,4 +94,13 @@ html_theme_options = {
     #   "show_nav_level": 4,
     "use_edit_page_button": True,
 
+}
+
+html_context = {
+    # Fix the "edit on" links.
+    "conf_py_path": f"/docs/{docset}/",
+    "display_github": True, # Integrate GitHub
+    "github_user": "jemissik", # Username
+    "github_repo": "ecodata", # Repo name
+    "github_version": "develop", # Version
 }
