@@ -11,8 +11,7 @@ classifiers = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["ecodata"]
-include = ["*"]
+where = ["src"]
 
 [tool.setuptools_scm]
 write_to = "ecodata/__version__.py"
