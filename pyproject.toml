@@ -10,8 +10,9 @@ classifiers = [
     "Programming Language :: Python :: 3"
 ]
 
-[tool.setuptools]
-packages = ["ecodata"]
+[tool.setuptools.packages.find]
+where = ["ecodata"]
+include = ["*"]
 
 [tool.setuptools_scm]
 write_to = "ecodata/__version__.py"
