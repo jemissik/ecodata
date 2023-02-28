@@ -14,7 +14,7 @@ classifiers = [
 where = ["src"]
 
 [tool.setuptools_scm]
-write_to = "ecodata/__version__.py"
+write_to = "src/ecodata/__version__.py"
 
 [tool.setuptools.package-data]
 "ecodata.datasets" = [
