@@ -1,6 +1,8 @@
-import pymovebank as pmv
-import click
 from pathlib import Path
+
+import click
+
+import ecodata as eco
 
 
 @click.command()
@@ -66,7 +68,7 @@ from pathlib import Path
 def main(filename, bbox, track_points, bounding_geom, boundary_type, buffer, clip, outfile):
 
     print("Creating subset...")
-    roads_subset, boundary = pmv.subset_data(
+    roads_subset, boundary = eco.subset_data(
         filename,
         bbox=bbox,
         track_points=track_points,

@@ -1,4 +1,4 @@
-name: pmv
+name: eco
 channels:
 - pyviz
 - conda-forge
@@ -9,26 +9,21 @@ dependencies:
 - geopandas
 - matplotlib
 - pandas
-- shapely<1.8.2
+- shapely<2.0
 - xarray
 - dask
 - netCDF4
 - bottleneck
 - cfgrib
 - rasterio
+- numpy<1.24  # numpy 1.24 is incompatible with numba
 - conda-forge::rioxarray
 - pyviz::hvplot
 - pyviz::panel
 - pyviz::datashader
 - pyviz::geoviews
 - conda-forge::geocube
-- dataprep
 - conda-forge::ffmpeg
 - anaconda::git
 - conda-forge::gdown
 - pip
-- pip:
-    - datasize
-    - requests
-    - wget
-    - awesome-panel-extensions==20221019.2

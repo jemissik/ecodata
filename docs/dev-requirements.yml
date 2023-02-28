@@ -1,4 +1,4 @@
-name: pmv-dev
+name: eco-dev
 channels:
   - conda-forge
   - defaults
