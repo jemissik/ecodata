@@ -8,7 +8,7 @@ changelog:
         - bug
     - title: ✨ Improvements
       labels:
-        -'*'
+        - '*'
       exclude:
         labels:
           - enhancements
