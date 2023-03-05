@@ -9,4 +9,5 @@ channels:
 
 specs:
   - python 3.9.*
+  - conda 22.11.1
   - ecodata
