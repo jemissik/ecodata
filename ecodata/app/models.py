@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import os
-from collections import OrderedDict
 from typing import AnyStr, ClassVar, Optional, Type
+from pathlib import Path
 
 import panel as pn
 import param
@@ -144,13 +144,16 @@ class FileSelector(pn.widgets.CompositeWidget):
         beyond which users cannot navigate.""",
     )
 
-    value = param.List(
-        default=[],
-        doc="""
-        List of selected files.""",
-    )
-
     _composite_type: ClassVar[Type[pn.layout.ListPanel]] = pn.Column
+
+    @property
+    def value(self):
+        """Value of selected file or directory"""
+        return self._directory.value
+
+    @value.setter
+    def value(self, value):
+        self._directory.value = value
 
     def __init__(self, directory: AnyStr | os.PathLike | None = None, **params):
         if directory is not None:
@@ -188,8 +191,6 @@ class FileSelector(pn.widgets.CompositeWidget):
         self._expanded = False
 
         # Set up callback
-        self._enter = KeyWatcher(watched=self._directory, key="Enter")
-        self._enter.on_click(self._dir_change)
         self._control_button.on_click(self._update_layout)
         self.link(self._directory, directory="value")
         self._selector.param.watch(self._update_value, "value")
@@ -230,13 +231,13 @@ class FileSelector(pn.widgets.CompositeWidget):
     def _update_value(self, event: param.parameterized.Event):
         value = [v for v in event.new if not self.only_files or os.path.isfile(v)]
         self._selector.value = value
-        self.value = value
+        self._value = value
 
     def _refresh(self):
         self._update_files(refresh=True)
 
     def _select(self, event: param.parameterized.Event):
-        if len(event.new) != 1:
+        if len(event.new) == 0:
             self._directory.value = self._cwd
             return
 
@@ -247,7 +248,7 @@ class FileSelector(pn.widgets.CompositeWidget):
             self._update_files()
             self._selector.value = []
         else:
-            self._directory.value = self._cwd
+            self._directory.value = sel
 
     def _dir_change(self, event: param.parameterized.Event):
         path = pn.util.fullpath(self._directory.value)
@@ -259,7 +260,10 @@ class FileSelector(pn.widgets.CompositeWidget):
         self._update_files()
 
     def _update_files(self, event: Optional[param.parameterized.Event] = None, refresh: bool = False):
+
         path = pn.util.fullpath(self._directory.value)
+        if not os.path.isdir(path):
+            path = Path(path).parent
 
         if refresh:
             path = self._cwd
@@ -307,5 +311,3 @@ class FileSelector(pn.widgets.CompositeWidget):
                 options[os.path.relpath(f, self._cwd)] = f
 
         self._selector.options = options
-        self._selector.value = []
-
