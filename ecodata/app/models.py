@@ -263,7 +263,7 @@ class FileSelector(pn.widgets.CompositeWidget):
 
         path = pn.util.fullpath(self._directory.value)
         if not os.path.isdir(path):
-            path = Path(path).parent
+            path = str(Path(path).parent)
 
         if refresh:
             path = self._cwd
