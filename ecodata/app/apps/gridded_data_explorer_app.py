@@ -16,7 +16,7 @@ from dask.distributed import Client
 import ecodata as eco
 from ecodata.panel_utils import param_widget, register_view, templater, try_catch
 from ecodata.plotting import plot_avg_timeseries, plot_gridded_data
-from ecodata.xr_tools import detect_varnames
+from ecodata.xr_tools import detect_varnames, set_time_encoding_modis
 
 
 class HTML_WidgetBox(ReactiveHTML):
@@ -117,8 +117,6 @@ class GriddedDataExplorer(param.Parameterized):
     )
 
     stats = param.ClassSelector(class_=pd.DataFrame)
-    # stats_widget = param.Parameter()
-    # stats_widget = param_widget(pn.widgets.Tabulator(None, name='DataFrame', hierarchical=True))
 
     # Save dataset
     output_fname = param_widget(
@@ -150,13 +148,7 @@ class GriddedDataExplorer(param.Parameterized):
 
     def __init__(self, **params):
         super().__init__(**params)
-        # self.stats_widget = pn.widgets.Tabulator(
-        #     pd.DataFrame(),
-        #     name='DataFrame', hierarchical=True,
-        #
-        #     # height=400,
-        #     sizing_mode="stretch_both",
-        # )
+
         self.dask_client = Client()
         self.dash_address = self.dask_client.dashboard_link
 
@@ -294,6 +286,12 @@ class GriddedDataExplorer(param.Parameterized):
 
     @try_catch()
     @param.depends("update_varnames.value", watch=True)
+    def update_ds_varnames(self):
+        if self.ds_raw is not None and self.zvar.value is not None:
+            self.ds = self.ds_raw[[self.zvar.value]].copy()
+            self.update_selection_widgets()
+
+    @try_catch()
     def update_selection_widgets(self):
         if self.ds_raw is not None and not self.disable_plotting_button.value:
             self.status_text = "Updating widgets"
@@ -378,7 +376,7 @@ class GriddedDataExplorer(param.Parameterized):
     def load_data(self):
         if self.filein.value:
             self.status_text = "Loading data..."
-            webbrowser.open(self.dash_address)
+            # webbrowser.open(self.dash_address) #TODO remove this 
 
             ds_raw = xr.open_dataset(self.filein.value, chunks='auto').unify_chunks()
             matched_vars, ds_vars, unmatched_vars = detect_varnames(ds_raw)
@@ -594,7 +592,7 @@ class GriddedDataExplorer(param.Parameterized):
         outfile = Path(self.output_fname.value).resolve()
 
         # Set the time encoding to match MODIS format
-        self.ds[self.timevar.value].encoding["units"] = "days since 2000-01-01 00:00:00"
+        set_time_encoding_modis(self.ds)
         print(self.ds.time.encoding)
 
         self.ds.to_netcdf(outfile)
