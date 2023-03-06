@@ -144,6 +144,15 @@ class FileSelector(pn.widgets.CompositeWidget):
         beyond which users cannot navigate.""",
     )
 
+    expanded = param.Boolean(
+        default=None,
+        allow_None=True,
+        doc="""
+        If the file selector is embedded in an expandable layout and expanded (True), 
+        not expanded (False), or not embedded (None)
+        """,
+    )
+
     _composite_type: ClassVar[Type[pn.layout.ListPanel]] = pn.Column
 
     @property
@@ -180,7 +189,6 @@ class FileSelector(pn.widgets.CompositeWidget):
         self._selector = pn.widgets.MultiSelect(size=self.size, **sel_layout)
         self._directory = pn.widgets.TextInput(value=self.directory, margin=(5, 10), width_policy="max")
         self._nav_bar = pn.Row(self._directory, **dict(layout, width=None, margin=0, width_policy="max"))
-        self._composite[:] = [self._control_button]
         self.link(self._selector, size="size")
 
         # Set up state
@@ -188,7 +196,8 @@ class FileSelector(pn.widgets.CompositeWidget):
         self._cwd = None
         self._position = -1
         self._update_files(refresh=True)
-        self._expanded = False
+        self._update_layout()
+
 
         # Set up callback
         self._control_button.on_click(self._update_layout)
@@ -198,6 +207,7 @@ class FileSelector(pn.widgets.CompositeWidget):
         self._selector.param.watch(self._select, "value")
         self._periodic = pn.io.PeriodicCallback(callback=self._refresh, period=self.refresh_period or 0)
         self.param.watch(self._update_periodic, "refresh_period")
+        self.param.watch(self._update_layout, "expanded")
         if self.refresh_period:
             self._periodic.start()
 
@@ -213,11 +223,19 @@ class FileSelector(pn.widgets.CompositeWidget):
     def _root_directory(self):
         return self.root_directory or self.directory
 
-    def _update_layout(self, event: param.parameterized.Event):
-        if self._expanded:
+    def _update_layout(self, event: param.parameterized.Event = None):
+        if self.expanded is not None:
+            # this func fires on expanded changing, so we don't want this change to be picked up
+            with param.parameterized.discard_events(self):
+                self.expanded = not self.expanded
+
+        if self.expanded:
             self._control_button.name = "Select File"
-            self._composite[:] = [self._control_button]
-        else:
+            self._composite[:] = [
+                self._nav_bar,
+                self._control_button,
+            ]
+        elif self.expanded is False:
             self._control_button.name = "Close"
             self._composite[:] = [
                 self._nav_bar,
@@ -226,7 +244,13 @@ class FileSelector(pn.widgets.CompositeWidget):
                 pn.layout.Divider(margin=0),
                 self._control_button,
             ]
-        self._expanded = not self._expanded
+        else:
+            self._composite[:] = [
+                self._nav_bar,
+                pn.layout.Divider(margin=0),
+                self._selector,
+                pn.layout.Divider(margin=0),
+            ]
 
     def _update_value(self, event: param.parameterized.Event):
         value = [v for v in event.new if not self.only_files or os.path.isfile(v)]
@@ -283,8 +307,7 @@ class FileSelector(pn.widgets.CompositeWidget):
             elif os.path.isfile(check):
                 files.append(s)
 
-        from pprint import pprint
-
+        paths = []
         paths = []
         for p in sorted(dirs) + sorted(files):
             if os.path.relpath(p, self._cwd).startswith("."):
