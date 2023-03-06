@@ -32,7 +32,7 @@ dependencies:
 - conda-forge::ffmpeg
 - anaconda::git
 - conda-forge::gdown
-- conda-forge::jupyter
+- conda-forge::jupyterlab
 - pip:
   - black
   - conda-merge
