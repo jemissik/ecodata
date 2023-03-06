@@ -6,6 +6,7 @@ from typing import AnyStr, ClassVar, Optional, Type
 
 import panel as pn
 import param
+import webbrowser
 from panel.io import PeriodicCallback
 from panel.layout import Column, Divider, ListPanel, Row
 from panel.util import fullpath
@@ -13,6 +14,83 @@ from panel.viewable import Layoutable
 from panel.widgets.input import TextInput
 
 from ecodata.app import config
+from ecodata.panel_utils import param_widget, try_catch
+
+from distributed.dashboard.components.scheduler import TaskProgress
+from distributed.dashboard.components.shared import SystemMonitor
+from dask.distributed import LocalCluster
+
+
+class SimpleDashboardCard(param.Parameterized):
+
+    open_dashboard_button = param_widget(
+        pn.widgets.Button(button_type="primary", name="Open processing dashboard", align="start", sizing_mode="fixed"))
+    def __init__(self, dask_client, **params):
+        super().__init__(**params)
+
+        # Reset names for panel widgets
+        self.open_dashboard_button.name = "Open processing dashboard"
+
+
+        self.dask_client = dask_client
+        self.dash_address = self.dask_client.dashboard_link
+        print("Dash address:")
+        print(self.dash_address)
+
+        # dashboard_description = pn.pane.HTML(
+        #     f'Processing dashboard is running at: <a apperance="stealth" href={self.dash_address} target="_blank">{self.dash_address} </a>'
+        #     )
+
+        dashboard_description = pn.pane.Markdown("Processing details (progress, memory usage, etc can be viewed in the "
+                                                 "processing dashboard)")
+
+        self.dask_processing_card = pn.Card(dashboard_description, self.open_dashboard_button, title="Processing info")
+
+    @param.depends("open_dashboard_button.value", watch=True)
+    def open_full_dashboard(self):
+        try:
+            webbrowser.open(self.dash_address)
+        except Exception as e:
+            print("failed to open dashboard")
+
+class DaskDashboardCard():
+    """
+    WIP dashboard card with progress plot embedded.
+    Not working yet.
+    """
+
+    open_dashboard_button = param_widget(
+        pn.widgets.Toggle(button_type="primary", name="Open processing dashboard", align="end", sizing_mode="fixed"))
+    def __init__(self, dask_cluster, **params):
+        super().__init__(**params)
+
+        # Reset names for panel widgets
+        self.open_dashboard_button.name = "Open processing dashboard"
+
+
+        self.dask_cluster = dask_cluster
+        # self.dash_address = self.dask_client.dashboard_link
+        self.dash_address = self.dask_cluster.dashboard_link
+        print("Dash address:")
+        print(self.dash_address)
+
+        self.scheduler = self.dask_cluster.scheduler
+        self.progress_figure = self.get_progress_figure()
+
+        self.dask_processing_card = pn.Card(self.open_dashboard_button, self.progress_figure, title="Processing info")
+
+    def get_progress_figure(self):
+        dask_progress = TaskProgress(self.scheduler)
+        # dask_progress = SystemMonitor(self.scheduler)
+
+        # Add periodic callback to figure
+        pn.state.add_periodic_callback(dask_progress.update, 100)
+        return pn.pane.Bokeh(dask_progress.root)
+
+    @param.depends("open_dashboard_button.value", watch=True)
+    def open_full_dashboard(self):
+        webbrowser.open(self.dash_address)
+
 
 
 class PMVCard(pn.Card):

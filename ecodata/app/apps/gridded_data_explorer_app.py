@@ -1,5 +1,4 @@
 import datetime as dt
-import webbrowser
 from pathlib import Path
 
 import geopandas as gpd
@@ -11,12 +10,14 @@ import panel as pn
 import param
 import xarray as xr
 from panel.reactive import ReactiveHTML, Viewable
-from dask.distributed import Client
+from dask.distributed import Client, LocalCluster
 
 import ecodata as eco
 from ecodata.panel_utils import param_widget, register_view, templater, try_catch
 from ecodata.plotting import plot_avg_timeseries, plot_gridded_data
 from ecodata.xr_tools import detect_varnames, set_time_encoding_modis
+from ecodata.app.models import DaskDashboardCard, SimpleDashboardCard
+
 
 
 class HTML_WidgetBox(ReactiveHTML):
@@ -150,7 +151,7 @@ class GriddedDataExplorer(param.Parameterized):
         super().__init__(**params)
 
         self.dask_client = Client()
-        self.dash_address = self.dask_client.dashboard_link
+        # self.dask_cluster = LocalCluster()
 
         # Reset names for panel widgets
         self.filein.name = "File path"
@@ -211,6 +212,7 @@ class GriddedDataExplorer(param.Parameterized):
             width_policy="max",
         )
 
+        self.dask_card = SimpleDashboardCard(self.dask_client)
         self.polyfile_widgets = pn.Card(self.polyfile, self.load_polyfile, title="Input polygon file")
 
         self.rs_time_widgets = pn.Card(
@@ -250,7 +252,7 @@ class GriddedDataExplorer(param.Parameterized):
         self.ts_pane = pn.pane.HoloViews(sizing_mode="stretch_both")
         self.ds_pane = pn.pane.HTML(sizing_mode="stretch_both", style={"overflow": "auto"})
         self.dashboard_pane = pn.pane.HTML(sizing_mode="stretch_both", style={"overflow": "auto"})
-        self.dashboard_pane.object = self.dask_client.scheduler_info()
+        # self.dashboard_pane.object = self.dask_client.scheduler_info()
 
         self.ts_widget = pn.pane.Markdown("")
         self.figs_with_widget = pn.Tabs()
@@ -267,7 +269,7 @@ class GriddedDataExplorer(param.Parameterized):
 
         self.view = pn.Column(
             # self.filein,
-            self.dashboard_pane,
+            self.dask_card.dask_processing_card,
             self.file_input_card,
             self.polyfile_widgets,
             self.outfile_widgets,
@@ -376,7 +378,6 @@ class GriddedDataExplorer(param.Parameterized):
     def load_data(self):
         if self.filein.value:
             self.status_text = "Loading data..."
-            # webbrowser.open(self.dash_address) #TODO remove this 
 
             ds_raw = xr.open_dataset(self.filein.value, chunks='auto').unify_chunks()
             matched_vars, ds_vars, unmatched_vars = detect_varnames(ds_raw)
