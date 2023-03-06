@@ -187,7 +187,7 @@ class FileSelector(pn.widgets.CompositeWidget):
         self._stack = []
         self._cwd = None
         self._position = -1
-        self._update_files(True)
+        self._update_files(refresh=True)
         self._expanded = False
 
         # Set up callback
@@ -259,28 +259,22 @@ class FileSelector(pn.widgets.CompositeWidget):
             self._directory.value = path
         self._update_files()
 
-    def _update_files(self, event: Optional[param.parameterized.Event] = None, refresh: bool = False):
+
+    def _update_files(self, refresh: bool = False):
 
         path = pn.util.fullpath(self._directory.value)
         if not os.path.isdir(path):
             path = str(Path(path).parent)
 
-        if refresh:
-            path = self._cwd
-        elif event is not None and (not self._stack or path != self._stack[-1]):
+        if (not self._stack or path != self._stack[-1]):
             self._stack.append(path)
             self._position += 1
 
         self._cwd = path
 
         selected = self.value
-        try:
-            dirs, files = pn.widgets.file_selector._scan_path(path, self.file_pattern)
-            os_error = False
-        except PermissionError as e:
-            self.error = e
-            dirs, files = pn.widgets.file_selector._scan_path(self._directory.value, self.file_pattern)
-            os_error = True
+
+        dirs, files = self._get_paths(path)
 
         for s in selected:
             check = os.path.realpath(s) if os.path.islink(s) else s
@@ -303,11 +297,20 @@ class FileSelector(pn.widgets.CompositeWidget):
         options = {"⬆️..": ".."}
 
         for f in paths:
-            if f in dirs and os_error:
-                options[f"⛔{os.path.relpath(f, self._cwd)}"] = f
-            elif f in dirs:
+            if f in dirs:
                 options[f"📁{os.path.relpath(f, self._cwd)}"] = f
             else:
                 options[os.path.relpath(f, self._cwd)] = f
 
         self._selector.options = options
+
+    def _get_paths(self, directory):
+        dirs_, files = pn.widgets.file_selector._scan_path(directory, self.file_pattern)
+        dirs = []
+        for d in dirs_:
+            try:
+                if os.listdir(d):
+                    dirs.append(d)
+            except OSError:  # we can't access that folder
+                pass
+        return dirs, files
