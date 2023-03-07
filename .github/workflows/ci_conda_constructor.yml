@@ -6,17 +6,18 @@ on:
 #        - v*
 jobs:
     unixlike:
-        name: ECODATA-${{ matrix.os }}
+        name: ${{ matrix.os }}
         runs-on: ${{ matrix.os }}-latest
         strategy:
             fail-fast: false
             matrix:
                 pyver: ["3.9"]
                 include:
-                    -   os: macos-latest
+                    -   os: macos
                         ARCH: x86_64
                         OS_NAME: "MacOSX"
-                    -   os: ubuntu-latest
+
+                    -   os: ubuntu
                         ARCH: x86_64
                         OS_NAME: "Linux"
         env:
