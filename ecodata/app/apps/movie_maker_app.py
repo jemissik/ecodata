@@ -20,7 +20,7 @@ logger = logging.getLogger(__file__)
 class MovieMaker(param.Parameterized):
 
     # Frames directory
-    frames_dir = param_widget(FileSelector(str(Path.home()), root_directory="/", expanded=True))
+    frames_dir = param_widget(FileSelector(str(Path.home()), root_directory=str(Path.home().root), expanded=True))
 
     # Output file
     output_file = param_widget(
