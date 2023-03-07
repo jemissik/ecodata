@@ -176,6 +176,7 @@ class FileSelector(pn.widgets.CompositeWidget):
         if directory is None:
             try:
                 directory = Path.home()
+                os.path.relpath(directory, os.getcwd())
             except (OSError, ValueError):
                 directory = os.getcwd()
         params["directory"] = pn.util.fullpath(directory)
