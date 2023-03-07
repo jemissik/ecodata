@@ -41,8 +41,8 @@ jobs:
         - name: Setup Mambaforge
           uses: conda-incubator/setup-miniconda@v2
           with:
-              miniconda-version: "latest"
-              activate-environment: foo
+              auto-update-conda: true
+              python-version: 3.9
 
         - name: Update conda
           run: conda update -n base conda
