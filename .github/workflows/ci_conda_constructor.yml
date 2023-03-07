@@ -11,8 +11,14 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                os: [ macos, ubuntu ]
                 pyver: ["3.9"]
+                include:
+                    -   os: macos-latest
+                        ARCH: x86_64
+                        OS_NAME: "MacOSX"
+                    -   os: ubuntu-latest
+                        ARCH: x86_64
+                        OS_NAME: "Linux"
         env:
             PYTHONUNBUFFERED: True
         steps:
@@ -23,14 +29,6 @@ jobs:
                     echo "  HEAD_REF:" "$GITHUB_HEAD_REF"
                     echo "  BASE_REF:" "$GITHUB_BASE_REF"
                     echo "       SHA:" "$GITHUB_SHA"
-            -   name: Set temp dirs correctly
-                if: startsWith(matrix.os, 'windows')
-                # https://github.com/actions/virtual-environments/issues/712
-                shell: powershell
-                run: |
-                    echo "TMPDIR=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-                    echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-                    echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
             -   name: Retrieve the source code
                 uses: actions/checkout@v3
                 with:
@@ -60,8 +58,8 @@ jobs:
             -   name: upload artifacts
                 uses: actions/upload-artifact@v3
                 with:
-                    path: scripts/ecodata-X-${{ matrix.os }}-x86_64.*
-                    name: ecodata-X-${{ matrix.os }}-x86_64.*
+                    path: scripts/ecodata-X-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}*
+                    name: ecodata-X-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}*
 
     windows:
         runs-on: windows-latest
