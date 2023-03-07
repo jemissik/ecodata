@@ -14,7 +14,7 @@ from dask.distributed import Client, LocalCluster
 
 import ecodata as eco
 from ecodata.panel_utils import param_widget, register_view, templater, try_catch
-from ecodata.plotting import plot_avg_timeseries, plot_gridded_data
+from ecodata.plotting import plot_avg_timeseries, plot_gridded_data, GriddedPlotWithSlider
 from ecodata.xr_tools import detect_varnames, set_time_encoding_modis
 from ecodata.app.models import DaskDashboardCard, SimpleDashboardCard
 
@@ -492,18 +492,16 @@ class GriddedDataExplorer(param.Parameterized):
         elif all([self.timevar.value, self.latvar.value, self.lonvar.value, self.zvar.value]):
             self.status_text = "Creating plot"
             width = 500
-            ds_plot = plot_gridded_data(
-                self.ds, x=self.lonvar.value, y=self.latvar.value, z=self.zvar.value, time=self.timevar.value
-            ).opts(
-                frame_width=width,
-            )
+            ds_plot = GriddedPlotWithSlider(
+                self.ds, timevar=self.timevar.value, zvar=self.zvar.value, width=width
+            ).fig_with_widget
             # .opts(frame_width=width)
             if self.poly is not None:
                 ds_plot = ds_plot * gv.Path(self.poly).opts(line_color="k", line_width=2)
-            plot = pn.pane.HoloViews(ds_plot)
-            widget = plot.widget_box.objects[0]
-            widget.width = width
-            widget.align = "center"
+            # plot = pn.pane.HoloViews(ds_plot)
+            # widget = plot.widget_box.objects[0]
+            # widget.width = width
+            # widget.align = "center"
             # widget.orientation = "vertical"
             # label = widget.name
             # print(repr(widget))
@@ -528,7 +526,7 @@ class GriddedDataExplorer(param.Parameterized):
             # pn.Card(self.ds)
             # )
             # figs_with_widget = pn.Card(plot, widget, ts_plot, self.ds, background='whitesmoke')
-            self.plot_col.objects = [plot, widget, ds_ts_plot]
+            self.plot_col.objects = [ds_plot, ds_ts_plot]
             # self.plot_col.objects = [pn.Row(plot, widget), ds_ts_plot]
             # self.ts_pane.object = ds_ts_plot
             # self.ts_widget = widget
@@ -595,6 +593,9 @@ class GriddedDataExplorer(param.Parameterized):
         # Set the time encoding to match MODIS format
         set_time_encoding_modis(self.ds)
         print(self.ds.time.encoding)
+
+        # Make sure dataset is rechunked before computations are triggered
+        self.ds.chunk(chunks='auto')
 
         self.ds.to_netcdf(outfile)
         self.status_text = f"File saved to: {outfile}"
