@@ -16,8 +16,7 @@ import ecodata as eco
 from ecodata.panel_utils import param_widget, register_view, templater, try_catch
 from ecodata.plotting import plot_avg_timeseries, plot_gridded_data, GriddedPlotWithSlider
 from ecodata.xr_tools import detect_varnames, set_time_encoding_modis
-from ecodata.app.models import DaskDashboardCard, SimpleDashboardCard
-
+from ecodata.app.models import SimpleDashboardCard, FileSelector
 
 
 class HTML_WidgetBox(ReactiveHTML):
@@ -35,8 +34,7 @@ class HTML_WidgetBox(ReactiveHTML):
 
 class GriddedDataExplorer(param.Parameterized):
 
-    # TODO replace with new file selector
-    filein = param_widget(pn.widgets.TextInput(placeholder="Select a file...", name="Data file"))
+    filein = param_widget(FileSelector(constrain_path=False, expanded=True))
     load_data_button = param_widget(
         pn.widgets.Button(button_type="primary", name="Load data", align="end", sizing_mode="fixed")
     )
@@ -51,7 +49,7 @@ class GriddedDataExplorer(param.Parameterized):
         pn.widgets.Toggle(button_type="primary", name="Disable plotting", align="end", sizing_mode="fixed")
     )
 
-    polyfile = param_widget(pn.widgets.TextInput(placeholder="Select a file...", name="Polygon file"))
+    polyfile = param_widget(FileSelector(constrain_path=False, expanded=True))
     load_polyfile = param_widget(
         pn.widgets.Button(button_type="primary", name="Load data", sizing_mode="fixed", align="start")
     )
@@ -153,7 +151,6 @@ class GriddedDataExplorer(param.Parameterized):
         self.dask_client = Client()
 
         # Reset names for panel widgets
-        self.filein.name = "File path"
         self.load_data_button.name = "Load data"
         self.disable_plotting_button.name = "Disable plotting"
         self.timevar.name = "Time"
@@ -162,7 +159,6 @@ class GriddedDataExplorer(param.Parameterized):
         self.zvar.name = "Variable of interest"
         self.update_varnames.name = "Update variable names"
 
-        self.polyfile.name = "Polygon file"
         self.load_polyfile.name = "Load file"
 
         # commas at the end are necessary for endpoints to be
@@ -266,7 +262,6 @@ class GriddedDataExplorer(param.Parameterized):
         }
 
         self.view = pn.Column(
-            # self.filein,
             self.dask_card.dask_processing_card,
             self.file_input_card,
             self.polyfile_widgets,
@@ -485,10 +480,10 @@ class GriddedDataExplorer(param.Parameterized):
             width = 500
             ds_plot = GriddedPlotWithSlider(
                 self.ds, timevar=self.timevar.value, zvar=self.zvar.value, width=width
-            ).fig_with_widget
+            )
             # .opts(frame_width=width)
             if self.poly is not None:
-                ds_plot = ds_plot * gv.Path(self.poly).opts(line_color="k", line_width=2)
+                ds_plot.fig.object = ds_plot.fig.object * gv.Path(self.poly).opts(line_color="k", line_width=2)
 
             ds_ts_plot = plot_avg_timeseries(
                 self.ds.reindex_like(self.ds_raw),
@@ -497,7 +492,7 @@ class GriddedDataExplorer(param.Parameterized):
                 z=self.zvar.value,
                 time=self.timevar.value,
             )
-            self.plot_col.objects = [ds_plot, ds_ts_plot]
+            self.plot_col.objects = [ds_plot.fig_with_widget, ds_ts_plot]
 
             self.figs_with_widget[:] = [
                 ("Charts", self.plot_col),
