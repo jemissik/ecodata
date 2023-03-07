@@ -151,7 +151,6 @@ class GriddedDataExplorer(param.Parameterized):
         super().__init__(**params)
 
         self.dask_client = Client()
-        # self.dask_cluster = LocalCluster()
 
         # Reset names for panel widgets
         self.filein.name = "File path"
@@ -252,7 +251,6 @@ class GriddedDataExplorer(param.Parameterized):
         self.ts_pane = pn.pane.HoloViews(sizing_mode="stretch_both")
         self.ds_pane = pn.pane.HTML(sizing_mode="stretch_both", style={"overflow": "auto"})
         self.dashboard_pane = pn.pane.HTML(sizing_mode="stretch_both", style={"overflow": "auto"})
-        # self.dashboard_pane.object = self.dask_client.scheduler_info()
 
         self.ts_widget = pn.pane.Markdown("")
         self.figs_with_widget = pn.Tabs()
@@ -279,13 +277,6 @@ class GriddedDataExplorer(param.Parameterized):
             sizing_mode="stretch_both",
         )
 
-
-    # @try_catch()
-    # @param.depends("open_dask_dashboard.value", watch=True)
-    # def open_dask_dashboard_window(self):
-    #     if self.dash_address is not None:
-    #         webbrowser.open(self.dash_address)
-
     @try_catch()
     @param.depends("update_varnames.value", watch=True)
     def update_ds_varnames(self):
@@ -295,7 +286,7 @@ class GriddedDataExplorer(param.Parameterized):
 
     @try_catch()
     def update_selection_widgets(self):
-        if self.ds_raw is not None and not self.disable_plotting_button.value:
+        if self.ds_raw is not None:
             self.status_text = "Updating widgets"
 
             self.date_range = pn.widgets.DateRangeSlider(
@@ -482,7 +473,7 @@ class GriddedDataExplorer(param.Parameterized):
         self.alert.object = self.status_text
 
     @try_catch()
-    @param.depends("ds", "update_varnames.value", "disable_plotting_button.value", "poly", watch=True)
+    @param.depends("update_varnames.value", "disable_plotting_button.value", "poly", watch=True)
     def update_plot_view(self):
         self.ds_pane.object = self.ds
 
@@ -498,38 +489,15 @@ class GriddedDataExplorer(param.Parameterized):
             # .opts(frame_width=width)
             if self.poly is not None:
                 ds_plot = ds_plot * gv.Path(self.poly).opts(line_color="k", line_width=2)
-            # plot = pn.pane.HoloViews(ds_plot)
-            # widget = plot.widget_box.objects[0]
-            # widget.width = width
-            # widget.align = "center"
-            # widget.orientation = "vertical"
-            # label = widget.name
-            # print(repr(widget))
-            # print(dir(widget))
+
             ds_ts_plot = plot_avg_timeseries(
                 self.ds.reindex_like(self.ds_raw),
                 x=self.lonvar.value,
                 y=self.latvar.value,
                 z=self.zvar.value,
                 time=self.timevar.value,
-            )  # .opts(width=width)
-            # vertical_label = pn.pane.HTML()
-            # @pn.depends(widget, watch=True)
-            # def update_widget_label(val):
-            #     vertical_label.object = f"<p style='writing-mode: vertical-rl;
-            # text-orientation: mixed;'>{label}: {val}</p>"
-
-            # vertical_label = pn.pane.HTML(f"<p style='writing-mode: vertical-rl;
-            # text-orientation: mixed;'>{label}</p>")
-
-            # figs_with_widget = pn.Column(pn.Card(pn.Column(plot, widget), align='center'), pn.Card(ts_plot),
-            # pn.Card(self.ds)
-            # )
-            # figs_with_widget = pn.Card(plot, widget, ts_plot, self.ds, background='whitesmoke')
+            )
             self.plot_col.objects = [ds_plot, ds_ts_plot]
-            # self.plot_col.objects = [pn.Row(plot, widget), ds_ts_plot]
-            # self.ts_pane.object = ds_ts_plot
-            # self.ts_widget = widget
 
             self.figs_with_widget[:] = [
                 ("Charts", self.plot_col),
