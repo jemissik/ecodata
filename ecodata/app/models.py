@@ -91,7 +91,7 @@ class FileSelector(pn.widgets.CompositeWidget):
     """
 
     directory = param.String(
-        default=os.getcwd(),
+        default=None,
         doc="""
         The directory to explore.""",
     )
@@ -173,8 +173,12 @@ class FileSelector(pn.widgets.CompositeWidget):
         self._directory.value = value
 
     def __init__(self, directory: AnyStr | os.PathLike | None = None, **params):
-        if directory is not None:
-            params["directory"] = pn.util.fullpath(directory)
+        if directory is None:
+            try:
+                directory = Path.home()
+            except (OSError, ValueError):
+                directory = os.getcwd()
+        params["directory"] = pn.util.fullpath(directory)
         if "root_directory" in params:
             root = params["root_directory"]
             params["root_directory"] = pn.util.fullpath(root)
