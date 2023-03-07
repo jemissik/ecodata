@@ -46,7 +46,7 @@ jobs:
               use-mamba: true
 
         - name: Install constructor
-          run: conda install constructor -y
+          run: mamba install --yes --channel conda-forge "constructor>=3.4.2"
 
         - name: Run conda constructor
           run: |
