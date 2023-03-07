@@ -45,7 +45,7 @@ jobs:
 
         - name: Run conda constructor
           run: |
-              conda install constructor -c conda_forge
+              conda install constructor -c conda-forge
               cd scripts
               constructor .
 
