@@ -44,8 +44,11 @@ jobs:
               miniconda-version: "latest"
               activate-environment: foo
 
+        - name: Update conda
+          run: conda update -n base conda
+
         - name: Install constructor
-          run: conda install --yes --channel conda-forge "constructor>=3.4.2"
+          run: conda install --yes "constructor>=3.4.2"
 
         - name: Run conda constructor
           run: |
