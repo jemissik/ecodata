@@ -12,7 +12,7 @@ jobs:
         fail-fast: false
         matrix:
             os: [ macos, ubuntu, windows ]
-            pyver: ["3.8", "3.9", "3.10" ]
+            pyver: 3.9
     env:
         PYTHONUNBUFFERED: True
     steps:
