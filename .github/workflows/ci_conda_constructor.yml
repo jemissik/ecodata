@@ -1,3 +1,4 @@
+name: conda_constructor
 on:
   push:
     # Sequence of patterns matched against refs/tags
@@ -42,15 +43,16 @@ jobs:
             miniforge-version: "latest"
             miniforge-variant: Mambaforge
             use-mamba: true
+        - name: Install constructor
+          run: $ conda install constructor -y
 
         - name: Run conda constructor
           run: |
-              conda install constructor -c conda-forge
               cd scripts
               constructor .
 
         - name: upload artifacts
           uses: actions/upload-artifact@v3
           with:
-            path: build/ECODATA-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}*
-            name: ECODATA-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}
+            path: scripts/ecodata-X-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}.exe
+            name: ecodata-X-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}
