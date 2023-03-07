@@ -41,12 +41,11 @@ jobs:
         - name: Setup Mambaforge
           uses: conda-incubator/setup-miniconda@v2
           with:
-              miniforge-variant: Mambaforge
-              miniforge-version: latest
-              use-mamba: true
+              miniconda-version: "latest"
+              activate-environment: foo
 
         - name: Install constructor
-          run: mamba install --yes --channel conda-forge "constructor>=3.4.2"
+          run: conda install --yes --channel conda-forge "constructor>=3.4.2"
 
         - name: Run conda constructor
           run: |
