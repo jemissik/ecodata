@@ -35,7 +35,7 @@ import panel as pn
 import param
 
 import ecodata as eco
-from ecodata.app.models import PMVCard
+from ecodata.app.models import PMVCard, FileSelector
 from ecodata.panel_utils import param_widget, register_view, templater, try_catch
 from ecodata.plotting import map_tile_options, plot_tracks_with_tiles
 
@@ -45,7 +45,7 @@ from ecodata.plotting import map_tile_options, plot_tracks_with_tiles
 class TracksExplorer(param.Parameterized):
 
     load_tracks_button = param_widget(pn.widgets.Button(button_type="primary", name="Load data"))
-    tracksfile = param_widget(pn.widgets.TextInput(placeholder="Select a file...", name="Track file"))
+    tracksfile = param_widget(FileSelector(constrain_path=False, expanded=None))
 
     # filetree = param_widget(FileTree("/Users/jmissik/Desktop/repos.nosync/ecodata/ecodata/datasets/user_datasets",
     # select_multiple=False))
@@ -124,10 +124,8 @@ class TracksExplorer(param.Parameterized):
             self.tracksfile,
             # self.file_selector,
             self.load_tracks_button,
-            title="Select File",
+            title="Input Data",
         )
-
-        print(self.file_card.active_header_background, self.file_card.header_background)
 
         self.options_col = pn.Column(
             self.tracks_boundary_shape,
@@ -166,7 +164,7 @@ class TracksExplorer(param.Parameterized):
             self.status_text = "Loading data..."
             val = self.tracksfile.value  # or self.filetree.value[0]
             # val = self.file_selector.value[0]
-            self.file_card.collapsed = True
+            self.tracksfile.expanded = False
             tracks = eco.read_track_data(val)
             self.status_text = "Track file loaded"
             self.tracks_extent = eco.get_tracks_extent(
@@ -227,7 +225,6 @@ class TracksExplorer(param.Parameterized):
     @try_catch()
     @param.depends("tracks", "boundary_update.value", "ds_checkbox.value", "map_tile.value", watch=True)
     def update_view(self):
-        print("calling update view")
         self.status_text = "Creating plot..."
 
         plot = (

@@ -1,16 +1,11 @@
 from __future__ import annotations
 
 import os
-from collections import OrderedDict
 from typing import AnyStr, ClassVar, Optional, Type
+from pathlib import Path
 
 import panel as pn
 import param
-from panel.io import PeriodicCallback
-from panel.layout import Column, Divider, ListPanel, Row
-from panel.util import fullpath
-from panel.viewable import Layoutable
-from panel.widgets.input import TextInput
 
 from ecodata.app import config
 
@@ -96,7 +91,7 @@ class FileSelector(pn.widgets.CompositeWidget):
     """
 
     directory = param.String(
-        default=os.getcwd(),
+        default=None,
         doc="""
         The directory to explore.""",
     )
@@ -142,27 +137,52 @@ class FileSelector(pn.widgets.CompositeWidget):
         the directory contents in milliseconds.""",
     )
 
+    constrain_path = param.Boolean(
+        default=True,
+        doc="""
+        If True, will constrain the user to only go to subdirectories of directory
+        or root_directory (if set).
+        """
+    )
+
     root_directory = param.String(
         default=None,
         doc="""
-        If set, overrides directory parameter as the root directory
-        beyond which users cannot navigate.""",
+        If set and constrain_path is True, overrides directory parameter as the root 
+        directory beyond which users cannot navigate.""",
     )
 
-    value = param.List(
-        default=[],
+    expanded = param.Boolean(
+        default=None,
+        allow_None=True,
         doc="""
-        List of selected files.""",
+        If the file selector is embedded in an expandable layout and expanded (True), 
+        not expanded (False), or not embedded (None)
+        """,
     )
 
-    _composite_type: ClassVar[Type[ListPanel]] = Column
+    _composite_type: ClassVar[Type[pn.layout.ListPanel]] = pn.Column
+
+    @property
+    def value(self):
+        """Value of selected file or directory"""
+        return self._directory.value
+
+    @value.setter
+    def value(self, value):
+        self._directory.value = value
 
     def __init__(self, directory: AnyStr | os.PathLike | None = None, **params):
-        if directory is not None:
-            params["directory"] = fullpath(directory)
+        if directory is None:
+            try:
+                directory = Path.home()
+                os.path.relpath(directory, os.getcwd())
+            except (OSError, ValueError):
+                directory = os.getcwd()
+        params["directory"] = pn.util.fullpath(directory)
         if "root_directory" in params:
             root = params["root_directory"]
-            params["root_directory"] = fullpath(root)
+            params["root_directory"] = pn.util.fullpath(root)
         if params.get("width") and params.get("height") and "sizing_mode" not in params:
             params["sizing_mode"] = None
 
@@ -173,36 +193,34 @@ class FileSelector(pn.widgets.CompositeWidget):
         # Set up layout
         layout = {
             p: getattr(self, p)
-            for p in Layoutable.param
+            for p in pn.viewable.Layoutable.param
             if p not in ("name", "height", "margin") and getattr(self, p) is not None
         }
         sel_layout = dict(layout, sizing_mode="stretch_both", height=None, margin=0)
         self._control_button = pn.widgets.Button(name="Select File")
 
         self._selector = pn.widgets.MultiSelect(size=self.size, **sel_layout)
-        self._directory = TextInput(value=self.directory, margin=(5, 10), width_policy="max")
-        self._nav_bar = Row(self._directory, **dict(layout, width=None, margin=0, width_policy="max"))
-        self._composite[:] = [self._control_button]
-        # self._composite[:] = [self._nav_bar, Divider(margin=0), self._selector, Divider(margin=0)]
+        self._directory = pn.widgets.TextInput(value=self.directory, margin=(5, 10), width_policy="max")
+        self._nav_bar = pn.Row(self._directory, **dict(layout, width=None, margin=0, width_policy="max"))
         self.link(self._selector, size="size")
 
         # Set up state
         self._stack = []
         self._cwd = None
         self._position = -1
-        self._update_files(True)
-        self._expanded = False
+        self._update_files(refresh=True)
+        self._update_layout()
+
 
         # Set up callback
-        self._enter = KeyWatcher(watched=self._directory, key="Enter")
-        self._enter.on_click(self._dir_change)
         self._control_button.on_click(self._update_layout)
         self.link(self._directory, directory="value")
         self._selector.param.watch(self._update_value, "value")
         self._directory.param.watch(self._dir_change, "value")
         self._selector.param.watch(self._select, "value")
-        self._periodic = PeriodicCallback(callback=self._refresh, period=self.refresh_period or 0)
+        self._periodic = pn.io.PeriodicCallback(callback=self._refresh, period=self.refresh_period or 0)
         self.param.watch(self._update_periodic, "refresh_period")
+        self.param.watch(self._update_layout, "expanded")
         if self.refresh_period:
             self._periodic.start()
 
@@ -218,71 +236,82 @@ class FileSelector(pn.widgets.CompositeWidget):
     def _root_directory(self):
         return self.root_directory or self.directory
 
-    def _update_layout(self, event: param.parameterized.Event):
-        if self._expanded:
+    def _update_layout(self, event: param.parameterized.Event = None):
+        if self.expanded is not None:
+            # this func fires on expanded changing, so we don't want this change to be picked up
+            with param.parameterized.discard_events(self):
+                self.expanded = not self.expanded
+
+        if self.expanded:
             self._control_button.name = "Select File"
-            self._composite[:] = [self._control_button]
-        else:
+            self._composite[:] = [
+                self._nav_bar,
+                self._control_button,
+            ]
+        elif self.expanded is False:
             self._control_button.name = "Close"
             self._composite[:] = [
                 self._nav_bar,
-                Divider(margin=0),
+                pn.layout.Divider(margin=0),
                 self._selector,
-                Divider(margin=0),
+                pn.layout.Divider(margin=0),
                 self._control_button,
             ]
-        self._expanded = not self._expanded
+        else:
+            self._composite[:] = [
+                self._nav_bar,
+                pn.layout.Divider(margin=0),
+                self._selector,
+                pn.layout.Divider(margin=0),
+            ]
 
     def _update_value(self, event: param.parameterized.Event):
         value = [v for v in event.new if not self.only_files or os.path.isfile(v)]
         self._selector.value = value
-        self.value = value
+        self._value = value
 
     def _refresh(self):
         self._update_files(refresh=True)
 
     def _select(self, event: param.parameterized.Event):
-        if len(event.new) != 1:
+        if len(event.new) == 0:
             self._directory.value = self._cwd
             return
 
         relpath = event.new[0].replace("📁", "")
-        sel = fullpath(os.path.join(self._cwd, relpath))
+        sel = pn.util.fullpath(os.path.join(self._cwd, relpath))
         if os.path.isdir(sel):
             self._directory.value = sel
             self._update_files()
             self._selector.value = []
         else:
-            self._directory.value = self._cwd
+            self._directory.value = sel
 
     def _dir_change(self, event: param.parameterized.Event):
-        path = fullpath(self._directory.value)
-        if not path.startswith(self._root_directory):
+        path = pn.util.fullpath(self._directory.value)
+        if self.constrain_path and not path.startswith(self._root_directory):
             self._directory.value = self._root_directory
             return
         elif path != self._directory.value:
             self._directory.value = path
         self._update_files()
 
-    def _update_files(self, event: Optional[param.parameterized.Event] = None, refresh: bool = False):
-        path = fullpath(self._directory.value)
 
-        if refresh:
-            path = self._cwd
-        elif event is not None and (not self._stack or path != self._stack[-1]):
+    def _update_files(self, refresh: bool = False):
+
+        path = pn.util.fullpath(self._directory.value)
+        if not os.path.isdir(path):
+            path = str(Path(path).parent)
+
+        if (not self._stack or path != self._stack[-1]):
             self._stack.append(path)
             self._position += 1
 
         self._cwd = path
 
         selected = self.value
-        try:
-            dirs, files = pn.widgets.file_selector._scan_path(path, self.file_pattern)
-            os_error = False
-        except PermissionError as e:
-            self.error = e
-            dirs, files = pn.widgets.file_selector._scan_path(self._directory.value, self.file_pattern)
-            os_error = True
+
+        dirs, files = self._get_paths(path)
 
         for s in selected:
             check = os.path.realpath(s) if os.path.islink(s) else s
@@ -291,17 +320,33 @@ class FileSelector(pn.widgets.CompositeWidget):
             elif os.path.isfile(check):
                 files.append(s)
 
-        paths = [p for p in sorted(dirs) + sorted(files) if self.show_hidden or not os.path.basename(p).startswith(".")]
+        paths = []
+        paths = []
+        for p in sorted(dirs) + sorted(files):
+            if os.path.relpath(p, self._cwd).startswith("."):
+                continue
+            elif os.path.basename(p).startswith(".") and self.show_hidden:
+                paths.append(p)
+            else:
+                paths.append(p)
 
-        paths.insert(0, "..")
-        abbreviated = ["⬆️ Go Out ⬆️"]
+        options = {"⬆️..": ".."}
+
         for f in paths:
             if f in dirs:
-                abbrev = "⛔️️" if os_error else "📁"
+                options[f"📁{os.path.relpath(f, self._cwd)}"] = f
             else:
-                abbrev = ""
-            abbreviated.append(abbrev + os.path.relpath(f, self._cwd))
+                options[os.path.relpath(f, self._cwd)] = f
 
-        options = OrderedDict(zip(abbreviated, paths))
         self._selector.options = options
-        self._selector.value = selected
+
+    def _get_paths(self, directory):
+        dirs_, files = pn.widgets.file_selector._scan_path(directory, self.file_pattern)
+        dirs = []
+        for d in dirs_:
+            try:
+                if os.listdir(d):
+                    dirs.append(d)
+            except OSError:  # we can't access that folder
+                pass
+        return dirs, files
