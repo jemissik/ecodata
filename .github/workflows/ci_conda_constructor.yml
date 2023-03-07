@@ -44,7 +44,7 @@ jobs:
             miniforge-variant: Mambaforge
             use-mamba: true
         - name: Install constructor
-          run: $ conda install constructor -y
+          run: conda install constructor -y
 
         - name: Run conda constructor
           run: |
