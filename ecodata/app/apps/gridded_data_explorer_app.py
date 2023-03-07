@@ -595,7 +595,7 @@ class GriddedDataExplorer(param.Parameterized):
         print(self.ds.time.encoding)
 
         # Make sure dataset is rechunked before computations are triggered
-        self.ds.chunk(chunks='auto')
+        self.ds = self.ds.chunk(chunks='auto')
 
         self.ds.to_netcdf(outfile)
         self.status_text = f"File saved to: {outfile}"
