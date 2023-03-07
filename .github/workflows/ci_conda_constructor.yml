@@ -5,60 +5,87 @@ on:
 #    tags:  # TODO uncomment after testing
 #        - v*
 jobs:
-  build:
-    name: ECODATA-${{ matrix.os }}
-    runs-on: ${{ matrix.os }}-latest
-    strategy:
-        fail-fast: false
-        matrix:
-            os: [ macos, ubuntu, windows ]
-            pyver: ["3.9"]
-    env:
-        PYTHONUNBUFFERED: True
-    steps:
-        -   name: Print github context
-            run: |
-                echo "EVENT_NAME:" "$GITHUB_EVENT_NAME"
-                echo "       REF:" "$GITHUB_REF"
-                echo "  HEAD_REF:" "$GITHUB_HEAD_REF"
-                echo "  BASE_REF:" "$GITHUB_BASE_REF"
-                echo "       SHA:" "$GITHUB_SHA"
-        -   name: Set temp dirs correctly
-            if: startsWith(matrix.os, 'windows')
-            # https://github.com/actions/virtual-environments/issues/712
-            shell: powershell
-            run: |
-                echo "TMPDIR=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-                echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-                echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-        -   name: Retrieve the source code
-            uses: actions/checkout@v3
-            with:
-                fetch-depth: 0
-                ref: ${{ github.event.pull_request.head.sha }}
-#        -   name: Build the build environment
-#            run: |
-#                source $CONDA/etc/profile.d/conda.sh
-#                [ $RUNNER_OS == macOS ] && export CONDA_PKGS_DIRS=~/.pkgs
-#                conda create -p ../conda conda-build conda-verify
-        - name: Install local constructor
-          run: |
-            source $CONDA/etc/profile.d/conda.sh
-            CONDA_BLD_PATH="${{ runner.temp }}/conda-bld" \
-              conda create -n constructor -c conda-forge constructor coverage
-            conda activate constructor
-            constructor --version
-            constructor --help-construct
+    unixlike:
+        name: ECODATA-${{ matrix.os }}
+        runs-on: ${{ matrix.os }}-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ macos, ubuntu ]
+                pyver: ["3.9"]
+        env:
+            PYTHONUNBUFFERED: True
+        steps:
+            -   name: Print github context
+                run: |
+                    echo "EVENT_NAME:" "$GITHUB_EVENT_NAME"
+                    echo "       REF:" "$GITHUB_REF"
+                    echo "  HEAD_REF:" "$GITHUB_HEAD_REF"
+                    echo "  BASE_REF:" "$GITHUB_BASE_REF"
+                    echo "       SHA:" "$GITHUB_SHA"
+            -   name: Set temp dirs correctly
+                if: startsWith(matrix.os, 'windows')
+                # https://github.com/actions/virtual-environments/issues/712
+                shell: powershell
+                run: |
+                    echo "TMPDIR=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+                    echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+                    echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+            -   name: Retrieve the source code
+                uses: actions/checkout@v3
+                with:
+                    fetch-depth: 0
+                    ref: ${{ github.event.pull_request.head.sha }}
+    #        -   name: Build the build environment
+    #            run: |
+    #                source $CONDA/etc/profile.d/conda.sh
+    #                [ $RUNNER_OS == macOS ] && export CONDA_PKGS_DIRS=~/.pkgs
+    #                conda create -p ../conda conda-build conda-verify
+            - name: Install local constructor
+              run: |
+                source $CONDA/etc/profile.d/conda.sh
+                CONDA_BLD_PATH="${{ runner.temp }}/conda-bld" \
+                  conda create -n constructor -c conda-forge constructor coverage
+                conda activate constructor
+                constructor --version
+                constructor --help-construct
 
-        - name: Run examples and prepare artifacts
-          run: |
-            source $CONDA/etc/profile.d/conda.sh
-            conda activate constructor
-            cd scripts
-            constructor .
+            - name: Run examples and prepare artifacts
+              run: |
+                source $CONDA/etc/profile.d/conda.sh
+                conda activate constructor
+                cd scripts
+                constructor .
 
-        -   name: upload artifacts
-            uses: actions/upload-artifact@v3
-            with:
-                path: scripts/ecodata-X-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}.exe
-                name: ecodata-X-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}
+            -   name: upload artifacts
+                uses: actions/upload-artifact@v3
+                with:
+                    path: scripts/ecodata-X-${{ matrix.os }}-x86_64.*
+                    name: ecodata-X-${{ matrix.os }}-x86_64.*
+
+    windows:
+        runs-on: windows-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Setup Mambaforge
+              uses: conda-incubator/setup-miniconda@v2
+              with:
+                  miniforge-variant: Mambaforge
+                  miniforge-version: latest
+                  use-mamba: true
+
+            - name: Install constructor
+              run: conda install constructor -y
+
+            - name: Run conda constructor
+              run: |
+                  cd scripts
+                  constructor .
+
+            - name: upload artifacts
+              uses: actions/upload-artifact@v3
+              with:
+                path: scripts/ecodata-X-Windows-x86_64.exe
+                name: ecodata-X-Windows-x86_64
