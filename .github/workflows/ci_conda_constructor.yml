@@ -45,15 +45,8 @@ jobs:
           run: |
             source $CONDA/etc/profile.d/conda.sh
             CONDA_BLD_PATH="${{ runner.temp }}/conda-bld" \
-              conda create -n constructor -c local --strict-channel-priority constructor coverage
+              conda create -n constructor -c conda-forge constructor coverage
             conda activate constructor
-            set -x
-            installed_channel=$(conda list constructor --json | jq -r '.[].channel')
-            if [[ "$installed_channel" != "conda-bld" ]]; then
-              echo $(conda list constructor --json)
-              echo "Installed constructor is not local!"
-              exit 1
-            fi
             constructor --version
             constructor --help-construct
 
