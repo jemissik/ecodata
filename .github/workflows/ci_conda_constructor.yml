@@ -6,7 +6,7 @@ on:
 #        - v*
 jobs:
   build:
-    name: ECODATA-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}
+    name: ECODATA-${{ matrix.os }}
     runs-on: ${{ matrix.os }}-latest
     strategy:
         fail-fast: false
@@ -36,11 +36,11 @@ jobs:
             with:
                 fetch-depth: 0
                 ref: ${{ github.event.pull_request.head.sha }}
-        -   name: Build the build environment
-            run: |
-                source $CONDA/etc/profile.d/conda.sh
-                [ $RUNNER_OS == macOS ] && export CONDA_PKGS_DIRS=~/.pkgs
-                conda create -p ../conda conda-build conda-verify
+#        -   name: Build the build environment
+#            run: |
+#                source $CONDA/etc/profile.d/conda.sh
+#                [ $RUNNER_OS == macOS ] && export CONDA_PKGS_DIRS=~/.pkgs
+#                conda create -p ../conda conda-build conda-verify
         - name: Install local constructor
           run: |
             source $CONDA/etc/profile.d/conda.sh
