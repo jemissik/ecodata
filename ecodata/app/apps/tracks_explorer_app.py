@@ -45,7 +45,7 @@ from ecodata.plotting import map_tile_options, plot_tracks_with_tiles
 class TracksExplorer(param.Parameterized):
 
     load_tracks_button = param_widget(pn.widgets.Button(button_type="primary", name="Load data"))
-    tracksfile = param_widget(FileSelector(str(Path.home()), root_directory=str(Path.home().root), expanded=None))
+    tracksfile = param_widget(FileSelector(str(Path.home()), constrain_path=False, expanded=None))
 
     # filetree = param_widget(FileTree("/Users/jmissik/Desktop/repos.nosync/ecodata/ecodata/datasets/user_datasets",
     # select_multiple=False))

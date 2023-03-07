@@ -137,11 +137,19 @@ class FileSelector(pn.widgets.CompositeWidget):
         the directory contents in milliseconds.""",
     )
 
+    constrain_path = param.Boolean(
+        default=True,
+        doc="""
+        If True, will constrain the user to only go to subdirectories of directory
+        or root_directory (if set).
+        """
+    )
+
     root_directory = param.String(
         default=None,
         doc="""
-        If set, overrides directory parameter as the root directory
-        beyond which users cannot navigate.""",
+        If set and constrain_path is True, overrides directory parameter as the root 
+        directory beyond which users cannot navigate.""",
     )
 
     expanded = param.Boolean(
@@ -276,7 +284,7 @@ class FileSelector(pn.widgets.CompositeWidget):
 
     def _dir_change(self, event: param.parameterized.Event):
         path = pn.util.fullpath(self._directory.value)
-        if not path.startswith(self._root_directory):
+        if self.constrain_path and not path.startswith(self._root_directory):
             self._directory.value = self._root_directory
             return
         elif path != self._directory.value:

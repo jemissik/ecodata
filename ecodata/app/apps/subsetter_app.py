@@ -31,7 +31,7 @@ logger = logging.getLogger(__file__)
 class Subsetter(param.Parameterized):
 
     # Input GIS file
-    input_file = param_widget(FileSelector(str(Path.home()), root_directory=str(Path.home().root), expanded=True))
+    input_file = param_widget(FileSelector(str(Path.home()), constrain_path=False, expanded=True))
 
     # Widgets common to all selection options
     buffer = param_widget(
