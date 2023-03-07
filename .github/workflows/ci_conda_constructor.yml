@@ -7,56 +7,65 @@ on:
 jobs:
   build:
     name: ECODATA-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}-latest
     strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            ARCH: x86_64
-            TARGET_PLATFORM: win-64
-            OS_NAME: "Windows"
-
-          - os: macos-latest
-            ARCH: arm64
-            TARGET_PLATFORM: osx-arm64
-            OS_NAME: "MacOSX"
-
-          - os: macos-latest
-            ARCH: x86_64
-            TARGET_PLATFORM: osx-64
-            OS_NAME: "MacOSX"
-
-          - os: ubuntu-latest
-            ARCH: x86_64
-            TARGET_PLATFORM: linux-64
-            DOCKER_ARCH: amd64
-            DOCKERIMAGE: condaforge/linux-anvil-comp7
-            OS_NAME: "Linux"
-
+        fail-fast: false
+        matrix:
+            os: [ macos, ubuntu, windows ]
+            pyver: ["3.8", "3.9", "3.10" ]
+    env:
+        PYTHONUNBUFFERED: True
     steps:
-        - name: Checkout code
-          uses: actions/checkout@v3
-
-        - name: Setup Mambaforge
-          uses: conda-incubator/setup-miniconda@v2
-          with:
-              auto-update-conda: true
-              python-version: 3.9
-
-        - name: Update conda
-          run: conda update -n base conda
-
-        - name: Install constructor
-          run: conda install --yes "constructor>=3.4.2"
-
-        - name: Run conda constructor
+        -   name: Print github context
+            run: |
+                echo "EVENT_NAME:" "$GITHUB_EVENT_NAME"
+                echo "       REF:" "$GITHUB_REF"
+                echo "  HEAD_REF:" "$GITHUB_HEAD_REF"
+                echo "  BASE_REF:" "$GITHUB_BASE_REF"
+                echo "       SHA:" "$GITHUB_SHA"
+        -   name: Set temp dirs correctly
+            if: startsWith(matrix.os, 'windows')
+            # https://github.com/actions/virtual-environments/issues/712
+            shell: powershell
+            run: |
+                echo "TMPDIR=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+                echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+                echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+        -   name: Retrieve the source code
+            uses: actions/checkout@v3
+            with:
+                fetch-depth: 0
+                ref: ${{ github.event.pull_request.head.sha }}
+        -   name: Build the build environment
+            run: |
+                source $CONDA/etc/profile.d/conda.sh
+                [ $RUNNER_OS == macOS ] && export CONDA_PKGS_DIRS=~/.pkgs
+                conda create -p ../conda conda-build conda-verify
+        - name: Install local constructor
           run: |
-              cd scripts
-              constructor .
+            source $CONDA/etc/profile.d/conda.sh
+            CONDA_BLD_PATH="${{ runner.temp }}/conda-bld" \
+              conda create -n constructor -c local --strict-channel-priority constructor coverage
+            conda activate constructor
+            set -x
+            installed_channel=$(conda list constructor --json | jq -r '.[].channel')
+            if [[ "$installed_channel" != "conda-bld" ]]; then
+              echo $(conda list constructor --json)
+              echo "Installed constructor is not local!"
+              exit 1
+            fi
+            constructor --version
+            constructor --help-construct
 
-        - name: upload artifacts
-          uses: actions/upload-artifact@v3
-          with:
-            path: scripts/ecodata-X-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}.exe
-            name: ecodata-X-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}
+        - name: Run examples and prepare artifacts
+          run: |
+            source $CONDA/etc/profile.d/conda.sh
+            conda activate constructor
+            cd scripts
+            constructor .
+
+        -   name: upload artifacts
+            uses: actions/upload-artifact@v3
+            with:
+                path: scripts/ecodata-X-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}.exe
+                name: ecodata-X-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}
