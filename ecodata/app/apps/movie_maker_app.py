@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 import panel as pn
 import param
@@ -11,6 +12,7 @@ from ecodata.panel_utils import (
     templater,
     try_catch,
 )
+from ecodata.app.models import FileSelector
 
 logger = logging.getLogger(__file__)
 
@@ -18,7 +20,7 @@ logger = logging.getLogger(__file__)
 class MovieMaker(param.Parameterized):
 
     # Frames directory
-    frames_dir = param_widget(pn.widgets.TextInput(placeholder="Add frames directory...", name="Frames directory"))
+    frames_dir = param_widget(FileSelector(constrain_path=False, expanded=True))
 
     # Output file
     output_file = param_widget(

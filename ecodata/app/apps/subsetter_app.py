@@ -12,6 +12,7 @@
 #     name: python3
 # ---
 import logging
+from pathlib import Path
 
 import hvplot.pandas  # noqa
 import hvplot.xarray  # noqa
@@ -21,6 +22,7 @@ from panel.io.loading import start_loading_spinner, stop_loading_spinner
 
 # %% pycharm={"name": "#%%\n"}
 import ecodata as eco
+from ecodata.app.models import FileSelector
 from ecodata.panel_utils import param_widget, register_view, templater, try_catch
 
 logger = logging.getLogger(__file__)
@@ -29,7 +31,7 @@ logger = logging.getLogger(__file__)
 class Subsetter(param.Parameterized):
 
     # Input GIS file
-    input_file = param_widget(pn.widgets.TextInput(placeholder="Select a file...", name="GIS file"))
+    input_file = param_widget(FileSelector(constrain_path=False, expanded=True))
 
     # Widgets common to all selection options
     buffer = param_widget(
