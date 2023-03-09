@@ -46,7 +46,7 @@ class GriddedDataExplorer(param.Parameterized):
         pn.widgets.Button(button_type="primary", name="Update variable names", align="end", sizing_mode="fixed")
     )
     disable_plotting_button = param_widget(
-        pn.widgets.Toggle(button_type="primary", name="Disable plotting", align="end", sizing_mode="fixed")
+        pn.widgets.Toggle(button_type="primary", name="Disable plotting", align="start", sizing_mode="fixed")
     )
 
     polyfile = param_widget(FileSelector(constrain_path=False, expanded=True))
@@ -202,12 +202,13 @@ class GriddedDataExplorer(param.Parameterized):
             self.filein,
             pn.Row(self.latvar, self.lonvar),
             pn.Row(self.timevar, self.zvar),
-            pn.Row(self.disable_plotting_button, self.load_data_button, self.update_varnames),
+            pn.Row(self.load_data_button, self.update_varnames),
             title="Input environmental dataset file",
             width_policy="max",
         )
 
         self.dask_card = SimpleDashboardCard(self.dask_client)
+        self.dask_card.dask_processing_card.append(self.disable_plotting_button)
         self.polyfile_widgets = pn.Card(self.polyfile, self.load_polyfile, title="Input polygon file")
 
         self.rs_time_widgets = pn.Card(
