@@ -364,13 +364,16 @@ def groupby_multi_time(ds, var, time="time", groupby_vars=None):
 
     da = ds[var]
 
-    grouped_index = pd.MultiIndex.from_arrays(
-        [getattr(da[time].dt, groupby_var).values for groupby_var in groupby_vars], names=groupby_vars
-    )
+    if groupby_vars:
+        grouped_index = pd.MultiIndex.from_arrays(
+            [getattr(da[time].dt, groupby_var).values for groupby_var in groupby_vars], names=groupby_vars
+        )
 
-    da.coords["grouped_time_index"] = ("time", grouped_index)
+        da.coords["grouped_time_index"] = ("time", grouped_index)
 
-    grouped = da.groupby("grouped_time_index")
+        grouped = da.groupby("grouped_time_index")
+    else:
+        grouped = da
 
     result = xr.Dataset(
         {
@@ -427,6 +430,7 @@ def groupby_poly_time(
 
     # Add vector data as a coordinate of the dataset
     ds2 = ds.assign_coords({"polygon": ([latvar, lonvar], gc[vector_var].values)})
+    ds2 = ds2.load()
 
     # Apply the time groupings for each polygon
     # TODO This approach should be updated when xarray's multi groupby is added
@@ -441,3 +445,19 @@ def groupby_poly_time(
     result = result.reorder_levels(index_levels).sort_index()
     result = result[["count", "mean", "std", "min", "25%", "50%", "75%", "max"]]
     return result
+
+
+def set_time_encoding_modis(ds):
+    """
+    Change the time encoding of a dataset to the encoding used in MODIS data (days since 2000-01-01).
+    This is so that the time encoding datasets will be able to be read by MATLAB app
+    (which can't read different encodings).
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset for which the encodings will be modified. This function will modify the encoding format in place.
+    """
+    modis_encoding = {'units': 'days since 2000-01-01', 'calendar': 'julian'}
+    for key in modis_encoding:
+        ds.time.encoding[key] = modis_encoding[key]

@@ -1,0 +1,91 @@
+name: conda_constructor
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+#    tags:  # TODO uncomment after testing
+#        - v*
+jobs:
+    unixlike:
+        name: ${{ matrix.os }}
+        runs-on: ${{ matrix.os }}-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    -   os: ubuntu
+                        ARCH: x86_64
+                        OS_NAME: "Linux"
+
+                    -   os: macos
+                        ARCH: x86_64
+                        OS_NAME: "MacOSX"
+        env:
+            PYTHONUNBUFFERED: True
+        steps:
+            -   name: Print github context
+                run: |
+                    echo "EVENT_NAME:" "$GITHUB_EVENT_NAME"
+                    echo "       REF:" "$GITHUB_REF"
+                    echo "  HEAD_REF:" "$GITHUB_HEAD_REF"
+                    echo "  BASE_REF:" "$GITHUB_BASE_REF"
+                    echo "       SHA:" "$GITHUB_SHA"
+            -   name: Retrieve the source code
+                uses: actions/checkout@v3
+                with:
+                    fetch-depth: 0
+                    ref: ${{ github.event.pull_request.head.sha }}
+    #        -   name: Build the build environment
+    #            run: |
+    #                source $CONDA/etc/profile.d/conda.sh
+    #                [ $RUNNER_OS == macOS ] && export CONDA_PKGS_DIRS=~/.pkgs
+    #                conda create -p ../conda conda-build conda-verify
+            - name: Install constructor
+              run: |
+                source $CONDA/etc/profile.d/conda.sh
+                CONDA_BLD_PATH="${{ runner.temp }}/conda-bld" \
+                  conda create -n constructor -c conda-forge constructor coverage jinja2
+                conda activate constructor
+                constructor --version
+                constructor --help-construct
+
+            - name: Run examples and prepare artifacts
+              run: |
+                source $CONDA/etc/profile.d/conda.sh
+                conda activate constructor
+                cd scripts
+                bash build.sh
+
+            -   name: upload artifacts
+                uses: actions/upload-artifact@v3
+                with:
+                    path: scripts/ecodata*
+                    name: ecodata-${{ matrix.OS_NAME }}
+
+    windows:
+        runs-on: windows-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Setup Mambaforge
+              uses: conda-incubator/setup-miniconda@v2
+              with:
+                  miniforge-variant: Mambaforge
+                  miniforge-version: latest
+                  use-mamba: true
+
+            - name: Install constructor
+              run: |
+                conda install constructor -y
+                conda install -c conda-forge jinja2 -y
+
+            - name: Run conda constructor
+              run: |
+                  cd scripts
+                  .\build.ps1
+
+            - name: upload artifacts
+              uses: actions/upload-artifact@v3
+              with:
+                path: scripts/ecodata*
+                name: ecodata-Windows
