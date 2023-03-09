@@ -14,3 +14,15 @@ source activate ${PREFIX}; python -m ecodata.app
 chmod +x "${PREFIX}"/ecodata.sh
 
 cp "${PREFIX}"/ecodata.sh ~/Desktop/ecodata.sh
+
+
+echo "
+
+echo \"
+Updating ECODATA
+\"
+
+source activate ${PREFIX}; conda update ecodata
+
+" > "${PREFIX}"/update_ecodata.sh
+chmod +x "${PREFIX}"/update_ecodata.sh
