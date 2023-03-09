@@ -53,7 +53,7 @@ jobs:
                 source $CONDA/etc/profile.d/conda.sh
                 conda activate constructor
                 cd scripts
-                constructor .
+                bash build.sh
 
             -   name: upload artifacts
                 uses: actions/upload-artifact@v3
@@ -75,12 +75,13 @@ jobs:
                   use-mamba: true
 
             - name: Install constructor
-              run: conda install constructor -y
+              run: |
+                conda install constructor -y
 
             - name: Run conda constructor
               run: |
                   cd scripts
-                  constructor .
+                  build.bat
 
             - name: upload artifacts
               uses: actions/upload-artifact@v3

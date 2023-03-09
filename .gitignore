@@ -14,8 +14,12 @@ ecodata/datasets/large_datasets/*
 ecodata/datasets/user_datasets/*
 
 # conda constructor installables
-scripts/ecodata-*.pkg
-scripts/ecodata-*.sh
+scripts/ecodata*.pkg
+scripts/ecodata*.sh
+scripts/ecodata*.exe
+
+# conda constructor tmp files
+scripts/tmp
 
 #small datasets (for now)
 ecodata/datasets/small_datasets/*

@@ -1,6 +1,7 @@
 set -ex
 
-#source activate "${PREFIX}"
+source activate "${PREFIX}"
+
 
 echo "
 
@@ -9,5 +10,7 @@ Launching App...
 \"
 
 source activate ${PREFIX}; python -m ecodata.app
-" > "${PREFIX}"/app.sh
+" > "${PREFIX}"/ecodata.sh
 chmod +x "${PREFIX}"/ecodata.sh
+
+cp "${PREFIX}"/ecodata.sh ~/Desktop/ecodata.sh

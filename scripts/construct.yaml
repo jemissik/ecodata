@@ -1,8 +1,17 @@
-name: ecodata
-version: X
-installer_type: all
+{% set name = os.environ.get("ECODATA_NAME", "ecodata") %}
+{% set version = os.environ.get("ECODATA_VERSION", "0.0.0") %}
+
+name: {{ name }}
+version: {{ version }}
+
+#installer_filename: {{ name }}_v{{ version }}
+installer_type: ["sh", "exe"]
 post_install: post_install.sh  # [unix]
 post_install: post_install.bat  # [win]
+
+default_prefix: ${HOME}/{{ name }}_v{{ version }}
+default_prefix_domain_user: ${LOCALAPPDATA}\{{ name }}_v{{ version }}
+default_prefix_all_users: ${ALLUSERSPROFILE}\{{ name }}_v{{ version }}
 
 channels:
   - https://conda.anaconda.org/conda-forge/
@@ -10,4 +19,4 @@ channels:
 specs:
   - python 3.9.*
   - conda 22.11.1
-  - ecodata
+  - ecodata=={{ version }}
