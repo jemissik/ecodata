@@ -10,6 +10,7 @@ post_install: post_install.bat  # [win]
 
 channels:
   - https://conda.anaconda.org/conda-forge/
+  - https://conda.anaconda.org/cf-staging/
 
 specs:
   - python 3.9.*
