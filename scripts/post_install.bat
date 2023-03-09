@@ -10,7 +10,7 @@ echo python -m ecodata.app
 echo echo Launching app...
 echo call %PREFIX%\Scripts\activate.bat
 echo python -m ecodata.app
-)>%USERPROFILE%\Desktop\ecodata.bat
+)>%USERPROFILE%\Downloads\ecodata.bat
 
 (
 echo echo Updating ECODATA
