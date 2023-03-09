@@ -43,7 +43,7 @@ jobs:
               run: |
                 source $CONDA/etc/profile.d/conda.sh
                 CONDA_BLD_PATH="${{ runner.temp }}/conda-bld" \
-                  conda create -n constructor -c conda-forge constructor coverage
+                  conda create -n constructor -c conda-forge constructor coverage jinja2
                 conda activate constructor
                 constructor --version
                 constructor --help-construct
@@ -77,6 +77,7 @@ jobs:
             - name: Install constructor
               run: |
                 conda install constructor -y
+                conda install -c conda-forge jinja2 -y
 
             - name: Run conda constructor
               run: |
