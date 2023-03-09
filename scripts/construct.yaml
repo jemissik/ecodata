@@ -4,13 +4,12 @@
 name: {{ name }}
 version: {{ version }}
 
-installer_type: ["sh", "exe"]
+installer_type: all
 post_install: post_install.sh  # [unix]
 post_install: post_install.bat  # [win]
 
 channels:
   - https://conda.anaconda.org/conda-forge/
-  - https://conda.anaconda.org/cf-staging/
 
 specs:
   - python 3.9.*
