@@ -16,8 +16,7 @@ import ecodata as eco
 from ecodata.panel_utils import param_widget, register_view, templater, try_catch
 from ecodata.plotting import plot_avg_timeseries, plot_gridded_data, GriddedPlotWithSlider
 from ecodata.xr_tools import detect_varnames, set_time_encoding_modis
-from ecodata.app.models import DaskDashboardCard, SimpleDashboardCard
-
+from ecodata.app.models import SimpleDashboardCard, FileSelector
 
 
 class HTML_WidgetBox(ReactiveHTML):
@@ -35,8 +34,7 @@ class HTML_WidgetBox(ReactiveHTML):
 
 class GriddedDataExplorer(param.Parameterized):
 
-    # TODO replace with new file selector
-    filein = param_widget(pn.widgets.TextInput(placeholder="Select a file...", name="Data file"))
+    filein = param_widget(FileSelector(constrain_path=False, expanded=True))
     load_data_button = param_widget(
         pn.widgets.Button(button_type="primary", name="Load data", align="end", sizing_mode="fixed")
     )
@@ -48,10 +46,10 @@ class GriddedDataExplorer(param.Parameterized):
         pn.widgets.Button(button_type="primary", name="Update variable names", align="end", sizing_mode="fixed")
     )
     disable_plotting_button = param_widget(
-        pn.widgets.Toggle(button_type="primary", name="Disable plotting", align="end", sizing_mode="fixed")
+        pn.widgets.Toggle(button_type="primary", name="Disable plotting", align="start", sizing_mode="fixed")
     )
 
-    polyfile = param_widget(pn.widgets.TextInput(placeholder="Select a file...", name="Polygon file"))
+    polyfile = param_widget(FileSelector(constrain_path=False, expanded=True))
     load_polyfile = param_widget(
         pn.widgets.Button(button_type="primary", name="Load data", sizing_mode="fixed", align="start")
     )
@@ -153,7 +151,6 @@ class GriddedDataExplorer(param.Parameterized):
         self.dask_client = Client()
 
         # Reset names for panel widgets
-        self.filein.name = "File path"
         self.load_data_button.name = "Load data"
         self.disable_plotting_button.name = "Disable plotting"
         self.timevar.name = "Time"
@@ -162,7 +159,6 @@ class GriddedDataExplorer(param.Parameterized):
         self.zvar.name = "Variable of interest"
         self.update_varnames.name = "Update variable names"
 
-        self.polyfile.name = "Polygon file"
         self.load_polyfile.name = "Load file"
 
         # commas at the end are necessary for endpoints to be
@@ -206,12 +202,13 @@ class GriddedDataExplorer(param.Parameterized):
             self.filein,
             pn.Row(self.latvar, self.lonvar),
             pn.Row(self.timevar, self.zvar),
-            pn.Row(self.disable_plotting_button, self.load_data_button, self.update_varnames),
+            pn.Row(self.load_data_button, self.update_varnames),
             title="Input environmental dataset file",
             width_policy="max",
         )
 
         self.dask_card = SimpleDashboardCard(self.dask_client)
+        self.dask_card.dask_processing_card.append(self.disable_plotting_button)
         self.polyfile_widgets = pn.Card(self.polyfile, self.load_polyfile, title="Input polygon file")
 
         self.rs_time_widgets = pn.Card(
@@ -253,7 +250,7 @@ class GriddedDataExplorer(param.Parameterized):
         self.dashboard_pane = pn.pane.HTML(sizing_mode="stretch_both", style={"overflow": "auto"})
 
         self.ts_widget = pn.pane.Markdown("")
-        self.figs_with_widget = pn.Tabs()
+        self.figs_with_widget = pn.Tabs(("Charts", self.plot_col), ("Data", self.ds_pane))
 
         self.view_objects = {
             "dashboard_pane":1,
@@ -266,7 +263,6 @@ class GriddedDataExplorer(param.Parameterized):
         }
 
         self.view = pn.Column(
-            # self.filein,
             self.dask_card.dask_processing_card,
             self.file_input_card,
             self.polyfile_widgets,
@@ -472,23 +468,29 @@ class GriddedDataExplorer(param.Parameterized):
     def update_status_view(self):
         self.alert.object = self.status_text
 
+
     @try_catch()
-    @param.depends("update_varnames.value", "disable_plotting_button.value", "poly", watch=True)
-    def update_plot_view(self):
+    @param.depends("ds", watch=True)
+    def update_dataset_view(self):
         self.ds_pane.object = self.ds
+        self.figs_with_widget.__setitem__(1, self.ds_pane)
 
-        if self.disable_plotting_button.value:
-            self.figs_with_widget[:] = [("Data", self.ds_pane)]
+    @try_catch()
+    @param.depends("update_varnames.value", "update_filters.value","disable_plotting_button.value", "poly", watch=True)
+    def update_plot_view(self):
+        # self.ds_pane.object = self.ds
+        # if self.disable_plotting_button.value:
+        #     self.figs_with_widget[:] = [("Data", self.ds_pane)]
 
-        elif all([self.timevar.value, self.latvar.value, self.lonvar.value, self.zvar.value]):
+        if not self.disable_plotting_button.value and all([self.timevar.value, self.latvar.value, self.lonvar.value, self.zvar.value]):
             self.status_text = "Creating plot"
             width = 500
             ds_plot = GriddedPlotWithSlider(
                 self.ds, timevar=self.timevar.value, zvar=self.zvar.value, width=width
-            ).fig_with_widget
+            )
             # .opts(frame_width=width)
             if self.poly is not None:
-                ds_plot = ds_plot * gv.Path(self.poly).opts(line_color="k", line_width=2)
+                ds_plot.fig.object = ds_plot.fig.object * gv.Path(self.poly).opts(line_color="k", line_width=2)
 
             ds_ts_plot = plot_avg_timeseries(
                 self.ds.reindex_like(self.ds_raw),
@@ -497,12 +499,14 @@ class GriddedDataExplorer(param.Parameterized):
                 z=self.zvar.value,
                 time=self.timevar.value,
             )
-            self.plot_col.objects = [ds_plot, ds_ts_plot]
+            self.plot_col.objects = [ds_plot.fig_with_widget, ds_ts_plot]
 
-            self.figs_with_widget[:] = [
-                ("Charts", self.plot_col),
-                ("Data", self.ds_pane),
-            ]
+            # self.figs_with_widget[:] = [
+            #     ("Charts", self.plot_col),
+            #     ("Data", self.ds_pane),
+            # ]
+            self.figs_with_widget.__setitem__(0, self.plot_col)
+
 
             self.status_text = "Plot created!"
 
