@@ -1,7 +1,19 @@
-call "%PREFIX%\Scripts\activate.bat"
+Rem robocopy "%PREFIX%\*.*" "%PREFIX%\pkg" /MOV /E
 
-for /f %%i in ('python -c "import ecodata; print(ecodata.__path__[0])"') do set eco_path=%%i
+(
+echo echo Launching app...
+echo call %PREFIX%\Scripts\activate.bat
+echo python -m ecodata.app
+)>%PREFIX%\ecodata.bat
 
-echo|set /p="
-call %PREFIX%\Scripts\activate.bat && python -m ecodata.app
-" > "${PREFIX}"/app.bat
+(
+echo echo Launching app...
+echo call %PREFIX%\Scripts\activate.bat
+echo python -m ecodata.app
+)>%USERPROFILE%\Downloads\ecodata.bat
+
+(
+echo echo Updating ECODATA
+echo call %PREFIX%\Scripts\activate.bat
+echo conda update ecodata
+)>%PREFIX%\update_ecodata.bat

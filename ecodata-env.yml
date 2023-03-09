@@ -27,5 +27,3 @@ dependencies:
 - anaconda::git
 - conda-forge::gdown
 - pip
-- pip:
-    - -e . --install-option="--no-deps"
