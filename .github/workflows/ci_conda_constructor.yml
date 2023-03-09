@@ -58,8 +58,7 @@ jobs:
             -   name: upload artifacts
                 uses: actions/upload-artifact@v3
                 with:
-                    path: scripts/ecodata-X-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}*
-                    name: ecodata-X-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}
+                    path: scripts/ecodata*
 
     windows:
         runs-on: windows-latest
@@ -87,5 +86,4 @@ jobs:
             - name: upload artifacts
               uses: actions/upload-artifact@v3
               with:
-                path: scripts/ecodata-X-Windows-x86_64.exe
-                name: ecodata-X-Windows-x86_64
+                path: scripts/ecodata*
