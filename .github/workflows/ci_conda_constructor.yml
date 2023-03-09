@@ -81,7 +81,7 @@ jobs:
             - name: Run conda constructor
               run: |
                   cd scripts
-                  build.bat
+                  .\build.ps1
 
             - name: upload artifacts
               uses: actions/upload-artifact@v3
