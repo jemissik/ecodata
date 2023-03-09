@@ -12,9 +12,9 @@ jobs:
             fail-fast: false
             matrix:
                 include:
-                    -   os: ubuntu
-                        ARCH: x86_64
-                        OS_NAME: "Linux"
+#                    -   os: ubuntu
+#                        ARCH: x86_64
+#                        OS_NAME: "Linux"
 
                     -   os: macos
                         ARCH: x86_64
@@ -61,31 +61,31 @@ jobs:
                     path: scripts/ecodata*
                     name: ecodata-${{ matrix.OS_NAME }}
 
-    windows:
-        runs-on: windows-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v3
-
-            - name: Setup Mambaforge
-              uses: conda-incubator/setup-miniconda@v2
-              with:
-                  miniforge-variant: Mambaforge
-                  miniforge-version: latest
-                  use-mamba: true
-
-            - name: Install constructor
-              run: |
-                conda install constructor -y
-                conda install -c conda-forge jinja2 -y
-
-            - name: Run conda constructor
-              run: |
-                  cd scripts
-                  .\build.ps1
-
-            - name: upload artifacts
-              uses: actions/upload-artifact@v3
-              with:
-                path: scripts/ecodata*
-                name: ecodata-Windows
+#    windows:
+#        runs-on: windows-latest
+#        steps:
+#            - name: Checkout code
+#              uses: actions/checkout@v3
+#
+#            - name: Setup Mambaforge
+#              uses: conda-incubator/setup-miniconda@v2
+#              with:
+#                  miniforge-variant: Mambaforge
+#                  miniforge-version: latest
+#                  use-mamba: true
+#
+#            - name: Install constructor
+#              run: |
+#                conda install constructor -y
+#                conda install -c conda-forge jinja2 -y
+#
+#            - name: Run conda constructor
+#              run: |
+#                  cd scripts
+#                  .\build.ps1
+#
+#            - name: upload artifacts
+#              uses: actions/upload-artifact@v3
+#              with:
+#                path: scripts/ecodata*
+#                name: ecodata-Windows

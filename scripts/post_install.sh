@@ -1,7 +1,5 @@
 set -ex
 
-source activate "${PREFIX}"
-
 
 echo "
 
