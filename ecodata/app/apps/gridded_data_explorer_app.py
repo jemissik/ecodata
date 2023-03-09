@@ -249,7 +249,7 @@ class GriddedDataExplorer(param.Parameterized):
         self.dashboard_pane = pn.pane.HTML(sizing_mode="stretch_both", style={"overflow": "auto"})
 
         self.ts_widget = pn.pane.Markdown("")
-        self.figs_with_widget = pn.Tabs()
+        self.figs_with_widget = pn.Tabs(("Charts", self.plot_col), ("Data", self.ds_pane))
 
         self.view_objects = {
             "dashboard_pane":1,
@@ -467,15 +467,21 @@ class GriddedDataExplorer(param.Parameterized):
     def update_status_view(self):
         self.alert.object = self.status_text
 
+
     @try_catch()
-    @param.depends("update_varnames.value", "disable_plotting_button.value", "poly", watch=True)
-    def update_plot_view(self):
+    @param.depends("ds", watch=True)
+    def update_dataset_view(self):
         self.ds_pane.object = self.ds
+        self.figs_with_widget.__setitem__(1, self.ds_pane)
 
-        if self.disable_plotting_button.value:
-            self.figs_with_widget[:] = [("Data", self.ds_pane)]
+    @try_catch()
+    @param.depends("update_varnames.value", "update_filters.value","disable_plotting_button.value", "poly", watch=True)
+    def update_plot_view(self):
+        # self.ds_pane.object = self.ds
+        # if self.disable_plotting_button.value:
+        #     self.figs_with_widget[:] = [("Data", self.ds_pane)]
 
-        elif all([self.timevar.value, self.latvar.value, self.lonvar.value, self.zvar.value]):
+        if not self.disable_plotting_button.value and all([self.timevar.value, self.latvar.value, self.lonvar.value, self.zvar.value]):
             self.status_text = "Creating plot"
             width = 500
             ds_plot = GriddedPlotWithSlider(
@@ -494,10 +500,12 @@ class GriddedDataExplorer(param.Parameterized):
             )
             self.plot_col.objects = [ds_plot.fig_with_widget, ds_ts_plot]
 
-            self.figs_with_widget[:] = [
-                ("Charts", self.plot_col),
-                ("Data", self.ds_pane),
-            ]
+            # self.figs_with_widget[:] = [
+            #     ("Charts", self.plot_col),
+            #     ("Data", self.ds_pane),
+            # ]
+            self.figs_with_widget.__setitem__(0, self.plot_col)
+
 
             self.status_text = "Plot created!"
 
