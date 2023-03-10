@@ -2,11 +2,10 @@
 
 ## Installers
 
-[Download installers for the latest release here](https://github.com/jemissik/ecodata/releases/latest), available
-for Mac, Windows, and Linux. You can also see all releases (including previous versions and pre-releases)
+[Download installers for the latest release here](https://github.com/jemissik/ecodata/releases/latest), available for Mac, Windows, and Linux. You can also see all releases (including previous versions and pre-releases)
 [here](https://github.com/jemissik/ecodata/releases/).
 
-1. Download the installer for your operating system, and extract the files from the zipped folder.
+1. Download the correct installer for your operating system. For Mac, both graphical (.pkg) and command line (.sh) installers are available.
 2. Run the installer and follow the prompts. You can change the default installation location if you wish. This
 installation location is where the program files will be installed (i.e., files not intended to be accessed by the user
 after installation). If you have a previous version already installed in the default location, you will need to install
