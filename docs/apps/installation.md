@@ -2,18 +2,17 @@
 
 ## Installers
 
-[Download installers for the latest release here](https://github.com/jemissik/ecodata/releases/latest), available
-for Mac, Windows, and Linux. You can also see all releases (including previous versions and pre-releases)
+[Download installers for the latest release here](https://github.com/jemissik/ecodata/releases/latest), available for Mac, Windows, and Linux. You can also see all releases (including previous versions and pre-releases)
 [here](https://github.com/jemissik/ecodata/releases/).
 
-1. Download the installer for your operating system, and extract the files from the zipped folder.
+1. Download the correct installer for your operating system. For Mac, both graphical (.pkg) and command line (.sh) installers are available.
 2. Run the installer and follow the prompts. You can change the default installation location if you wish. This
 installation location is where the program files will be installed (i.e., files not intended to be accessed by the user
 after installation). If you have a previous version already installed in the default location, you will need to install
 the new version in a different location, or remove the previous version before installing the new version.
-3. A file used to launch the apps (``ecodata.sh`` for Mac and ``ecodata.bat`` for Windows) will be copied to your
-Downloads folder. Double-click this file to launch the apps.
-4. A terminal will open indicating that the apps are launching. A window will open on your default web browser, showing
+3. A file used to launch the apps (``ecodata.command`` for Mac and ``ecodata.bat`` for Windows) will be copied to your
+Downloads folder. You can move this file to a convenient location after the installer is finished running.
+4. Double-click the ``ecodata.command`` or ``ecodata.bat`` file to launch the apps. A terminal will open indicating that the apps are launching. A window will open on your default web browser, showing
 the main app gallery page (the apps are running locally at ``localhost:5006``). There may be a short wait the first time
 you launch the apps, or the first time you launch after an update.
 5. You may receive a message "Do you want the application "python3.9" to accept incoming network connections?" You can click Allow.
@@ -175,3 +174,27 @@ If your directory has many files, replace "ls" with "ls -lt" to sort files by th
     conda activate eco
     pip install git+https://github.com/jemissik/ecodata.git@main
     ```
+
+#### Launch in Windows
+
+- Open Anaconda PowerShell.
+- Copy-paste the below code into the prompt window, and press Enter:
+
+```bash
+conda activate eco
+python -m ecodata.app
+```
+
+#### Launch on Mac
+
+- Open Anaconda Navigator.
+- Navigate to "eco".
+
+![anaconda_navigator](../images/anaconda_navigator.png)
+
+- Hit the play button and select "Open Terminal".
+- A Terminal window will open. Enter the following and hit Return:
+
+```bash
+python -m ecodata.app
+```
