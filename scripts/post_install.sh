@@ -23,4 +23,4 @@ Updating ECODATA
 source activate ${PREFIX}; conda update ecodata
 
 " > "${PREFIX}"/update_ecodata.sh
-chmod +x "${PREFIX}"/update_ecodata.sh
+chmod a+x "${PREFIX}"/update_ecodata.sh
