@@ -36,6 +36,7 @@ maxdepth: 2
 ---
 installation
 user_guide/index
+environmental_data
 support
 developer_guide
 ```
