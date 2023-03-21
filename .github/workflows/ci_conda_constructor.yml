@@ -1,9 +1,7 @@
 name: conda_constructor
 on:
-  push:
-    # Sequence of patterns matched against refs/tags
-#    tags:  # TODO uncomment after testing
-#        - v*
+   tags:
+       - v*
 jobs:
     unixlike:
         name: ${{ matrix.os }}

@@ -190,7 +190,7 @@ python -m ecodata.app
 - Open Anaconda Navigator.
 - Navigate to "eco".
 
-![anaconda_navigator](../images/anaconda_navigator.png)
+![anaconda_navigator](./images/anaconda_navigator.png)
 
 - Hit the play button and select "Open Terminal".
 - A Terminal window will open. Enter the following and hit Return:
