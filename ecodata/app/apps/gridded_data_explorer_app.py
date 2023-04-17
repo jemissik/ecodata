@@ -31,6 +31,39 @@ class HTML_WidgetBox(ReactiveHTML):
     def __init__(self, object, **params):
         super().__init__(object=object, **params)
 
+class GriddedData(param.Parameterized):
+    filein = param_widget(FileSelector(constrain_path=False, expanded=True))
+    load_data_button = param_widget(
+        pn.widgets.Button(button_type="primary", name="Load data", align="end", sizing_mode="fixed")
+    )
+    timevar = param_widget(pn.widgets.Select(options=[], name="Time", sizing_mode="fixed"))
+    latvar = param_widget(pn.widgets.Select(options=[], name="Latitude", sizing_mode="fixed"))
+    lonvar = param_widget(pn.widgets.Select(options=[], name="Longitude", sizing_mode="fixed"))
+    zvar = param_widget(pn.widgets.Select(options=[], name="Variable of interest", sizing_mode="fixed"))
+
+    ds_raw = param.ClassSelector(class_=xr.Dataset, precedence=-1)
+    ds = param.ClassSelector(class_=xr.Dataset, precedence=-1)
+
+    update_varnames = param_widget(
+        pn.widgets.Button(button_type="primary", name="Update variable names", align="end", sizing_mode="fixed")
+    )
+
+    def __init__(self, **params):
+        self.load_data_button.name = "Load data"
+        self.timevar.name = "Time"
+        self.latvar.name = "Latitude"
+        self.lonvar.name = "Longitude"
+        self.zvar.name = "Variable of interest"
+        self.update_varnames.name = "Update variable names"
+
+        self.file_input_card = pn.Card(
+            self.filein,
+            pn.Row(self.latvar, self.lonvar),
+            pn.Row(self.timevar, self.zvar),
+            pn.Row(self.load_data_button, self.update_varnames),
+            title="Input environmental dataset file",
+            width_policy="max",
+        )
 class TimeResampler(param.Parameterized):
     rs_time_quantity = param_widget(
         pn.widgets.FloatInput(name="Amount", value=1.0, step=1e-1, start=0, end=100, sizing_mode="fixed")
@@ -67,17 +100,6 @@ class TimeResampler(param.Parameterized):
 
 class GriddedDataExplorer(param.Parameterized):
 
-    filein = param_widget(FileSelector(constrain_path=False, expanded=True))
-    load_data_button = param_widget(
-        pn.widgets.Button(button_type="primary", name="Load data", align="end", sizing_mode="fixed")
-    )
-    timevar = param_widget(pn.widgets.Select(options=[], name="Time", sizing_mode="fixed"))
-    latvar = param_widget(pn.widgets.Select(options=[], name="Latitude", sizing_mode="fixed"))
-    lonvar = param_widget(pn.widgets.Select(options=[], name="Longitude", sizing_mode="fixed"))
-    zvar = param_widget(pn.widgets.Select(options=[], name="Variable of interest", sizing_mode="fixed"))
-    update_varnames = param_widget(
-        pn.widgets.Button(button_type="primary", name="Update variable names", align="end", sizing_mode="fixed")
-    )
     disable_plotting_button = param_widget(
         pn.widgets.Toggle(button_type="primary", name="Disable plotting", align="start", sizing_mode="fixed")
     )
@@ -89,8 +111,6 @@ class GriddedDataExplorer(param.Parameterized):
 
     status_text = param.String("Ready...")
 
-    ds_raw = param.ClassSelector(class_=xr.Dataset, precedence=-1)
-    ds = param.ClassSelector(class_=xr.Dataset, precedence=-1)
     poly = param.ClassSelector(class_=gpd.GeoDataFrame, precedence=-1)
 
     # Time selection widgets
@@ -173,13 +193,8 @@ class GriddedDataExplorer(param.Parameterized):
         self.dask_client = Client()
 
         # Reset names for panel widgets
-        self.load_data_button.name = "Load data"
         self.disable_plotting_button.name = "Disable plotting"
-        self.timevar.name = "Time"
-        self.latvar.name = "Latitude"
-        self.lonvar.name = "Longitude"
-        self.zvar.name = "Variable of interest"
-        self.update_varnames.name = "Update variable names"
+
 
         self.load_polyfile.name = "Load file"
 
@@ -220,14 +235,7 @@ class GriddedDataExplorer(param.Parameterized):
         self.stats_fname.name = "Output file for statistics"
         self.save_stats.name = "Save statistics"
 
-        self.file_input_card = pn.Card(
-            self.filein,
-            pn.Row(self.latvar, self.lonvar),
-            pn.Row(self.timevar, self.zvar),
-            pn.Row(self.load_data_button, self.update_varnames),
-            title="Input environmental dataset file",
-            width_policy="max",
-        )
+
 
         self.dask_card = SimpleDashboardCard(self.dask_client)
         self.dask_card.dask_processing_card.append(self.disable_plotting_button)
