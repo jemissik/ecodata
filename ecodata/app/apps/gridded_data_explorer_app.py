@@ -31,6 +31,39 @@ class HTML_WidgetBox(ReactiveHTML):
     def __init__(self, object, **params):
         super().__init__(object=object, **params)
 
+class TimeResampler(param.Parameterized):
+    rs_time_quantity = param_widget(
+        pn.widgets.FloatInput(name="Amount", value=1.0, step=1e-1, start=0, end=100, sizing_mode="fixed")
+    )
+    rs_time_unit = param_widget(
+        pn.widgets.Select(options={"Days": "D", "Hours": "H"}, name="Time unit", sizing_mode="stretch_width")
+    )
+    rs_time = param_widget(
+        pn.widgets.Button(button_type="primary", name="Resample time", align="end", sizing_mode="fixed")
+    )
+    def __init__(self, ds, **params):
+        self.ds = ds
+        super().__init__(**params)
+        self.rs_time_quantity.name = "Amount"
+        self.rs_time_unit.name = "Time unit"
+        self.rs_time.name = "Resample time"
+
+        self.widget_card = pn.Card(
+            pn.Row(self.rs_time_quantity, self.rs_time_unit, self.rs_time), title="Time resampling"
+        )
+
+    @try_catch(msg="Resampling failed.")
+    @param.depends("rs_time.value", watch=True)
+    def resample_time(self):
+        self.status_text = "Resampling..."
+        ds_ = eco.resample_time(
+            self.ds.owner.ds,
+            timevar='time', #self.timevar.value,
+            time_quantity=self.rs_time_quantity.value,
+            time_unit=self.rs_time_unit.value,
+        )
+        self.status_text = "Dataset resampled"
+        return ds_
 
 class GriddedDataExplorer(param.Parameterized):
 
@@ -81,17 +114,6 @@ class GriddedDataExplorer(param.Parameterized):
     )
     revert_filters = param_widget(
         pn.widgets.Button(button_type="primary", name="Revert filters", align="end", sizing_mode="fixed")
-    )
-
-    # Time resampling
-    rs_time_quantity = param_widget(
-        pn.widgets.FloatInput(name="Amount", value=1.0, step=1e-1, start=0, end=100, sizing_mode="fixed")
-    )
-    rs_time_unit = param_widget(
-        pn.widgets.Select(options={"Days": "D", "Hours": "H"}, name="Time unit", sizing_mode="stretch_width")
-    )
-    rs_time = param_widget(
-        pn.widgets.Button(button_type="primary", name="Resample time", align="end", sizing_mode="fixed")
     )
 
     # Spatial resolution
@@ -161,6 +183,9 @@ class GriddedDataExplorer(param.Parameterized):
 
         self.load_polyfile.name = "Load file"
 
+        # Time resampline
+        self.time_resampler = TimeResampler(self.param.ds)
+
         # commas at the end are necessary for endpoints to be
         self.year_range = pn.widgets.EditableRangeSlider(
             step=1,
@@ -186,9 +211,6 @@ class GriddedDataExplorer(param.Parameterized):
         self.selection_type.name = "Polygon selection options"
         self.update_filters.name = "Update filters"
         self.revert_filters.name = "Revert filters"
-        self.rs_time_quantity.name = "Amount"
-        self.rs_time_unit.name = "Time unit"
-        self.rs_time.name = "Resample time"
         self.space_coarsen_factor.name = "Window size"
         self.rs_space.name = "Coarsen dataset"
         self.group_selector.name = "Groupings"
@@ -209,11 +231,9 @@ class GriddedDataExplorer(param.Parameterized):
 
         self.dask_card = SimpleDashboardCard(self.dask_client)
         self.dask_card.dask_processing_card.append(self.disable_plotting_button)
+        self.dask_card.dask_processing_card.append(self.time_resampler.widget_card)
         self.polyfile_widgets = pn.Card(self.polyfile, self.load_polyfile, title="Input polygon file")
 
-        self.rs_time_widgets = pn.Card(
-            pn.Row(self.rs_time_quantity, self.rs_time_unit, self.rs_time), title="Time resampling"
-        )
         self.rs_space_widgets = pn.Card(pn.Row(self.space_coarsen_factor, self.rs_space), title="Spatial resolution")
 
         self.groupby_widgets = pn.Card(pn.Row(self.group_selector), self.calculate_stats, title="Calculate statistics")
@@ -237,8 +257,7 @@ class GriddedDataExplorer(param.Parameterized):
             ),
             (
                 "Processing Options",
-                pn.Column(
-                    self.rs_time_quantity, self.rs_time_unit, self.rs_time, self.space_coarsen_factor, self.rs_space
+                pn.Column(self.space_coarsen_factor, self.rs_space
                 ),
             ),
             active=[0, 1],
@@ -437,18 +456,6 @@ class GriddedDataExplorer(param.Parameterized):
         if self.ds_raw is not None:
             self.ds = self.ds_raw.copy()
             self.status_text = "Filters reverted"
-
-    @try_catch(msg="Resampling failed.")
-    @param.depends("rs_time.value", watch=True)
-    def resample_time(self):
-        self.status_text = "Resampling..."
-        self.ds = eco.resample_time(
-            self.ds,
-            timevar=self.timevar.value,
-            time_quantity=self.rs_time_quantity.value,
-            time_unit=self.rs_time_unit.value,
-        )
-        self.status_text = "Dataset resampled"
 
     @try_catch(msg="Aggregation failed.")
     @param.depends("rs_space.value", watch=True)
