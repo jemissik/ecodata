@@ -47,14 +47,25 @@ class GriddedData(param.Parameterized):
     update_varnames = param_widget(
         pn.widgets.Button(button_type="primary", name="Update variable names", align="end", sizing_mode="fixed")
     )
+    save_ds = param_widget(
+        pn.widgets.Button(name="Save dataset", button_type="primary", align="end", sizing_mode="fixed")
+    )
 
+    # Save dataset
+    output_fname = param_widget(
+        pn.widgets.TextInput(placeholder="Output filename...", value="processed_dataset.nc", name="Output file")
+    )
     def __init__(self, **params):
+        super.__init__(**params)
         self.load_data_button.name = "Load data"
         self.timevar.name = "Time"
         self.latvar.name = "Latitude"
         self.lonvar.name = "Longitude"
         self.zvar.name = "Variable of interest"
         self.update_varnames.name = "Update variable names"
+        self.save_ds.name = "Save dataset"
+        self.output_fname.name = "Output file"
+
 
         self.file_input_card = pn.Card(
             self.filein,
@@ -64,54 +75,11 @@ class GriddedData(param.Parameterized):
             title="Input environmental dataset file",
             width_policy="max",
         )
-class TimeResampler(param.Parameterized):
-    rs_time_quantity = param_widget(
-        pn.widgets.FloatInput(name="Amount", value=1.0, step=1e-1, start=0, end=100, sizing_mode="fixed")
-    )
-    rs_time_unit = param_widget(
-        pn.widgets.Select(options={"Days": "D", "Hours": "H"}, name="Time unit", sizing_mode="stretch_width")
-    )
-    rs_time = param_widget(
-        pn.widgets.Button(button_type="primary", name="Resample time", align="end", sizing_mode="fixed")
-    )
-    def __init__(self, ds, **params):
-        self.ds = ds
-        super().__init__(**params)
-        self.rs_time_quantity.name = "Amount"
-        self.rs_time_unit.name = "Time unit"
-        self.rs_time.name = "Resample time"
 
-        self.widget_card = pn.Card(
-            pn.Row(self.rs_time_quantity, self.rs_time_unit, self.rs_time), title="Time resampling"
-        )
+        self.outfile_widgets = pn.Card(pn.Row(self.output_fname, self.save_ds), title="Output file")
 
-    @try_catch(msg="Resampling failed.")
-    @param.depends("rs_time.value", watch=True)
-    def resample_time(self):
-        self.status_text = "Resampling..."
-        ds_ = eco.resample_time(
-            self.ds.owner.ds,
-            timevar='time', #self.timevar.value,
-            time_quantity=self.rs_time_quantity.value,
-            time_unit=self.rs_time_unit.value,
-        )
-        self.status_text = "Dataset resampled"
-        return ds_
 
-class GriddedDataExplorer(param.Parameterized):
-
-    disable_plotting_button = param_widget(
-        pn.widgets.Toggle(button_type="primary", name="Disable plotting", align="start", sizing_mode="fixed")
-    )
-
-    polyfile = param_widget(FileSelector(constrain_path=False, expanded=True))
-    load_polyfile = param_widget(
-        pn.widgets.Button(button_type="primary", name="Load data", sizing_mode="fixed", align="start")
-    )
-
-    status_text = param.String("Ready...")
-
-    poly = param.ClassSelector(class_=gpd.GeoDataFrame, precedence=-1)
+class TimeSelector(param.Parameterized):
 
     # Time selection widgets
     date_range = param_widget(
@@ -121,87 +89,10 @@ class GriddedDataExplorer(param.Parameterized):
             end=dt.date.today(),
         )
     )
-
-    # Polygon selection
-    selection_type = param_widget(
-        pn.widgets.RadioBoxGroup(
-            name="Selection options", options={"Select within boundary": False, "Mask within boundary": True}
-        )
-    )
-
-    update_filters = param_widget(
-        pn.widgets.Button(button_type="primary", name="Update filters", align="end", sizing_mode="fixed")
-    )
-    revert_filters = param_widget(
-        pn.widgets.Button(button_type="primary", name="Revert filters", align="end", sizing_mode="fixed")
-    )
-
-    # Spatial resolution
-    space_coarsen_factor = param_widget(
-        pn.widgets.FloatInput(name="Window size", value=2.0, step=1, start=2, end=100, sizing_mode="fixed")
-    )
-    rs_space = param_widget(
-        pn.widgets.Button(button_type="primary", name="Resample space", align="end", sizing_mode="fixed")
-    )
-
-    # Group selection for aggregation
-    group_selector = param_widget(
-        pn.widgets.CrossSelector(
-            name="Groupings",
-            options=["polygon", "year", "month", "day", "hour"],
-            definition_order=False,
-            sizing_mode="fixed",
-        )
-    )
-    calculate_stats = param_widget(
-        pn.widgets.Button(button_type="primary", name="Calculate statistics", align="start", sizing_mode="fixed")
-    )
-
-    stats = param.ClassSelector(class_=pd.DataFrame)
-
-    # Save dataset
-    output_fname = param_widget(
-        pn.widgets.TextInput(placeholder="Output filename...", value="processed_dataset.nc", name="Output file")
-    )
-    save_ds = param_widget(
-        pn.widgets.Button(name="Save dataset", button_type="primary", align="end", sizing_mode="fixed")
-    )
-
-    # Save statistics
-    stats_fname = param_widget(
-        pn.widgets.TextInput(
-            placeholder="Output filename...", value="statistics.csv", name="Output file for statistics"
-        )
-    )
-    save_stats = param_widget(
-        pn.widgets.Button(name="Save statistics", button_type="primary", align="end", sizing_mode="fixed")
-    )
-
-    save_stats_widgets = param.ClassSelector(
-        class_=pn.Card, default=pn.Card(title="Statistics", sizing_mode="stretch_both")
-    )
-
-    # stats = param.DataFrame()
-
-    # view
-
-    # view = param.ClassSelector(class_=pn.Column, default=pn.Column(sizing_mode="stretch_both"))
-
     def __init__(self, **params):
-        super().__init__(**params)
+        super.__init__(**params)
 
-        self.dask_client = Client()
-
-        # Reset names for panel widgets
-        self.disable_plotting_button.name = "Disable plotting"
-
-
-        self.load_polyfile.name = "Load file"
-
-        # Time resampline
-        self.time_resampler = TimeResampler(self.param.ds)
-
-        # commas at the end are necessary for endpoints to be
+                # commas at the end are necessary for endpoints to be
         self.year_range = pn.widgets.EditableRangeSlider(
             step=1,
             format="0",
@@ -223,32 +114,180 @@ class GriddedDataExplorer(param.Parameterized):
         self.dayofyear_selection = pn.widgets.MultiChoice()
         self.hour_selection = pn.widgets.MultiChoice()
 
+class TimeResampler(param.Parameterized):
+    rs_time_quantity = param_widget(
+        pn.widgets.FloatInput(name="Amount", value=1.0, step=1e-1, start=0, end=100, sizing_mode="fixed")
+    )
+    rs_time_unit = param_widget(
+        pn.widgets.Select(options={"Days": "D", "Hours": "H"}, name="Time unit", sizing_mode="stretch_width")
+    )
+    rs_time = param_widget(
+        pn.widgets.Button(button_type="primary", name="Resample time", align="end", sizing_mode="fixed")
+    )
+    def __init__(self, gridded_ds, **params):
+        self.gridded_ds = gridded_ds
+        super().__init__(**params)
+        self.rs_time_quantity.name = "Amount"
+        self.rs_time_unit.name = "Time unit"
+        self.rs_time.name = "Resample time"
+
+        self.widget_card = pn.Card(
+            pn.Row(self.rs_time_quantity, self.rs_time_unit, self.rs_time), title="Time resampling"
+        )
+
+    @try_catch(msg="Resampling failed.")
+    @param.depends("rs_time.value", watch=True)
+    def resample_time(self):
+        self.status_text = "Resampling..."
+        ds_ = eco.resample_time(
+            self.gridded_ds.owner.ds,
+            timevar='time', #self.timevar.value,
+            time_quantity=self.rs_time_quantity.value,
+            time_unit=self.rs_time_unit.value,
+        )
+        self.status_text = "Dataset resampled"
+        self.gridded_ds = ds_
+        return self.gridded_ds
+
+    @param.output()
+    def resampled_ds(self):
+        return self.gridded_ds
+
+    def panel(self):
+        return self.widget_card
+
+
+class PolygonData(param.Parameterized):
+    polyfile = param_widget(FileSelector(constrain_path=False, expanded=True))
+    load_polyfile = param_widget(
+        pn.widgets.Button(button_type="primary", name="Load data", sizing_mode="fixed", align="start")
+    )
+    poly = param.ClassSelector(class_=gpd.GeoDataFrame, precedence=-1)
+
+    # Polygon selection
+    selection_type = param_widget(
+        pn.widgets.RadioBoxGroup(
+            name="Selection options", options={"Select within boundary": False, "Mask within boundary": True}
+        )
+    )
+
+    def __init__(self, **params):
+        super.__init__(**params)
+        self.load_polyfile.name = "Load file"
         self.selection_type.name = "Polygon selection options"
-        self.update_filters.name = "Update filters"
-        self.revert_filters.name = "Revert filters"
+
+
+        self.polyfile_widgets = pn.Card(self.polyfile, self.load_polyfile, title="Input polygon file")
+    @try_catch()
+    @param.depends("load_polyfile.value", watch=True)
+    def load_poly_data(self):
+        if self.polyfile.value:
+            self.status_text = "Loading file..."
+            poly = gpd.read_file(self.polyfile.value)
+            self.status_text = "File loaded"
+            self.poly = poly
+        else:
+            self.status_text = "File path must be selected first!"
+
+class SpatialResampler(param.Parameterized):
+    # Spatial resolution
+    space_coarsen_factor = param_widget(
+        pn.widgets.FloatInput(name="Window size", value=2.0, step=1, start=2, end=100, sizing_mode="fixed")
+    )
+    rs_space = param_widget(
+        pn.widgets.Button(button_type="primary", name="Resample space", align="end", sizing_mode="fixed")
+    )
+
+    def __init__(self, **params):
+        super.__init__(**params)
+
         self.space_coarsen_factor.name = "Window size"
         self.rs_space.name = "Coarsen dataset"
+        self.rs_space_widgets = pn.Card(pn.Row(self.space_coarsen_factor, self.rs_space), title="Spatial resolution")
+
+class GroupedStats(param.Parameterized):
+    # Group selection for aggregation
+    group_selector = param_widget(
+        pn.widgets.CrossSelector(
+            name="Groupings",
+            options=["polygon", "year", "month", "day", "hour"],
+            definition_order=False,
+            sizing_mode="fixed",
+        )
+    )
+    calculate_stats = param_widget(
+        pn.widgets.Button(button_type="primary", name="Calculate statistics", align="start", sizing_mode="fixed")
+    )
+    # Save statistics
+    stats_fname = param_widget(
+        pn.widgets.TextInput(
+            placeholder="Output filename...", value="statistics.csv", name="Output file for statistics"
+        )
+    )
+    save_stats = param_widget(
+        pn.widgets.Button(name="Save statistics", button_type="primary", align="end", sizing_mode="fixed")
+    )
+
+    save_stats_widgets = param.ClassSelector(
+        class_=pn.Card, default=pn.Card(title="Statistics", sizing_mode="stretch_both")
+    )
+
+    stats = param.ClassSelector(class_=pd.DataFrame)
+    def __init__(self, **params):
+        super.__init__(**params)
         self.group_selector.name = "Groupings"
         self.calculate_stats.name = "Calculate statistics"
-        self.output_fname.name = "Output file"
-        self.save_ds.name = "Save dataset"
         self.stats_fname.name = "Output file for statistics"
         self.save_stats.name = "Save statistics"
 
+        self.groupby_widgets = pn.Card(pn.Row(self.group_selector), self.calculate_stats, title="Calculate statistics")
+
+        self.save_stats_widgets[:] = [pn.Row(self.stats_fname, self.save_stats), self.stats]
+
+
+class GriddedDataPlot(param.Parameterized):
+    disable_plotting_button = param_widget(
+        pn.widgets.Toggle(button_type="primary", name="Disable plotting", align="start", sizing_mode="fixed")
+    )
+    def __init__(self, **params):
+        super.__init__(**params)
+        # Reset names for panel widgets
+        self.disable_plotting_button.name = "Disable plotting"
+
+class GriddedDataDisplay(param.Parameterized):
+
+    def __init__(self, **params):
+        super.__init__(**params)
+
+class GriddedDataExplorer(param.Parameterized):
+
+    ds = param.ClassSelector(class_=GriddedData, precedence=-1)
+
+    status_text = param.String("Ready...")
+
+    update_filters = param_widget(
+        pn.widgets.Button(button_type="primary", name="Update filters", align="end", sizing_mode="fixed")
+    )
+    revert_filters = param_widget(
+        pn.widgets.Button(button_type="primary", name="Revert filters", align="end", sizing_mode="fixed")
+    )
+
+    def __init__(self, **params):
+        super().__init__(**params)
+
+        self.dask_client = Client()
+
+        self.time_resampler = TimeResampler(self.param.ds)
+
+        self.pipeline = pn.pipeline.Pipeline([('Stage 1', self.time_resampler)])
+
+        self.update_filters.name = "Update filters"
+        self.revert_filters.name = "Revert filters"
 
 
         self.dask_card = SimpleDashboardCard(self.dask_client)
         self.dask_card.dask_processing_card.append(self.disable_plotting_button)
         self.dask_card.dask_processing_card.append(self.time_resampler.widget_card)
-        self.polyfile_widgets = pn.Card(self.polyfile, self.load_polyfile, title="Input polygon file")
-
-        self.rs_space_widgets = pn.Card(pn.Row(self.space_coarsen_factor, self.rs_space), title="Spatial resolution")
-
-        self.groupby_widgets = pn.Card(pn.Row(self.group_selector), self.calculate_stats, title="Calculate statistics")
-
-        self.outfile_widgets = pn.Card(pn.Row(self.output_fname, self.save_ds), title="Output file")
-
-        self.save_stats_widgets[:] = [pn.Row(self.stats_fname, self.save_stats), self.stats]
 
         self.alert = pn.pane.Alert(self.status_text)
 
@@ -415,16 +454,6 @@ class GriddedDataExplorer(param.Parameterized):
         else:
             self.status_text = "File path must be selected first!"
 
-    @try_catch()
-    @param.depends("load_polyfile.value", watch=True)
-    def load_poly_data(self):
-        if self.polyfile.value:
-            self.status_text = "Loading file..."
-            poly = gpd.read_file(self.polyfile.value)
-            self.status_text = "File loaded"
-            self.poly = poly
-        else:
-            self.status_text = "File path must be selected first!"
 
     @try_catch()
     @param.depends("update_filters.value", watch=True)
@@ -449,8 +478,9 @@ class GriddedDataExplorer(param.Parameterized):
                         kwargs[range_widget] = (int(range_values[0]), int(range_values[1]))
             _ds = eco.select_time_cond(_ds, time_var=self.timevar.value, **kwargs)
 
-            if self.poly is not None:
-                _ds = eco.select_spatial(_ds, boundary=self.poly, invert=self.selection_type.value)
+            #TODO
+            # if self.poly is not None:
+            #     _ds = eco.select_spatial(_ds, boundary=self.poly, invert=self.selection_type.value)
             self.ds = _ds
             self.status_text = "Applied updated filters"
         else:
@@ -491,7 +521,7 @@ class GriddedDataExplorer(param.Parameterized):
         self.figs_with_widget.__setitem__(1, self.ds_pane)
 
     @try_catch()
-    @param.depends("update_varnames.value", "update_filters.value","disable_plotting_button.value", "poly", watch=True)
+    @param.depends("update_varnames.value", "update_filters.value","disable_plotting_button.value", watch=True)  #TODO "poly"
     def update_plot_view(self):
         # self.ds_pane.object = self.ds
         # if self.disable_plotting_button.value:
