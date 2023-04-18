@@ -10,7 +10,8 @@ import panel as pn
 import param
 import xarray as xr
 from panel.reactive import ReactiveHTML, Viewable
-from dask.distributed import Client, LocalCluster
+from dask.diagnostics import ProgressBar
+from dask.distributed import Client
 
 import ecodata as eco
 from ecodata.panel_utils import param_widget, register_view, templater, try_catch
@@ -42,6 +43,7 @@ class GriddedDataExplorer(param.Parameterized):
     latvar = param_widget(pn.widgets.Select(options=[], name="Latitude", sizing_mode="fixed"))
     lonvar = param_widget(pn.widgets.Select(options=[], name="Longitude", sizing_mode="fixed"))
     zvar = param_widget(pn.widgets.Select(options=[], name="Variable of interest", sizing_mode="fixed"))
+    vars_to_save = param_widget(pn.widgets.MultiChoice(options=[], name='Variables to save', sizing_mode='fixed'))
     update_varnames = param_widget(
         pn.widgets.Button(button_type="primary", name="Update variable names", align="end", sizing_mode="fixed")
     )
@@ -157,7 +159,8 @@ class GriddedDataExplorer(param.Parameterized):
         self.latvar.name = "Latitude"
         self.lonvar.name = "Longitude"
         self.zvar.name = "Variable of interest"
-        self.update_varnames.name = "Update variable names"
+        self.vars_to_save.name = "Variables to save"
+        self.update_varnames.name = "Update variable selections"
 
         self.load_polyfile.name = "Load file"
 
@@ -202,6 +205,7 @@ class GriddedDataExplorer(param.Parameterized):
             self.filein,
             pn.Row(self.latvar, self.lonvar),
             pn.Row(self.timevar, self.zvar),
+            pn.Row(self.vars_to_save),
             pn.Row(self.load_data_button, self.update_varnames),
             title="Input environmental dataset file",
             width_policy="max",
@@ -277,7 +281,7 @@ class GriddedDataExplorer(param.Parameterized):
     @param.depends("update_varnames.value", watch=True)
     def update_ds_varnames(self):
         if self.ds_raw is not None and self.zvar.value is not None:
-            self.ds = self.ds_raw[[self.zvar.value]].copy()
+            self.ds = self.ds_raw[self.vars_to_save.value].copy()
             self.update_selection_widgets()
 
     @try_catch()
@@ -376,6 +380,8 @@ class GriddedDataExplorer(param.Parameterized):
             self.lonvar.value = matched_vars["lonvar"]
             self.zvar.options = [None] + list(unmatched_vars)
             self.zvar.value = None
+            self.vars_to_save.options = [None] + list(unmatched_vars)
+            self.vars_to_save.value = list(unmatched_vars)
 
             # Convert to datetime if necessary
             if ds_raw[self.timevar.value].dtype == "O":
@@ -457,8 +463,8 @@ class GriddedDataExplorer(param.Parameterized):
         self.ds = eco.coarsen_dataset(
             self.ds,
             n_window={
-                self.latvar.value: self.space_coarsen_factor.value,
-                self.lonvar.value: self.space_coarsen_factor.value,
+                self.latvar.value: int(self.space_coarsen_factor.value),
+                self.lonvar.value: int(self.space_coarsen_factor.value),
             },
         )
         self.status_text = "Aggregation completed."
@@ -486,7 +492,8 @@ class GriddedDataExplorer(param.Parameterized):
             self.status_text = "Creating plot"
             width = 500
             ds_plot = GriddedPlotWithSlider(
-                self.ds, timevar=self.timevar.value, zvar=self.zvar.value, width=width
+                self.ds, timevar=self.timevar.value, zvar=self.zvar.value,
+                lonvar=self.lonvar.value, latvar=self.latvar.value, width=width
             )
             # .opts(frame_width=width)
             if self.poly is not None:
