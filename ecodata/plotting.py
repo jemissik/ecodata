@@ -92,7 +92,8 @@ class GriddedPlotWithSlider(param.Parameterized):
         self.time_slider.options = options
         self.time_slider.width = width
         self.fig.object = plot_gridded_time_slice(self.ds, self.timevar, self.zvar,
-                                                  vals[0], clim=clim, width=self.width)
+                                                  vals[0], clim=clim, width=self.width,
+                                                  lonvar=self.lonvar, latvar=self.latvar)
         self.fig_with_widget = pn.Column(self.fig, self.time_slider)
 
 
