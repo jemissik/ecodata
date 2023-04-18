@@ -1,6 +1,8 @@
 name: conda_constructor
 on:
-   tags:
+  push:
+    tags:
+      - 'v*'
 
 jobs:
     unixlike:
