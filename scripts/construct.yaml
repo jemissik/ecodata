@@ -4,7 +4,7 @@
 name: {{ name }}
 version: {{ version }}
 
-installer_type: pkg
+installer_type: all
 initialize_by_default: False
 post_install: post_install.sh  # [unix]
 post_install: post_install.bat  # [win]
