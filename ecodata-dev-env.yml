@@ -49,5 +49,5 @@ dependencies:
   - click
   - build
   - git+https://github.com/madeline-scyphers/panel-jstree.git
-  - -e . --install-option="--no-deps"
+  - -e .
 name: eco-dev

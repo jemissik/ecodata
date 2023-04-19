@@ -1,7 +1,9 @@
 name: conda_constructor
 on:
-   tags:
-       - v*
+  push:
+    tags:
+      - 'v*'
+
 jobs:
     unixlike:
         name: ${{ matrix.os }}

@@ -1,4 +1,5 @@
 import datetime as dt
+import time
 from pathlib import Path
 
 import geopandas as gpd
@@ -10,7 +11,7 @@ import panel as pn
 import param
 import xarray as xr
 from panel.reactive import ReactiveHTML, Viewable
-from dask.distributed import Client, LocalCluster
+from dask.diagnostics import ProgressBar, Callback
 
 import ecodata as eco
 from ecodata.panel_utils import param_widget, register_view, templater, try_catch
@@ -32,6 +33,34 @@ class HTML_WidgetBox(ReactiveHTML):
         super().__init__(object=object, **params)
 
 
+class Progress(Callback):
+    def __init__(self, *args, parent, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.parent = parent
+
+    def _start_state(self, dsk, state):
+        """runs on start of tasks"""
+        self.parent.progress_percent.visible = True
+        self.parent.progress_indicator.visible = True
+
+    def _pretask(self, key, dsk, state):
+        """runs before every series of tasks"""
+        s = state
+        ndone = len(s["finished"])
+        ntasks = sum(len(s[k]) for k in ["ready", "waiting", "running"]) + ndone
+        ratio = min(ndone / ntasks if ntasks else 0, 1)
+        self.value = round(ratio * 100)
+        # self.parent.view[3][2].value = self.value
+        self.parent.progress_indicator.value = self.value
+        self.parent.progress_percent.value  = f"{self.value}%"
+
+    def _finish(self, *args, **kwargs):
+        """runs after all tasks are done"""
+        self.parent.progress_indicator.value = 100
+        self.parent.progress_percent.value = "100%"
+    #     super()._finish(*args, **kwargs)
+
+
 class GriddedDataExplorer(param.Parameterized):
 
     filein = param_widget(FileSelector(constrain_path=False, expanded=True))
@@ -42,6 +71,7 @@ class GriddedDataExplorer(param.Parameterized):
     latvar = param_widget(pn.widgets.Select(options=[], name="Latitude", sizing_mode="fixed"))
     lonvar = param_widget(pn.widgets.Select(options=[], name="Longitude", sizing_mode="fixed"))
     zvar = param_widget(pn.widgets.Select(options=[], name="Variable of interest", sizing_mode="fixed"))
+    vars_to_save = param_widget(pn.widgets.MultiChoice(options=[], name='Variables to save', sizing_mode='fixed'))
     update_varnames = param_widget(
         pn.widgets.Button(button_type="primary", name="Update variable names", align="end", sizing_mode="fixed")
     )
@@ -125,6 +155,10 @@ class GriddedDataExplorer(param.Parameterized):
         pn.widgets.Button(name="Save dataset", button_type="primary", align="end", sizing_mode="fixed")
     )
 
+    # Progress bar and percent for saving
+    progress_indicator = param.ClassSelector(pn.indicators.Progress)
+    progress_percent = param.ClassSelector(pn.widgets.StaticText)
+
     # Save statistics
     stats_fname = param_widget(
         pn.widgets.TextInput(
@@ -148,8 +182,6 @@ class GriddedDataExplorer(param.Parameterized):
     def __init__(self, **params):
         super().__init__(**params)
 
-        self.dask_client = Client()
-
         # Reset names for panel widgets
         self.load_data_button.name = "Load data"
         self.disable_plotting_button.name = "Disable plotting"
@@ -157,7 +189,8 @@ class GriddedDataExplorer(param.Parameterized):
         self.latvar.name = "Latitude"
         self.lonvar.name = "Longitude"
         self.zvar.name = "Variable of interest"
-        self.update_varnames.name = "Update variable names"
+        self.vars_to_save.name = "Variables to save"
+        self.update_varnames.name = "Update variable selections"
 
         self.load_polyfile.name = "Load file"
 
@@ -198,17 +231,20 @@ class GriddedDataExplorer(param.Parameterized):
         self.stats_fname.name = "Output file for statistics"
         self.save_stats.name = "Save statistics"
 
+        # Progress bar and percent for saving
+        self.progress_indicator = pn.indicators.Progress(name='Progress', height=20, bar_color="success", align="end", visible=False)
+        self.progress_percent = pn.widgets.StaticText(name="Progress", value="0%", align="end", visible=False)
+
         self.file_input_card = pn.Card(
             self.filein,
             pn.Row(self.latvar, self.lonvar),
             pn.Row(self.timevar, self.zvar),
+            pn.Row(self.vars_to_save),
             pn.Row(self.load_data_button, self.update_varnames),
             title="Input environmental dataset file",
             width_policy="max",
         )
 
-        self.dask_card = SimpleDashboardCard(self.dask_client)
-        self.dask_card.dask_processing_card.append(self.disable_plotting_button)
         self.polyfile_widgets = pn.Card(self.polyfile, self.load_polyfile, title="Input polygon file")
 
         self.rs_time_widgets = pn.Card(
@@ -218,7 +254,7 @@ class GriddedDataExplorer(param.Parameterized):
 
         self.groupby_widgets = pn.Card(pn.Row(self.group_selector), self.calculate_stats, title="Calculate statistics")
 
-        self.outfile_widgets = pn.Card(pn.Row(self.output_fname, self.save_ds), title="Output file")
+        self.outfile_widgets = pn.Card(pn.Row(self.output_fname, self.save_ds, self.progress_percent, self.progress_indicator), title="Output file")
 
         self.save_stats_widgets[:] = [pn.Row(self.stats_fname, self.save_stats), self.stats]
 
@@ -253,17 +289,15 @@ class GriddedDataExplorer(param.Parameterized):
         self.figs_with_widget = pn.Tabs(("Charts", self.plot_col), ("Data", self.ds_pane))
 
         self.view_objects = {
-            "dashboard_pane":1,
-            "file_input_card": 2,
-            "polyfile_widgets": 3,
-            "outfile_widgets": 4,
-            "groupby_widgets": 5,
-            "stats": 6,
-            "status": 7,
+            "file_input_card": 1,
+            "polyfile_widgets": 2,
+            "outfile_widgets": 3,
+            "groupby_widgets": 4,
+            "stats": 5,
+            "status": 6,
         }
 
         self.view = pn.Column(
-            self.dask_card.dask_processing_card,
             self.file_input_card,
             self.polyfile_widgets,
             self.outfile_widgets,
@@ -277,7 +311,7 @@ class GriddedDataExplorer(param.Parameterized):
     @param.depends("update_varnames.value", watch=True)
     def update_ds_varnames(self):
         if self.ds_raw is not None and self.zvar.value is not None:
-            self.ds = self.ds_raw[[self.zvar.value]].copy()
+            self.ds = self.ds_raw[self.vars_to_save.value].copy()
             self.update_selection_widgets()
 
     @try_catch()
@@ -376,6 +410,8 @@ class GriddedDataExplorer(param.Parameterized):
             self.lonvar.value = matched_vars["lonvar"]
             self.zvar.options = [None] + list(unmatched_vars)
             self.zvar.value = None
+            self.vars_to_save.options = [None] + list(unmatched_vars)
+            self.vars_to_save.value = list(unmatched_vars)
 
             # Convert to datetime if necessary
             if ds_raw[self.timevar.value].dtype == "O":
@@ -457,8 +493,8 @@ class GriddedDataExplorer(param.Parameterized):
         self.ds = eco.coarsen_dataset(
             self.ds,
             n_window={
-                self.latvar.value: self.space_coarsen_factor.value,
-                self.lonvar.value: self.space_coarsen_factor.value,
+                self.latvar.value: int(self.space_coarsen_factor.value),
+                self.lonvar.value: int(self.space_coarsen_factor.value),
             },
         )
         self.status_text = "Aggregation completed."
@@ -486,7 +522,8 @@ class GriddedDataExplorer(param.Parameterized):
             self.status_text = "Creating plot"
             width = 500
             ds_plot = GriddedPlotWithSlider(
-                self.ds, timevar=self.timevar.value, zvar=self.zvar.value, width=width
+                self.ds, timevar=self.timevar.value, zvar=self.zvar.value,
+                lonvar=self.lonvar.value, latvar=self.latvar.value, width=width
             )
             # .opts(frame_width=width)
             if self.poly is not None:
@@ -560,17 +597,19 @@ class GriddedDataExplorer(param.Parameterized):
     @try_catch(msg="File couldn't be saved.")
     @param.depends("save_ds.value", watch=True)
     def save_dataset(self):
-        outfile = Path(self.output_fname.value).resolve()
+        with Progress(parent=self):
+            outfile = Path(self.output_fname.value).resolve()
 
-        # Set the time encoding to match MODIS format
-        set_time_encoding_modis(self.ds)
-        print(self.ds.time.encoding)
+            # Set the time encoding to match MODIS format
+            set_time_encoding_modis(self.ds)
+            print(self.ds.time.encoding)
 
-        # Make sure dataset is rechunked before computations are triggered
-        self.ds = self.ds.chunk(chunks='auto')
+            # Make sure dataset is rechunked before computations are triggered
+            self.ds = self.ds.chunk(chunks='auto')
 
-        self.ds.to_netcdf(outfile)
-        self.status_text = f"File saved to: {outfile}"
+            self.ds.to_netcdf(outfile)
+            self.status_text = f"File saved to: {outfile}"
+        # self.progress_indicator.value = 100
 
 
 @register_view()
