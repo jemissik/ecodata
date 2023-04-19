@@ -58,9 +58,11 @@ def plot_avg_timeseries(ds, x="longitude", y="latitude", z="t2m", time="time", c
     return ds[z].mean([x, y]).hvplot.line(time, color=color)
 
 
-def plot_gridded_time_slice(ds, timevar, zvar, time, clim=None, width=500):
+def plot_gridded_time_slice(ds, timevar, zvar, time, lonvar='longitude',
+                            latvar='latitude', clim=None, width=500):
     ds_slice = ds[zvar].sel({timevar: time})
-    fig = ds_slice.hvplot.image(cmap='Greens', geo=True, rasterize=True, clim=clim).opts(frame_width=width)
+    fig = ds_slice.hvplot.image(cmap='Greens', x=lonvar, y=latvar,
+                                geo=True, rasterize=True, clim=clim).opts(frame_width=width)
     return fig
 
 
@@ -68,7 +70,8 @@ class GriddedPlotWithSlider(param.Parameterized):
     time_slider = param_widget(pn.widgets.DiscreteSlider(name="Datetime slider", align="center"))
     fig = param.ClassSelector(class_=pn.pane.HoloViews, default=pn.pane.HoloViews(sizing_mode="stretch_both"))
 
-    def __init__(self, ds, timevar, zvar, clim=None, width=500, **params):
+    def __init__(self, ds, timevar, zvar, lonvar='longitude', latvar='latitude',
+                 clim=None, width=500, **params):
         super().__init__(**params)
 
         # Rename
@@ -81,13 +84,16 @@ class GriddedPlotWithSlider(param.Parameterized):
         self.ds = ds
         self.timevar = timevar
         self.zvar = zvar
+        self.lonvar=lonvar
+        self.latvar=latvar
         self.clim=clim
         self.width = width
 
         self.time_slider.options = options
         self.time_slider.width = width
         self.fig.object = plot_gridded_time_slice(self.ds, self.timevar, self.zvar,
-                                                  vals[0], clim=clim, width=self.width)
+                                                  vals[0], clim=clim, width=self.width,
+                                                  lonvar=self.lonvar, latvar=self.latvar)
         self.fig_with_widget = pn.Column(self.fig, self.time_slider)
 
 
@@ -95,5 +101,6 @@ class GriddedPlotWithSlider(param.Parameterized):
     def plot_slice(self):
 
         fig = plot_gridded_time_slice(self.ds, self.timevar, self.zvar, self.time_slider.value,
-                                      self.clim, width=self.width)
+                                      lonvar=self.lonvar, latvar=self.latvar,
+                                      clim=self.clim, width=self.width)
         self.fig.object = fig
