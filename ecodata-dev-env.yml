@@ -21,10 +21,10 @@ dependencies:
 - numpy<1.24  # numpy 1.24 is incompatible with numba
 - pyinstaller
 - conda-forge::rioxarray
-- pyviz::hvplot
-- pyviz::panel
-- pyviz::datashader
-- pyviz::geoviews
+- hvplot
+- panel>1
+- datashader
+- geoviews>=1.10
 - bokeh::jupyter_bokeh  # Enables interactive widgets in vscode
 - conda-forge::geocube
 - jupytext
@@ -48,6 +48,6 @@ dependencies:
   - sphinx-multiproject
   - click
   - build
-  - git+https://github.com/madeline-scyphers/panel-jstree.git
+#  - git+https://github.com/madeline-scyphers/panel-jstree.git
   - -e .
 name: eco-dev

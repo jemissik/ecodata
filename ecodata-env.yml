@@ -1,6 +1,7 @@
 name: eco
 channels:
 - pyviz
+#- pyviz/label/dev
 - conda-forge
 - defaults
 dependencies:
@@ -16,12 +17,12 @@ dependencies:
 - bottleneck
 - cfgrib
 - rasterio
-- numpy<1.24  # numpy 1.24 is incompatible with numba
+- numpy1<1.24  # numpy 1.24 is incompatible with numba
 - conda-forge::rioxarray
-- pyviz::hvplot
-- pyviz::panel
-- pyviz::datashader
-- pyviz::geoviews
+- hvplot
+- panel>=1
+- datashader
+- geoviews>=1.10
 - conda-forge::geocube
 - conda-forge::ffmpeg
 - anaconda::git
