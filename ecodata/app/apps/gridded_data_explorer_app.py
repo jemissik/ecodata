@@ -14,11 +14,11 @@ from panel.reactive import ReactiveHTML, Viewable
 from dask.diagnostics import ProgressBar, Callback
 
 import ecodata as eco
-from ecodata.panel_utils import param_widget, register_view, templater, try_catch
+from ecodata.panel_utils import param_widget, register_view, try_catch
 from ecodata.plotting import plot_avg_timeseries, plot_gridded_data, GriddedPlotWithSlider
 from ecodata.xr_tools import detect_varnames, set_time_encoding_modis
 from ecodata.app.models import SimpleDashboardCard, FileSelector
-
+from ecodata.app.config import DEFAULT_TEMPLATE
 
 class HTML_WidgetBox(ReactiveHTML):
     object = param.ClassSelector(class_=Viewable)
@@ -63,25 +63,25 @@ class Progress(Callback):
 
 class GriddedDataExplorer(param.Parameterized):
 
-    filein = param_widget(FileSelector(constrain_path=False, expanded=True))
+    filein = param_widget(pn.widgets.FileSelector(constrain_path=False, expanded=True))
     load_data_button = param_widget(
-        pn.widgets.Button(button_type="primary", name="Load data", align="end", sizing_mode="fixed")
+        pn.widgets.Button(button_type="primary", name="Load data")
     )
-    timevar = param_widget(pn.widgets.Select(options=[], name="Time", sizing_mode="fixed"))
-    latvar = param_widget(pn.widgets.Select(options=[], name="Latitude", sizing_mode="fixed"))
-    lonvar = param_widget(pn.widgets.Select(options=[], name="Longitude", sizing_mode="fixed"))
-    zvar = param_widget(pn.widgets.Select(options=[], name="Variable of interest", sizing_mode="fixed"))
+    timevar = param_widget(pn.widgets.Select(options=[], name="Time"))
+    latvar = param_widget(pn.widgets.Select(options=[], name="Latitude"))
+    lonvar = param_widget(pn.widgets.Select(options=[], name="Longitude"))
+    zvar = param_widget(pn.widgets.Select(options=[], name="Variable of interest"))
     vars_to_save = param_widget(pn.widgets.MultiChoice(options=[], name='Variables to save', sizing_mode='fixed'))
     update_varnames = param_widget(
-        pn.widgets.Button(button_type="primary", name="Update variable names", align="end", sizing_mode="fixed")
+        pn.widgets.Button(button_type="primary", name="Update variable names")
     )
     disable_plotting_button = param_widget(
-        pn.widgets.Toggle(button_type="primary", name="Disable plotting", align="start", sizing_mode="fixed")
+        pn.widgets.Toggle(button_type="primary", name="Disable plotting")
     )
 
-    polyfile = param_widget(FileSelector(constrain_path=False, expanded=True))
+    polyfile = param_widget(pn.widgets.FileSelector(constrain_path=False, expanded=True))
     load_polyfile = param_widget(
-        pn.widgets.Button(button_type="primary", name="Load data", sizing_mode="fixed", align="start")
+        pn.widgets.Button(button_type="primary", name="Load data")
     )
 
     status_text = param.String("Ready...")
@@ -107,29 +107,29 @@ class GriddedDataExplorer(param.Parameterized):
     )
 
     update_filters = param_widget(
-        pn.widgets.Button(button_type="primary", name="Update filters", align="end", sizing_mode="fixed")
+        pn.widgets.Button(button_type="primary", name="Update filters")
     )
     revert_filters = param_widget(
-        pn.widgets.Button(button_type="primary", name="Revert filters", align="end", sizing_mode="fixed")
+        pn.widgets.Button(button_type="primary", name="Revert filters")
     )
 
     # Time resampling
     rs_time_quantity = param_widget(
-        pn.widgets.FloatInput(name="Amount", value=1.0, step=1e-1, start=0, end=100, sizing_mode="fixed")
+        pn.widgets.FloatInput(name="Amount", value=1.0, step=1e-1, start=0, end=100)
     )
     rs_time_unit = param_widget(
-        pn.widgets.Select(options={"Days": "D", "Hours": "H"}, name="Time unit", sizing_mode="stretch_width")
+        pn.widgets.Select(options={"Days": "D", "Hours": "H"}, name="Time unit")
     )
     rs_time = param_widget(
-        pn.widgets.Button(button_type="primary", name="Resample time", align="end", sizing_mode="fixed")
+        pn.widgets.Button(button_type="primary", name="Resample time", )
     )
 
     # Spatial resolution
     space_coarsen_factor = param_widget(
-        pn.widgets.FloatInput(name="Window size", value=2.0, step=1, start=2, end=100, sizing_mode="fixed")
+        pn.widgets.FloatInput(name="Window size", value=2.0, step=1, start=2, end=100)
     )
     rs_space = param_widget(
-        pn.widgets.Button(button_type="primary", name="Resample space", align="end", sizing_mode="fixed")
+        pn.widgets.Button(button_type="primary", name="Resample space",)
     )
 
     # Group selection for aggregation
@@ -138,11 +138,10 @@ class GriddedDataExplorer(param.Parameterized):
             name="Groupings",
             options=["polygon", "year", "month", "day", "hour"],
             definition_order=False,
-            sizing_mode="fixed",
         )
     )
     calculate_stats = param_widget(
-        pn.widgets.Button(button_type="primary", name="Calculate statistics", align="start", sizing_mode="fixed")
+        pn.widgets.Button(button_type="primary", name="Calculate statistics")
     )
 
     stats = param.ClassSelector(class_=pd.DataFrame)
@@ -152,7 +151,7 @@ class GriddedDataExplorer(param.Parameterized):
         pn.widgets.TextInput(placeholder="Output filename...", value="processed_dataset.nc", name="Output file")
     )
     save_ds = param_widget(
-        pn.widgets.Button(name="Save dataset", button_type="primary", align="end", sizing_mode="fixed")
+        pn.widgets.Button(name="Save dataset", button_type="primary")
     )
 
     # Progress bar and percent for saving
@@ -166,7 +165,7 @@ class GriddedDataExplorer(param.Parameterized):
         )
     )
     save_stats = param_widget(
-        pn.widgets.Button(name="Save statistics", button_type="primary", align="end", sizing_mode="fixed")
+        pn.widgets.Button(name="Save statistics", button_type="primary")
     )
 
     save_stats_widgets = param.ClassSelector(
@@ -232,8 +231,8 @@ class GriddedDataExplorer(param.Parameterized):
         self.save_stats.name = "Save statistics"
 
         # Progress bar and percent for saving
-        self.progress_indicator = pn.indicators.Progress(name='Progress', height=20, bar_color="success", align="end", visible=False)
-        self.progress_percent = pn.widgets.StaticText(name="Progress", value="0%", align="end", visible=False)
+        self.progress_indicator = pn.indicators.Progress(name='Progress', height=20, bar_color="success", visible=False)
+        self.progress_percent = pn.widgets.StaticText(name="Progress", value="0%", visible=False)
 
         self.file_input_card = pn.Card(
             self.filein,
@@ -242,7 +241,6 @@ class GriddedDataExplorer(param.Parameterized):
             pn.Row(self.vars_to_save),
             pn.Row(self.load_data_button, self.update_varnames),
             title="Input environmental dataset file",
-            width_policy="max",
         )
 
         self.polyfile_widgets = pn.Card(self.polyfile, self.load_polyfile, title="Input polygon file")
@@ -278,15 +276,20 @@ class GriddedDataExplorer(param.Parameterized):
                 ),
             ),
             active=[0, 1],
+            sizing_mode="stretch_width"
         )
 
-        self.plot_col = pn.Column(height_policy="max")
+        self.plot_col = pn.Column()
         self.ts_pane = pn.pane.HoloViews(sizing_mode="stretch_both")
-        self.ds_pane = pn.pane.HTML(sizing_mode="stretch_both", style={"overflow": "auto"})
-        self.dashboard_pane = pn.pane.HTML(sizing_mode="stretch_both", style={"overflow": "auto"})
+        self.ds_pane = pn.pane.HTML(sizing_mode="stretch_both", styles={"overflow": "auto"})
+        self.dashboard_pane = pn.pane.HTML(sizing_mode="stretch_both", styles={"overflow": "auto"})
 
         self.ts_widget = pn.pane.Markdown("")
-        self.figs_with_widget = pn.Tabs(("Charts", self.plot_col), ("Data", self.ds_pane))
+        self.figs_with_widget = pn.layout.FloatPanel(
+            pn.Tabs(("Charts", self.plot_col), ("Data", self.ds_pane)),
+            name='Basic FloatPanel',
+            margin=20
+        )
 
         self.view_objects = {
             "file_input_card": 1,
@@ -294,7 +297,6 @@ class GriddedDataExplorer(param.Parameterized):
             "outfile_widgets": 3,
             "groupby_widgets": 4,
             "stats": 5,
-            "status": 6,
         }
 
         self.view = pn.Column(
@@ -303,7 +305,6 @@ class GriddedDataExplorer(param.Parameterized):
             self.outfile_widgets,
             self.groupby_widgets,
             self.save_stats_widgets,
-            self.alert,
             sizing_mode="stretch_both",
         )
 
@@ -612,14 +613,19 @@ class GriddedDataExplorer(param.Parameterized):
         # self.progress_indicator.value = 100
 
 
-@register_view()
-def view(app):
+@register_view('floatpanel')
+def view():
     viewer = GriddedDataExplorer()
-    return templater(app.template, main=[viewer.figs_with_widget, viewer.view], sidebar=[viewer.sidebar])
+    template = DEFAULT_TEMPLATE(
+        main=[viewer.figs_with_widget, viewer.view],
+        sidebar=[viewer.sidebar],
+        header=viewer.alert
+    )
+    return template
 
 
 if __name__ == "__main__":
-    pn.serve({"gridded_data_explorer_app": view})
+    pn.serve({Path(__file__).name: view})
 
 
 if __name__.startswith("bokeh"):

@@ -23,7 +23,8 @@ from panel.io.loading import start_loading_spinner, stop_loading_spinner
 # %% pycharm={"name": "#%%\n"}
 import ecodata as eco
 from ecodata.app.models import FileSelector
-from ecodata.panel_utils import param_widget, register_view, templater, try_catch
+from ecodata.panel_utils import param_widget, register_view, try_catch
+from ecodata.app.config import DEFAULT_TEMPLATE
 
 logger = logging.getLogger(__file__)
 
@@ -213,13 +214,15 @@ class Subsetter(param.Parameterized):
 
 
 @register_view()
-def view(app):
-    viewer = Subsetter()
-    return templater(app.template, main=[viewer.view])
+def view():
+    template = DEFAULT_TEMPLATE(
+        main=Subsetter().view
+    )
+    return template
 
 
 if __name__ == "__main__":
-    pn.serve({"subsetter_app": view})
+    pn.serve({Path(__file__).name: view})
 
 
 if __name__.startswith("bokeh"):

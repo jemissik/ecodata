@@ -5,11 +5,11 @@ import panel as pn
 import param
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
 
+from ecodata.app.config import DEFAULT_TEMPLATE
 from ecodata.panel_utils import (
     make_mp4_from_frames,
     param_widget,
     register_view,
-    templater,
     try_catch,
 )
 from ecodata.app.models import FileSelector
@@ -20,7 +20,7 @@ logger = logging.getLogger(__file__)
 class MovieMaker(param.Parameterized):
 
     # Frames directory
-    frames_dir = param_widget(FileSelector(constrain_path=False, expanded=True))
+    frames_dir = param_widget(pn.widgets.FileSelector(constrain_path=False, expanded=True))
 
     # Output file
     output_file = param_widget(
@@ -87,12 +87,15 @@ class MovieMaker(param.Parameterized):
 
 
 @register_view()
-def view(app):
-    return templater(app.template, main=[MovieMaker().view])
+def view():
+    template = DEFAULT_TEMPLATE(
+        main=MovieMaker().view
+    )
+    return template
 
 
 if __name__ == "__main__":
-    pn.serve({"movie_maker_app": view})
+    pn.serve({Path(__file__).name: view})
 
 if __name__.startswith("bokeh"):
     view()

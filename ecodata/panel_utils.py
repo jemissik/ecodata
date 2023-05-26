@@ -18,7 +18,7 @@ import panel as pn
 import param
 
 from ecodata.app.assets import get_link_list_html, list_links_html, menu_fast_html
-from ecodata.app.config import extension
+from ecodata.app.config import extension, format_tempalte
 
 Servable = Union[Callable, pn.viewable.Viewable]
 
@@ -169,26 +169,8 @@ def make_mp4_from_frames(frames_dir, output_file, frame_rate):
     return output_file
 
 
-def templater(
-    template: pn.template.BaseTemplate,
-    main: Servable | Sequence[Servable] = (),
-    sidebar: Servable | Sequence[Servable] = (),
-    header: Servable | Sequence[Servable] = (),
-):
-    main = main if isinstance(main, Sequence) else [main]
-    sidebar = sidebar if isinstance(sidebar, Sequence) else [sidebar]
-    header = header if isinstance(header, Sequence) else [header]
-    for app in main:
-        template.main.append(app)
-    for app in sidebar:
-        template.sidebar.append(app)
-    for app in header:
-        template.header.append(app)
-
-    return template
-
-
-def register_view(*ext_args, url=None, name=None, **ext_kw):
+def register_view(*ext_args, url=None, name=None, ext_dict=None, **template_format_kw):
+    ext_dict = {} if ext_dict is None else ext_dict
     # grab url of as filename of calling file if not supplied
     url = url or Path(inspect.stack()[1].filename).stem  # file name of calling file
     # grab name for app from url
@@ -210,15 +192,13 @@ def register_view(*ext_args, url=None, name=None, **ext_kw):
     def inner(view):
         @wraps(view)
         def wrapper(*args, **kwargs):
-
             # create app and template at run time so that each is a fresh app
             # to prevent bleed over effects where to stack on top of each other
-            app = extension(*ext_args, url=url, name=name, **ext_kw)
-            template = view(app, *args, **kwargs)
+            extension(*ext_args, **ext_dict)
+            template = view(*args, **kwargs)
+            format_tempalte(template, name=name, **template_format_kw)
 
-            list_html = {"dashboard_links": list_links_html(links)}
-            template.sidebar_footer = menu_fast_html(accent=template.accent_base_color, jinja_subs=list_html)
-            return template
+            return template.servable()
 
         applications[url] = wrapper
         return wrapper

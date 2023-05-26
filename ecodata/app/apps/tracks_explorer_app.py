@@ -36,8 +36,9 @@ import param
 
 import ecodata as eco
 from ecodata.app.models import PMVCard, FileSelector
-from ecodata.panel_utils import param_widget, register_view, templater, try_catch
+from ecodata.panel_utils import param_widget, register_view, try_catch
 from ecodata.plotting import map_tile_options, plot_tracks_with_tiles
+from ecodata.app.config import DEFAULT_TEMPLATE
 
 # from panel_jstree.widgets.jstree import FileTree
 
@@ -133,12 +134,12 @@ class TracksExplorer(param.Parameterized):
             self.boundary_update,
         )
 
-        self.widgets = pn.WidgetBox(
-            self.file_card,
-            # self.options_card,
-            # self.output_file_button,
+        self.widgets = pn.Column(
+            # self.file_card,
+            pn.Card(FileSelector("~"), self.load_tracks_button),
             self.output_fname,
             self.save_tracks_extent_button,
+            sizing_mode="stretch_height"
         )
 
         self.alert = pn.pane.Alert(self.status_text)
@@ -150,11 +151,11 @@ class TracksExplorer(param.Parameterized):
         #         pn.pane.Alert(self.status_text),
         #         sizing_mode="stretch_both")
         # Add view
-        self.view[:] = [
-            pn.Row(self.plot_pane),
-            self.widgets,
-            self.alert,
-        ]
+        # self.view[:] = [
+        #     pn.Row(self.plot_pane),
+        #     self.widgets,
+        #     self.alert,
+        # ]
 
     @try_catch()
     @param.depends("load_tracks_button.value", watch=True)  # depends on load_tracks_button
@@ -266,13 +267,19 @@ class TracksExplorer(param.Parameterized):
 
 
 @register_view()
-def view(app):
+def view():
     viewer = TracksExplorer()
-    return templater(app.template, main=[viewer.view], sidebar=[viewer.options_col])
+    template = DEFAULT_TEMPLATE(
+        sidebar=[viewer.widgets],
+        main=[viewer.plot_pane],
+        header=viewer.alert
+    )
+    return template
+
 
 
 if __name__ == "__main__":
-    pn.serve({"tracks_explorer_app": view})
+    pn.serve({Path(__file__).name: view})
 
 if __name__.startswith("bokeh"):
     view()
