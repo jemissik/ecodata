@@ -8,7 +8,7 @@ Installation options
         conda env create -n eco-dev --file ecodata-env.yml
         conda activate eco-dev
         conda env update -n eco-dev -f ecodata-dev-env.yml --prune
-        python -m pip -e . --no-deps
+        python -m pip install -e . --no-deps
 
 * To do a full install (not editable):
 

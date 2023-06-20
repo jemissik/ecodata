@@ -45,5 +45,5 @@ You may have to click "Show details" next to where it says "All checks have pass
 
     ```
     conda env update --name eco-dev --file ecodata-dev-env.yml --prune
-    python -m pip -e . --no-deps
+    python -m pip install -e . --no-deps
     ```
