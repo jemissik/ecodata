@@ -27,5 +27,5 @@ dependencies:
   - click
   - build
   # - panel-jstree  # panel needs to updated to >1 first
-#  - -e . --no-deps
+  - -e . --global-option="--no-deps"
 name: eco-dev
