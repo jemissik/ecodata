@@ -147,7 +147,6 @@ class Subsetter(param.Parameterized):
             self.option_picker,
             self.bbox_widgets,
             self.shared_widgets,
-            self.alert,
         )
 
     @try_catch()
@@ -215,8 +214,10 @@ class Subsetter(param.Parameterized):
 
 @register_view()
 def view():
+    viewer = Subsetter()
     template = DEFAULT_TEMPLATE(
-        main=Subsetter().view
+        main=viewer.view,
+        header=viewer.status_text
     )
     return template
 

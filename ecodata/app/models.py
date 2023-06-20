@@ -161,7 +161,7 @@ class KeyWatcher(pn.reactive.ReactiveHTML):
         return self.param.watch(callback, "value", onlychanged=False)
 
 
-class FileSelector(pn.widgets.FileSelector):
+class FileSelector(pn.widgets.CompositeWidget):
     """
     The `FileSelector` widget allows browsing the filesystem on the
     server and selecting one or more files in a directory.
@@ -235,14 +235,16 @@ class FileSelector(pn.widgets.FileSelector):
         directory beyond which users cannot navigate.""",
     )
 
-    # expanded = param.Boolean(
-    #     default=None,
-    #     allow_None=True,
-    #     doc="""
-    #     If the file selector is embedded in an expandable layout and expanded (True),
-    #     not expanded (False), or not embedded (None)
-    #     """,
-    # )
+    expanded = param.Boolean(
+        default=None,
+        allow_None=True,
+        doc="""
+        If the file selector is embedded in an expandable layout and expanded (True),
+        not expanded (False), or not embedded (None)
+        """,
+    )
+
+    _composite_type: ClassVar[Type[pn.layout.ListPanel]] = pn.Column
 
     @property
     def value(self):
@@ -290,18 +292,18 @@ class FileSelector(pn.widgets.FileSelector):
         self._cwd = None
         self._position = -1
         self._update_files(refresh=True)
-        # self._composite[:] = [self._nav_bar, pn.layout.Divider(margin=0), self._selector, ]
+        self._update_layout()
 
 
         # Set up callback
-        # self._control_button.on_click(self._update_layout)
+        self._control_button.on_click(self._update_layout)
         self.link(self._directory, directory="value")
         self._selector.param.watch(self._update_value, "value")
         self._directory.param.watch(self._dir_change, "value")
         self._selector.param.watch(self._select, "value")
         self._periodic = pn.io.PeriodicCallback(callback=self._refresh, period=self.refresh_period or 0)
         self.param.watch(self._update_periodic, "refresh_period")
-        # self.param.watch(self._update_layout, "expanded")
+        self.param.watch(self._update_layout, "expanded")
         if self.refresh_period:
             self._periodic.start()
 
@@ -318,34 +320,33 @@ class FileSelector(pn.widgets.FileSelector):
         return self.root_directory or self.directory
 
     def _update_layout(self, event: param.parameterized.Event = None):
-        # if self.expanded is not None:
-        #     # this func fires on expanded changing, so we don't want this change to be picked up
-        #     with param.parameterized.discard_events(self):
-        #         self.expanded = not self.expanded
-        #
-        # if self.expanded:
-        #     self._control_button.name = "Select File"
-        #     self._composite[:] = [
-        #         self._nav_bar,
-        #         self._control_button,
-        #     ]
-        # elif self.expanded is False:
-        #     self._control_button.name = "Close"
-        #     self._composite[:] = [
-        #         self._nav_bar,
-        #         pn.layout.Divider(margin=0),
-        #         self._selector,
-        #         pn.layout.Divider(margin=0),
-        #         self._control_button,
-        #     ]
-        # else:
-        # self._composite[:] = [
-        #     self._nav_bar,
-        #     pn.layout.Divider(margin=0),
-        #     self._selector,
-        #     pn.layout.Divider(margin=0),
-        # ]
-        self._composite[:] = [self._nav_bar, pn.layout.Divider(margin=0), self._selector, ]
+        if self.expanded is not None:
+            # this func fires on expanded changing, so we don't want this change to be picked up
+            with param.parameterized.discard_events(self):
+                self.expanded = not self.expanded
+
+        if self.expanded:
+            self._control_button.name = "Select File"
+            self._composite[:] = [
+                self._nav_bar,
+                self._control_button,
+            ]
+        elif self.expanded is False:
+            self._control_button.name = "Close"
+            self._composite[:] = [
+                self._nav_bar,
+                pn.layout.Divider(margin=0),
+                self._selector,
+                pn.layout.Divider(margin=0),
+                self._control_button,
+            ]
+        else:
+            self._composite[:] = [
+                self._nav_bar,
+                pn.layout.Divider(margin=0),
+                self._selector,
+                pn.layout.Divider(margin=0),
+            ]
 
     def _update_value(self, event: param.parameterized.Event):
         value = [v for v in event.new if not self.only_files or os.path.isfile(v)]

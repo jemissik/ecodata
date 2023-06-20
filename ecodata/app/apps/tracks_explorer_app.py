@@ -272,7 +272,7 @@ def view():
     template = DEFAULT_TEMPLATE(
         sidebar=[viewer.widgets],
         main=[viewer.plot_pane],
-        header=viewer.alert
+        header=viewer.status_text
     )
     return template
 

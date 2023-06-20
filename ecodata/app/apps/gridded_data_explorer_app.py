@@ -63,7 +63,7 @@ class Progress(Callback):
 
 class GriddedDataExplorer(param.Parameterized):
 
-    filein = param_widget(pn.widgets.FileSelector(constrain_path=False, expanded=True))
+    filein = param_widget(FileSelector(constrain_path=False, expanded=True))
     load_data_button = param_widget(
         pn.widgets.Button(button_type="primary", name="Load data")
     )
@@ -79,7 +79,7 @@ class GriddedDataExplorer(param.Parameterized):
         pn.widgets.Toggle(button_type="primary", name="Disable plotting")
     )
 
-    polyfile = param_widget(pn.widgets.FileSelector(constrain_path=False, expanded=True))
+    polyfile = param_widget(FileSelector(constrain_path=False, expanded=True))
     load_polyfile = param_widget(
         pn.widgets.Button(button_type="primary", name="Load data")
     )
@@ -285,11 +285,12 @@ class GriddedDataExplorer(param.Parameterized):
         self.dashboard_pane = pn.pane.HTML(sizing_mode="stretch_both", styles={"overflow": "auto"})
 
         self.ts_widget = pn.pane.Markdown("")
-        self.figs_with_widget = pn.layout.FloatPanel(
-            pn.Tabs(("Charts", self.plot_col), ("Data", self.ds_pane)),
-            name='Basic FloatPanel',
-            margin=20
-        )
+        # self.figs_with_widget = pn.layout.FloatPanel(
+        #     pn.Tabs(("Charts", self.plot_col), ("Data", self.ds_pane)),
+        #     name='Basic FloatPanel',
+        #     margin=20
+        # )
+        self.figs_with_widget = pn.Tabs(("Charts", self.plot_col), ("Data", self.ds_pane))
 
         self.view_objects = {
             "file_input_card": 1,
@@ -619,7 +620,7 @@ def view():
     template = DEFAULT_TEMPLATE(
         main=[viewer.figs_with_widget, viewer.view],
         sidebar=[viewer.sidebar],
-        header=viewer.alert
+        header=viewer.status_text
     )
     return template
 

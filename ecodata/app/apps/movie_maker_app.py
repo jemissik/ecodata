@@ -58,7 +58,7 @@ class MovieMaker(param.Parameterized):
 
         self.alert = pn.pane.Alert(self.status_text)
 
-        self.view = pn.Column(self.movie_widgets, self.alert)
+        self.view = pn.Column(self.movie_widgets)
 
     @try_catch()
     @param.depends("status_text", watch=True)
@@ -88,8 +88,10 @@ class MovieMaker(param.Parameterized):
 
 @register_view()
 def view():
+    viewer = MovieMaker()
     template = DEFAULT_TEMPLATE(
-        main=MovieMaker().view
+        main=viewer.view,
+        header=viewer.status_text
     )
     return template
 

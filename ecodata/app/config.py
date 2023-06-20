@@ -22,7 +22,7 @@ PALETTE = [
     "#17becf",
 ]
 
-DEFAULT_TEMPLATE: Type[pn.template.BaseTemplate] = pn.template.BootstrapTemplate
+DEFAULT_TEMPLATE: Type[pn.template.BaseTemplate] = pn.template.FastListTemplate
 
 
 def extension(
