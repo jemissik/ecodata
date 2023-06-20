@@ -3,36 +3,14 @@ channels:
 - conda-forge
 - defaults
 dependencies:
-- cartopy
-- geopandas
 - ipykernel
 - ipython
-- matplotlib
-- pandas
-- pip
-- python=3.9
-- shapely<2.0
-- xarray
-- dask=2023.4.0
-- netCDF4
-- bottleneck
-- cfgrib
-- rasterio
-- numpy<1.24  # numpy 1.24 is incompatible with numba
 - pyinstaller
-- conda-forge::rioxarray
-- pyviz::hvplot
-- pyviz::panel=0.14.4
-- pyviz::datashader
-- pyviz::geoviews
 - bokeh::jupyter_bokeh  # Enables interactive widgets in vscode
-- conda-forge::geocube
 - jupytext
 - nodejs>=14
-- conda-forge::ffmpeg
-- anaconda::git
-- conda-forge::gdown
 - conda-forge::jupyterlab
+- pip
 - pip:
   - black
   - conda-merge
@@ -48,6 +26,6 @@ dependencies:
   - sphinx-multiproject
   - click
   - build
-  - git+https://github.com/madeline-scyphers/panel-jstree.git
+  # - panel-jstree  # panel needs to updated to >1 first
   - -e .
 name: eco-dev
