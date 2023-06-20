@@ -37,7 +37,7 @@ jobs:
             use-mamba: true
 
       -   name: Update base environment
-          run: mamba env update -n eco-dev -f ecodata-dev-env.yml --prune
+          run: mamba env update -n eco-dev -f ecodata-dev-env.yml
 
       - name: Run tests
         shell: sh -l {0}
