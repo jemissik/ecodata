@@ -44,6 +44,5 @@ You may have to click "Show details" next to where it says "All checks have pass
 4. With the `eco-dev` environment activated, install the additional dev requirements (needed for docs, testing, code style, etc):
 
     ```
-    conda env update --name eco-dev --file ecodata-dev-env.yml --prune
-    python -m pip install -e . --no-deps
+    conda env update --name eco-dev --file ecodata-dev-env.yml
     ```
