@@ -46,6 +46,7 @@ jobs:
 
       -   name: Update base environment
           run: |
+            mambda activate eco-dev
             mamba env update -n eco-dev -f ecodata-dev-env.yml --prune
             python -m pip install . --no-deps
           if: steps.cache.outputs.cache-hit != 'true'
