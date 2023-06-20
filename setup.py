@@ -72,7 +72,8 @@ base_pkgs = process_file(BASE_ENV)
 
 dev_pkgs = [pkg for pkg in process_file(DEV_ENV) if pkg not in base_pkgs]
 
-print(base_pkgs)
+print("base packages:\n\n\n", base_pkgs)
+print("dev packages:\n\n\n", dev_pkgs)
 
 setup(
     install_requires=base_pkgs,
