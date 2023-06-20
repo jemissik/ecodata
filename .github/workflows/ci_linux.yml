@@ -46,6 +46,7 @@ jobs:
         id: cache
 
       -   name: Update base environment
+          shell: bash -l {0}
           run: |
             which python
             mamba env update -n eco-dev -f ecodata-dev-env.yml --prune
