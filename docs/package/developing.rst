@@ -5,7 +5,9 @@ Installation options
 --------------------
 * To install ecodata in editable mode::
 
-        conda env create --file ecodata-dev-env.yml
+        conda env create -n eco-dev --file ecodata-env.yml
+        conda activate eco-dev
+        conda env update -n eco-dev -f ecodata-dev-env.yml
 
 * To do a full install (not editable):
 

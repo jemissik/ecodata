@@ -20,8 +20,8 @@ After editing the pages, you can look at a build of the pages to see how things 
 You may have to click "Show details" next to where it says "All checks have passed"). You can push additional commits to the open PR if you want to change anything after seeing the preview build.
 - Option 2: Build the docs locally. You will need to have python and the docs requirements installed.
 
-    - To install the doc requirements: use the ecodata-dev-env.yml file in the root of the repository.
-    - Build the docs: Run ``PROJECT=apps sphinx-build -b html docs docs/_build/apps`` from the repo's root directory
+    - To install the doc requirements: [Developing Installation instructions](#developer-installation)
+    - Then Run ``PROJECT=apps sphinx-build -b html docs docs/_build/apps`` from the repo's root directory
     - To view the build, open the ``index.html`` in the docs/_build/apps directory that was created.
 
 ### Versions of the docs
@@ -44,5 +44,5 @@ You may have to click "Show details" next to where it says "All checks have pass
 4. With the `eco-dev` environment activated, install the additional dev requirements (needed for docs, testing, code style, etc):
 
     ```
-    conda env update --name eco-dev --file ecodata-dev-env.yml --prune
+    conda env update --name eco-dev --file ecodata-dev-env.yml
     ```
