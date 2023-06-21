@@ -24,5 +24,4 @@ dependencies:
 - pyviz::geoviews
 - conda-forge::geocube
 - conda-forge::ffmpeg
-- anaconda::git
 - conda-forge::gdown
