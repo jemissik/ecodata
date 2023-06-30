@@ -6,9 +6,9 @@ dependencies:
 - ipykernel
 - ipython
 - pyinstaller
+- bokeh<3
 - bokeh::jupyter_bokeh  # Enables interactive widgets in vscode
 - jupytext
-- nodejs>=14
 - conda-forge::jupyterlab
 - pytest
 - pip
@@ -27,6 +27,6 @@ dependencies:
   - sphinx-multiproject
   - click
   - build
-   - panel-jstree  # panel needs to updated to >1 first
+#   - panel-jstree  # panel needs to updated to >1 first
   - -e . --global-option="--no-deps"
 name: eco-dev
