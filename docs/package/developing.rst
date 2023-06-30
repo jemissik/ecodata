@@ -41,8 +41,6 @@ Once the release has been made, you will need the release's sha. You can get thi
 
     curl -sL https://github.com/jemissik/ecodata/archive/refs/tags/{tag of release}.tar.gz | openssl sha256
 
-
-
 Follow `Conda | example workflow for updating a package`_ for the `ecodata feedstock`_.
 
 You will often only need to update the version number and sha. But if any requirements were updated (added, removed, or version pin changes) those will need to be updated as well.
