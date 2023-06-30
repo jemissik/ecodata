@@ -1,8 +1,10 @@
 name: conda_constructor
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag of Release'
+        required: true
 
 jobs:
     unixlike:
@@ -61,6 +63,15 @@ jobs:
                     path: scripts/ecodata*
                     name: ecodata-${{ matrix.OS_NAME }}
 
+            -   name: Upload binaries to release
+                uses: svenstaro/upload-release-action@v2
+                with:
+                    repo_token: ${{ secrets.GITHUB_TOKEN }}
+                    file: scripts/ecodata*
+                    tag: ${{ inputs.tag }}
+                    overwrite: true
+                    file_glob: true
+
     windows:
         runs-on: windows-latest
         steps:
@@ -89,3 +100,12 @@ jobs:
               with:
                 path: scripts/ecodata*
                 name: ecodata-Windows
+
+            -   name: Upload binaries to release
+                uses: svenstaro/upload-release-action@v2
+                with:
+                    repo_token: ${{ secrets.GITHUB_TOKEN }}
+                    file: scripts/ecodata*
+                    tag: ${{ inputs.tag }}
+                    overwrite: true
+                    file_glob: true

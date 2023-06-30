@@ -34,13 +34,16 @@ jobs:
             miniforge-variant: Mambaforge
             miniforge-version: latest
             activate-environment: eco-dev
-            environment-file: ./ecodata-dev-env.yml
+            environment-file: ecodata-env.yml
             use-mamba: true
 
+      -   name: Update base environment
+          run: mamba env update -n eco-dev -f ecodata-dev-env.yml
+
       - name: Run tests
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: |
           pwd
-          conda list
+          mamba list
           pip freeze
           pytest -s

@@ -11,9 +11,9 @@ DEV_ENV = Path(__file__).resolve().parent / "ecodata-dev-env.yml"
 # also if you are installing a pkg from a git rep, you should remap it
 # to "git+https/etc": "pkg_name @ git+https/etc"
 pkg_renames = {
-    "git+https://github.com/madeline-scyphers/panel-jstree.git": (
-        "panel-jstree @ git+https://github.com/madeline-scyphers/panel-jstree.git"
-    )
+    "dask=2023.4.0": "dask==2023.4.0",
+    "panel=0.14.4": "panel==0.14.4"
+
 }
 
 
@@ -72,7 +72,8 @@ base_pkgs = process_file(BASE_ENV)
 
 dev_pkgs = [pkg for pkg in process_file(DEV_ENV) if pkg not in base_pkgs]
 
-print(base_pkgs)
+print("base packages:\n\n\n", base_pkgs)
+print("dev packages:\n\n\n", dev_pkgs)
 
 setup(
     install_requires=base_pkgs,

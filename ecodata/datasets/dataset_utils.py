@@ -111,10 +111,14 @@ def install_test_datasets():
 
     try:
         install_path.mkdir(exist_ok=True)
-        gdown.download_folder(url, output=str(install_path))
+        filenames = gdown.download_folder(url, output=str(install_path))
+        if not filenames:
+            raise IOError
         print("Installed test datasets.")
-    except BaseException as e:
-        print(f"\nFailed to install datasets because of {e!r}")
+    except IOError as e:
+        raise IOError(f"\nFailed to install datasets because of {e!r}."
+                      "\nThis is most likely because of API rate limiting."
+                      "\nPlease try again later.")
 
 
 def _remove_temp_downloads():
