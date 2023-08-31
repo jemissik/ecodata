@@ -5,20 +5,20 @@ Installation options
 --------------------
 * To install ecodata in editable mode::
 
-        conda env create -n eco-dev --file ecodata-env.yml
-        conda activate eco-dev
-        conda env update -n eco-dev -f ecodata-dev-env.yml
+        mamba env create -n eco-dev --file ecodata-env.yml
+        mamba activate eco-dev
+        mamba env update -n eco-dev -f ecodata-dev-env.yml
 
 * To do a full install (not editable):
 
   * Create a clean build environment (including only ecodata's requirements, not ecodata)::
 
-        conda env create --file ecodata-clean-build-env.yml
+        mamba env create --file ecodata-clean-build-env.yml
 
   * If you want to keep a copy of the clean environment, make a new copy where ecodata will be installed::
 
-        conda create --clone eco-build-clean --name eco-build
-        conda activate eco-build
+        mamba create --clone eco-build-clean --name eco-build
+        mamba activate eco-build
 
   * build and install ecodata (must be in the repository's root directory)::
 

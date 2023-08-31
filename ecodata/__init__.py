@@ -13,18 +13,20 @@ except ImportError:
 import ecodata.panel_utils  # noqa
 import ecodata.plotting  # noqa
 from ecodata.datasets import *  # noqa
+from ecodata.raster_utils import (
+    grib2nc,  # noqa
+    geotif2nc,  # noqa
+)
 from ecodata.functions import (
     bbox2poly,  # noqa
     clip_tracks_timerange,  # noqa
     combine_studies,  # noqa
-    geotif2nc,  # noqa
     get_crs,  # noqa
     get_extent,  # noqa
     get_file_info,  # noqa
     get_file_len,  # noqa
     get_geometry,  # noqa
     get_tracks_extent,  # noqa
-    grib2nc,  # noqa
     merge_tracks_ref,  # noqa
     plot_subset,  # noqa
     plot_subset_interactive,  # noqa
