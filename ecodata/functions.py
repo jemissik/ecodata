@@ -2,7 +2,6 @@
 See the notebooks in the examples section for demos of how these are used."""
 from __future__ import annotations
 
-import glob
 import re
 import warnings
 from pathlib import Path
@@ -56,24 +55,24 @@ def geotif2nc(data_dir, fileout):
     ----------
     data_dir : str or pathlib.Path
         Directory containing the tif files
-    fileout : str
+    fileout : str or pathlib.Path
         Output filename where the netcdf will be written
 
 
     Returns
     -------
     xarray.DataArray
-        DataArray of the
+        DataArray of the converted geotif data
     """
 
     # Get a list of the tif files in the data directory
-    filenames = glob.glob(str(Path(data_dir) / "*.tif"))
+    filenames = [str(f) for f in Path(data_dir).glob("*.tif")]
 
     # Create the time index from the filenames
     time = xr.Variable("time", time_index_from_filenames(filenames))
 
     # Concatenate to one dataset, and make sure it's sorted by time
-    ds = xr.concat([xr.open_rasterio(f) for f in filenames], dim=time)
+    ds = xr.concat([rioxarray.open_rasterio(f) for f in filenames], dim=time)
     ds = ds.sortby("time")
 
     # Save dataset to netcdf
@@ -83,9 +82,24 @@ def geotif2nc(data_dir, fileout):
 
 
 def time_index_from_filenames(filenames):
-    """Helper function to create a pandas DatetimeIndex from MODIS filenames
-    Note: this currently only works for MODIS filenames in the format:
-    MOD13A1.006__500m_16_days_NDVI_doy2021017_aid0001.tif"""
+    """
+    Helper function to create a pandas DatetimeIndex from MODIS filenames
+    Note: this is a specific test example that currently only works for MODIS filenames in the format:
+    MOD13A1.006__500m_16_days_NDVI_doy2021017_aid0001.tif.
+
+    .. todo::
+    - Needs to be generalized to take other filename formats.
+
+    Parameters
+    ----------
+    filenames : list[str]
+        List of .tif files to create the time index from
+
+    Returns
+    -------
+    pandas.DatetimeIndex
+        Time index parsed from the filenames
+    """
     return pd.DatetimeIndex([pd.to_datetime(f[-19:-12], format="%Y%j") for f in filenames])
 
 
