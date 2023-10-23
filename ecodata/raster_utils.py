@@ -8,8 +8,10 @@ from pathlib import Path
 import pandas as pd
 import rioxarray  # noqa
 import xarray as xr
-
-
+from datetime import datetime
+import calendar
+import os
+import io
 
 def grib2nc(filein, fileout):
     """
@@ -30,7 +32,7 @@ def grib2nc(filein, fileout):
     ds.to_netcdf(fileout)
 
 
-def geotif2nc(data_dir, fileout):
+def geotif2nc(data_dir, fileout, fileFormat):
     """
     Convert a stack of geotif files to an xarray object and saves to a netcdf file. Returns the xarray Dataset.
     Note: Currently only set up to handle MODIS geotif files.
@@ -48,40 +50,91 @@ def geotif2nc(data_dir, fileout):
     xarray.DataArray
         DataArray of the converted geotif data
     """
+    print("In the method")
+    tif_filenames = []
+    
+    # Iterate through the files in the directory
+    for filename in os.listdir(data_dir):
+        if filename.endswith(".tif"):
+            # If the file has a ".tif" extension, add its name to the list
+            tif_filenames.append(filename)
+    
+    # Print the list of ".tif" filenames
+    for filename in tif_filenames:
+        print(filename)
 
-    # Get a list of the tif files in the data directory
-    filenames = [str(f) for f in Path(data_dir).glob("*.tif")]
-
-    # Create the time index from the filenames
-    time = xr.Variable("time", time_index_from_filenames(filenames))
-
-    # Concatenate to one dataset, and make sure it's sorted by time
-    ds = xr.concat([rioxarray.open_rasterio(f) for f in filenames], dim=time)
-    ds = ds.sortby("time")
-
-    # Save dataset to netcdf
-    ds.to_netcdf(fileout)
-
-    return ds
+    time_index_from_filenames(tif_filenames, fileFormat, fileout);
 
 
-def time_index_from_filenames(filenames):
-    """
-    Helper function to create a pandas DatetimeIndex from MODIS filenames
-    Note: this is a specific test example that currently only works for MODIS filenames in the format:
-    MOD13A1.006__500m_16_days_NDVI_doy2021017_aid0001.tif.
+def time_index_from_filenames(filenames,  fileFormat, outputFile):
+    #array of file names. - filenames
+    #fileFormat - users file format
+    #output - file you write to.
 
-    .. todo::
-    - Needs to be generalized to take other filename formats.
+    dateTime = []
 
-    Parameters
-    ----------
-    filenames : list[str]
-        List of .tif files to create the time index from
+    def extract_date_time(originalFileName):
+        user_input = fileFormat #combac to this
+        dateString = ""
+        if user_input.count('#') > 0:
+            first_index = user_input.find('#')
+            last_index = user_input.rfind('#')
+            year = originalFileName[first_index:last_index+1]
+            if user_input.count('#') == 4:
+                actualYear = datetime.strptime(year, "%Y").year
+                print(actualYear)
+                dateString += str(actualYear) + " "
+            elif fileFormat.count('#') == 2:
+                if int(year) >= 0 and int(year) <= 29:
+                    year = "20" + year
+                else:
+                    year = "19" + year
+                actualYear = datetime.strptime(year, "%Y")
+                print(actualYear.strftime("%Y"))
+                # adds tothe string
+                dateString += actualYear.strftime("%Y")
 
-    Returns
-    -------
-    pandas.DatetimeIndex
-        Time index parsed from the filenames
-    """
-    return pd.DatetimeIndex([pd.to_datetime(f[-19:-12], format="%Y%j") for f in filenames])
+        if user_input.count('%') > 0:
+            first_index = user_input.find('%')
+            last_index = user_input.rfind('%')
+            date = originalFileName[first_index:last_index+1]
+            actualDay = datetime.strptime(date, "%j")
+            print(actualDay.strftime("%B %d"))
+            dateString += actualDay.strftime("%B %d")
+
+        if user_input.count('&') > 0:
+            first_index = user_input.find('&')
+            last_index = user_input.rfind('&')
+            month_str = originalFileName[first_index:last_index+1]
+            month_int = int(month_str)
+            month_abbreviation = calendar.month_abbr[month_int]
+            print(f"Month is {month_abbreviation}")
+            dateString += month_abbreviation
+
+        if user_input.count('$') > 0:
+            first_index = user_input.find('$')
+            last_index = user_input.rfind('$')
+            day_str = originalFileName[first_index:last_index+1]
+            print(f"day is {day_str}")
+            dateString += day_str
+
+        dateTime.append(dateString)
+
+    def process_files():
+        text_format = fileFormat
+        if text_format:
+            if filenames:
+                for index, value in enumerate(filenames):
+
+                    print(f"Index {index}: {value}")
+                    extract_date_time(value)
+
+                print(dateTime)
+            else:
+                print("No files selected.")
+        else:
+            print("Fill in the text format field.")
+
+
+
+    
