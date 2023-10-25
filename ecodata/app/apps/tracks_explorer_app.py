@@ -133,14 +133,13 @@ class TracksExplorer(param.Parameterized):
         )
 
         self.widgets = pn.Column(
-            # self.file_card,
-            pn.Card(FileSelector("~", expanded=None), self.load_tracks_button),
+            self.file_card,
             self.output_fname,
             self.save_tracks_extent_button,
             sizing_mode="stretch_height"
         )
 
-        self.alert = pn.pane.Alert(self.status_text)
+        self.alert = pn.pane.Markdown(self.status_text)
 
         # # Add view
         # self.view = pn.Column(
@@ -268,9 +267,9 @@ class TracksExplorer(param.Parameterized):
 def view():
     viewer = TracksExplorer()
     template = DEFAULT_TEMPLATE(
-        sidebar=[viewer.widgets],
-        main=[viewer.plot_pane],
-        header=viewer.status_text
+        sidebar=[viewer.options_col],
+        main=[viewer.plot_pane, viewer.widgets],
+        header=viewer.alert
     )
     return template
 

@@ -139,7 +139,7 @@ class Subsetter(param.Parameterized):
             "status": 5,
         }
 
-        self.alert = pn.pane.Alert(self.status_text)
+        self.alert = pn.pane.Markdown(self.status_text)
 
         self.view = pn.Column(
             pn.pane.Markdown("## Create a subset!"),
@@ -217,7 +217,7 @@ def view():
     viewer = Subsetter()
     template = DEFAULT_TEMPLATE(
         main=viewer.view,
-        header=viewer.status_text
+        header=viewer.alert
     )
     return template
 

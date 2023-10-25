@@ -56,7 +56,7 @@ class MovieMaker(param.Parameterized):
         # View
         self.view_objects = {"movie_widgets": 0, "status": 1}
 
-        self.alert = pn.pane.Alert(self.status_text)
+        self.alert = pn.pane.Markdown(self.status_text)
 
         self.view = pn.Column(self.movie_widgets)
 
@@ -91,7 +91,7 @@ def view():
     viewer = MovieMaker()
     template = DEFAULT_TEMPLATE(
         main=viewer.view,
-        header=viewer.status_text
+        header=viewer.alert
     )
     return template
 

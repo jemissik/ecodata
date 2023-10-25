@@ -256,7 +256,7 @@ class GriddedDataExplorer(param.Parameterized):
 
         self.save_stats_widgets[:] = [pn.Row(self.stats_fname, self.save_stats), self.stats]
 
-        self.alert = pn.pane.Alert(self.status_text)
+        self.alert = pn.pane.Markdown(self.status_text)
 
         # View
 
