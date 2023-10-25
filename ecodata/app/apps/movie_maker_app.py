@@ -90,7 +90,7 @@ class MovieMaker(param.Parameterized):
 def view():
     viewer = MovieMaker()
     template = DEFAULT_TEMPLATE(
-        main=viewer.view,
+        main=[viewer.view],
         header=viewer.alert
     )
     return template

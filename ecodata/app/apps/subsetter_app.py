@@ -216,7 +216,7 @@ class Subsetter(param.Parameterized):
 def view():
     viewer = Subsetter()
     template = DEFAULT_TEMPLATE(
-        main=viewer.view,
+        main=[viewer.view],
         header=viewer.alert
     )
     return template
