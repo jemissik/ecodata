@@ -42,11 +42,9 @@ from ecodata.app.config import DEFAULT_TEMPLATE
 
 # from panel_jstree.widgets.jstree import FileTree
 
-
 class TracksExplorer(param.Parameterized):
-
     load_tracks_button = param_widget(pn.widgets.Button(button_type="primary", name="Load data"))
-    tracksfile = param_widget(FileSelector(constrain_path=False, expanded=None))
+    tracksfile = param_widget(FileSelector(expanded=None))
 
     # filetree = param_widget(FileTree("/Users/jmissik/Desktop/repos.nosync/ecodata/ecodata/datasets/user_datasets",
     # select_multiple=False))
@@ -136,7 +134,7 @@ class TracksExplorer(param.Parameterized):
 
         self.widgets = pn.Column(
             # self.file_card,
-            pn.Card(FileSelector("~"), self.load_tracks_button),
+            pn.Card(FileSelector("~", expanded=None), self.load_tracks_button),
             self.output_fname,
             self.save_tracks_extent_button,
             sizing_mode="stretch_height"
