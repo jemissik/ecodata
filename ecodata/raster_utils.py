@@ -24,7 +24,7 @@ def grib2nc(filein, fileout):
     fileout : str
         Output filename where the .nc file will be written
     """
-
+    
     # Read the .grib file using xarray and the cfgrib engine
     ds = xr.load_dataset(filein, engine="cfgrib")
 
@@ -43,39 +43,71 @@ def geotif2nc(data_dir, fileout, fileFormat):
         Directory containing the tif files
     fileout : str or pathlib.Path
         Output filename where the netcdf will be written
-
+    fileFormat : str (added this)
+        Holds the file format that is used to extract date
 
     Returns
     -------
     xarray.DataArray
         DataArray of the converted geotif data
     """
-    print("In the method")
-    tif_filenames = []
+    # print("In the method", flush=True)
+    filenamesTIF = []
     
-    # Iterate through the files in the directory
-    for filename in os.listdir(data_dir):
-        if filename.endswith(".tif"):
-            # If the file has a ".tif" extension, add its name to the list
-            tif_filenames.append(filename)
+    filenamesTIF = [str(f) for f in Path(data_dir).glob("*.tif")]
+
+    time = xr.Variable("time", time_index_from_filenames(filenamesTIF, fileFormat, fileout))
     
-    # Print the list of ".tif" filenames
-    for filename in tif_filenames:
-        print(filename)
+    ds = xr.concat([rioxarray.open_rasterio(f) for f in filenamesTIF], dim=time)
+    ds = ds.sortby("time")
+    ds.to_netcdf(fileout)
+    
+    return ds
 
-    time_index_from_filenames(tif_filenames, fileFormat, fileout);
+def time_index_from_filenames(filenames,  fileFormat):
+    
+    """
+    Helper function to create a pandas DatetimeIndex from MODIS filenames
+    Note: this is a specific test example that currently only works for MODIS filenames in the format:
+    MOD13A1.006__500m_16_days_NDVI_doy2021017_aid0001.tif.
 
+    .. todo::
+    - Needs to extract the time as well
 
-def time_index_from_filenames(filenames,  fileFormat, outputFile):
-    #array of file names. - filenames
-    #fileFormat - users file format
-    #output - file you write to.
-
+    Parameters
+    ----------
+    filenames : list[str]
+        List of .tif files to create the time index from
+    fileFormart : str
+        Used to find the placement of date in the filenames
+    
+    Returns
+    -------
+    pandas.DatetimeIndex
+        Time index parsed from the filenames
+    """
+        
+    finalFiles = []
+    
+    for file_path in filenames:
+        # fileNameSplit = file_path.split("\\")
+        if(file_path.count('/') > 0):
+            fileNameSplit = file_path.split("/")
+        elif(file_path.count('\\') > 0):
+            fileNameSplit = file_path.split("\\")
+        # fileNameSplit = file_path.split("/") #this doesn't work?
+        finalFiles.append(fileNameSplit[len(fileNameSplit) - 1])
+        # result_label.config(text=f"Selected File: {fileNames}")
+        
     dateTime = []
 
     def extract_date_time(originalFileName):
-        user_input = fileFormat #combac to this
+        user_input = fileFormat
         dateString = ""
+        finalDate = ""
+        finalMonth = ""
+        finalYear = ""
+        finalTime = ""
         if user_input.count('#') > 0:
             first_index = user_input.find('#')
             last_index = user_input.rfind('#')
@@ -83,8 +115,9 @@ def time_index_from_filenames(filenames,  fileFormat, outputFile):
             if user_input.count('#') == 4:
                 actualYear = datetime.strptime(year, "%Y").year
                 print(actualYear)
-                dateString += str(actualYear) + " "
-            elif fileFormat.count('#') == 2:
+                # dateString += str(actualYear)
+                finalYear = str(actualYear)
+            elif file_format.count('#') == 2:
                 if int(year) >= 0 and int(year) <= 29:
                     year = "20" + year
                 else:
@@ -92,49 +125,50 @@ def time_index_from_filenames(filenames,  fileFormat, outputFile):
                 actualYear = datetime.strptime(year, "%Y")
                 print(actualYear.strftime("%Y"))
                 # adds tothe string
-                dateString += actualYear.strftime("%Y")
+                # dateString += actualYear.strftime("%Y")
+                finalYear = actualYear.strftime("%Y")
 
         if user_input.count('%') > 0:
             first_index = user_input.find('%')
             last_index = user_input.rfind('%')
             date = originalFileName[first_index:last_index+1]
+            print(date)
             actualDay = datetime.strptime(date, "%j")
-            print(actualDay.strftime("%B %d"))
-            dateString += actualDay.strftime("%B %d")
+            if(user_input.count('%') == 3):
+                # dateString += actualDay.strftime("-%m-%d")
+                finalDate = actualDay.strftime("-%d")
+                finalMonth = actualDay.strftime("-%m")
 
         if user_input.count('&') > 0:
             first_index = user_input.find('&')
             last_index = user_input.rfind('&')
             month_str = originalFileName[first_index:last_index+1]
             month_int = int(month_str)
-            month_abbreviation = calendar.month_abbr[month_int]
-            print(f"Month is {month_abbreviation}")
-            dateString += month_abbreviation
+            finalMonth = "-"+month_str
 
         if user_input.count('$') > 0:
             first_index = user_input.find('$')
             last_index = user_input.rfind('$')
             day_str = originalFileName[first_index:last_index+1]
             print(f"day is {day_str}")
-            dateString += day_str
+            # dateString += day_str
+            finalDate = "-"+day_str
 
-        dateTime.append(dateString)
+        dateString = finalYear + finalMonth + finalDate
+        dateTime.append(pd.to_datetime(dateString))
 
     def process_files():
         text_format = fileFormat
         if text_format:
-            if filenames:
-                for index, value in enumerate(filenames):
-
-                    print(f"Index {index}: {value}")
+            if finalFiles:
+                for index, value in enumerate(finalFiles):
+                    # print(f"Index {index}: {value}")
                     extract_date_time(value)
-
-                print(dateTime)
+                # print(dateTime)
             else:
                 print("No files selected.")
         else:
             print("Fill in the text format field.")
-
-
-
-    
+            
+    process_files()
+    return pd.DatetimeIndex(dateTime)
