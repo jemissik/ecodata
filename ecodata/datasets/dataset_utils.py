@@ -2,11 +2,14 @@
 Datasets for ecodata
 """
 
+import logging
 import os
 import shutil
 from pathlib import Path
 
 import gdown
+
+logger = logging.getLogger(__file__)
 
 __all__ = ["available", "get_path", "install_roads_dataset"]
 
@@ -112,9 +115,9 @@ def install_test_datasets():
     try:
         install_path.mkdir(exist_ok=True)
         gdown.download_folder(url, output=str(install_path))
-        print("Installed test datasets.")
+        logger.info("Installed test datasets.")
     except BaseException as e:
-        print(f"\nFailed to install datasets because of {e!r}")
+        logger.exception(f"\nFailed to install datasets because of {e!r}")
 
 
 def _remove_temp_downloads():
@@ -123,12 +126,12 @@ def _remove_temp_downloads():
     """
     download_path = Path(_module_path) / "user_datasets/temp_downloads"
     if os.path.exists(download_path) and os.listdir(download_path):
-        print("Found partially downloaded files in ecodata.datasets.")
+        logger.info("Found partially downloaded files in ecodata.datasets.")
         while True:
             response = input("Do you want to delete these files before you download a new dataset? [y/n]")
             if response.lower() == "y":
                 shutil.rmtree(download_path)
-                print("Removed files.")
+                logger.info("Removed files.")
                 break
             elif response.lower() == "n":
                 break

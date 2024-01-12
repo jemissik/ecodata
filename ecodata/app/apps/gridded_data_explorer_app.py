@@ -14,7 +14,7 @@ from panel.reactive import ReactiveHTML, Viewable
 from dask.diagnostics import ProgressBar, Callback
 
 import ecodata as eco
-from ecodata.panel_utils import param_widget, register_view, try_catch
+from ecodata.panel_utils import param_widget, register_view, try_catch, rename_param_widgets
 from ecodata.plotting import plot_avg_timeseries, plot_gridded_data, GriddedPlotWithSlider
 from ecodata.xr_tools import detect_varnames, set_time_encoding_modis
 from ecodata.app.models import SimpleDashboardCard, FileSelector
@@ -102,7 +102,7 @@ class GriddedDataExplorer(param.Parameterized):
     # Polygon selection
     selection_type = param_widget(
         pn.widgets.RadioBoxGroup(
-            name="Selection options", options={"Select within boundary": False, "Mask within boundary": True}
+            name="Polygon Selection Options", options={"Select within boundary": False, "Mask within boundary": True}
         )
     )
 
@@ -182,16 +182,34 @@ class GriddedDataExplorer(param.Parameterized):
         super().__init__(**params)
 
         # Reset names for panel widgets
-        self.load_data_button.name = "Load data"
-        self.disable_plotting_button.name = "Disable plotting"
-        self.timevar.name = "Time"
-        self.latvar.name = "Latitude"
-        self.lonvar.name = "Longitude"
-        self.zvar.name = "Variable of interest"
-        self.vars_to_save.name = "Variables to save"
-        self.update_varnames.name = "Update variable selections"
-
-        self.load_polyfile.name = "Load file"
+        rename_param_widgets(
+            self,
+            [
+                "load_data_button",
+                "disable_plotting_button",
+                "timevar",
+                "latvar",
+                "lonvar",
+                "zvar",
+                "vars_to_save",
+                "update_varnames",
+                "load_polyfile",
+                "selection_type",
+                "update_filters",
+                "revert_filters",
+                "rs_time_quantity",
+                "rs_time_unit",
+                "rs_time",
+                "space_coarsen_factor",
+                "rs_space",
+                "group_selector",
+                "calculate_stats",
+                "output_fname",
+                "save_ds",
+                "stats_fname",
+                "save_stats",
+            ]
+        )
 
         # commas at the end are necessary for endpoints to be
         self.year_range = pn.widgets.EditableRangeSlider(
@@ -215,20 +233,6 @@ class GriddedDataExplorer(param.Parameterized):
         self.dayofyear_selection = pn.widgets.MultiChoice()
         self.hour_selection = pn.widgets.MultiChoice()
 
-        self.selection_type.name = "Polygon selection options"
-        self.update_filters.name = "Update filters"
-        self.revert_filters.name = "Revert filters"
-        self.rs_time_quantity.name = "Amount"
-        self.rs_time_unit.name = "Time unit"
-        self.rs_time.name = "Resample time"
-        self.space_coarsen_factor.name = "Window size"
-        self.rs_space.name = "Coarsen dataset"
-        self.group_selector.name = "Groupings"
-        self.calculate_stats.name = "Calculate statistics"
-        self.output_fname.name = "Output file"
-        self.save_ds.name = "Save dataset"
-        self.stats_fname.name = "Output file for statistics"
-        self.save_stats.name = "Save statistics"
 
         # Progress bar and percent for saving
         self.progress_indicator = pn.indicators.Progress(name='Progress', height=20, bar_color="success", visible=False)

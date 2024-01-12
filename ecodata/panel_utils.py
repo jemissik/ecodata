@@ -53,6 +53,11 @@ def param_widget(panel_widget):
     return param.ClassSelector(class_=pn.widgets.Widget, default=panel_widget)
 
 
+def rename_param_widgets(cls_instance, widgets: list[str]):
+    for widget_str in widgets:
+        getattr(cls_instance, widget_str).name = getattr(cls_instance.__class__, widget_str).name
+
+
 def select_file():
     """
     Get filepath from native os GUI file selector, using Tkinter

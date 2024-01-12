@@ -10,7 +10,7 @@ from ecodata.panel_utils import (
     make_mp4_from_frames,
     param_widget,
     register_view,
-    try_catch,
+    try_catch, rename_param_widgets,
 )
 from ecodata.app.models import FileSelector
 
@@ -40,11 +40,16 @@ class MovieMaker(param.Parameterized):
     def __init__(self, **params):
         super().__init__(**params)
 
-        # Reset names
-        self.frames_dir.name = "Frames directory"
-        self.output_file.name = "Output file"
-        self.frame_rate.name = "Frame rate"
-        self.go_button.name = "Make movie!"
+        # Reset names for panel widgets
+        rename_param_widgets(
+            self,
+            [
+                "frames_dir",
+                "output_file",
+                "frame_rate",
+                "go_button",
+            ]
+        )
 
         # Widget groups
         self.movie_widgets = pn.Card(

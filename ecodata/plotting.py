@@ -3,23 +3,25 @@ import hvplot.xarray  # noqa
 import param
 import panel as pn
 from ecodata.panel_utils import param_widget
+import geoviews as gv
 
-map_tile_options = [
-    None,
-    "CartoDark",
-    "CartoLight",
-    "EsriImagery",
-    "EsriNatGeo",
-    "EsriReference",
-    "EsriTerrain",
-    "EsriUSATopo",
-    "OSM",
-    "StamenTerrain",
-    "StamenTerrainRetina",
-    "StamenToner",
-    "StamenTonerBackground",
-    "StamenWatercolor",
-]
+map_tile_options = list(gv.tile_sources.tile_sources.keys())
+# map_tile_options = [
+#     None,
+#     "CartoDark",
+#     "CartoLight",
+#     "EsriImagery",
+#     "EsriNatGeo",
+#     "EsriReference",
+#     "EsriTerrain",
+#     "EsriUSATopo",
+#     "OSM",
+#     "StamenTerrain",
+#     "StamenTerrainRetina",
+#     "StamenToner",
+#     "StamenTonerBackground",
+#     "StamenWatercolor",
+# ]
 
 
 def plot_tracks_with_tiles(
