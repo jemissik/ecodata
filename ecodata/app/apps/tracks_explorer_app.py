@@ -241,8 +241,8 @@ def view():
     viewer = TracksExplorer()
     template = DEFAULT_TEMPLATE(
         sidebar=[viewer.options_col],
-        main=[viewer.plot_pane, viewer.widgets],
-        header=viewer.alert
+        main=[viewer.alert, viewer.plot_pane, viewer.widgets],
+        # header=viewer.alert
     )
     return template
 

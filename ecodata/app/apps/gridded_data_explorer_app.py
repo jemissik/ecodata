@@ -618,13 +618,12 @@ class GriddedDataExplorer(param.Parameterized):
         # self.progress_indicator.value = 100
 
 
-@register_view('floatpanel')
+@register_view(ext_args=['floatpanel'])
 def view():
     viewer = GriddedDataExplorer()
     template = DEFAULT_TEMPLATE(
-        main=[viewer.figs_with_widget, viewer.view],
+        main=[viewer.alert, viewer.figs_with_widget, viewer.view],
         sidebar=[viewer.sidebar],
-        header=viewer.status_text
     )
     return template
 

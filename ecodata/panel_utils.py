@@ -18,7 +18,7 @@ import panel as pn
 import param
 
 from ecodata.app.assets import get_link_list_html, list_links_html, menu_fast_html
-from ecodata.app.config import extension, format_tempalte
+from ecodata.app.config import extension, format_tempalte, DEFAULT_TEMPLATE
 
 Servable = Union[Callable, pn.viewable.Viewable]
 
@@ -174,8 +174,8 @@ def make_mp4_from_frames(frames_dir, output_file, frame_rate):
     return output_file
 
 
-def register_view(*ext_args, url=None, name=None, ext_dict=None, **template_format_kw):
-    ext_dict = {} if ext_dict is None else ext_dict
+def register_view(url=None, name=None, ext_kw=None, *, ext_args, **template_format_kw):
+    ext_kw = {} if ext_kw is None else ext_kw
     # grab url of as filename of calling file if not supplied
     url = url or Path(inspect.stack()[1].filename).stem  # file name of calling file
     # grab name for app from url
@@ -199,7 +199,7 @@ def register_view(*ext_args, url=None, name=None, ext_dict=None, **template_form
         def wrapper(*args, **kwargs):
             # create app and template at run time so that each is a fresh app
             # to prevent bleed over effects where to stack on top of each other
-            extension(*ext_args, **ext_dict)
+            pn.extension(*ext_args, **ext_kw)
             template = view(*args, **kwargs)
             format_tempalte(template, name=name, **template_format_kw)
 
