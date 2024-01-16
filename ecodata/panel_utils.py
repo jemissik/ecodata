@@ -174,7 +174,7 @@ def make_mp4_from_frames(frames_dir, output_file, frame_rate):
     return output_file
 
 
-def register_view(url=None, name=None, ext_kw=None, *, ext_args, **template_format_kw):
+def register_view(url=None, name=None, ext_kw=None, ext_args=(), **template_format_kw):
     ext_kw = {} if ext_kw is None else ext_kw
     # grab url of as filename of calling file if not supplied
     url = url or Path(inspect.stack()[1].filename).stem  # file name of calling file
