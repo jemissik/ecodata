@@ -1,33 +1,4 @@
-# ---
-# jupyter:
-#   jupytext:
-#     text_representation:
-#       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
-#       jupytext_version: 1.14.0
-#   kernelspec:
-#     display_name: Python 3 (ipykernel)
-#     language: python
-#     name: python3
-# ---
-
-# %% [markdown]
-# # Tracks explorer GUI
-#
-# - Read in track data
-# - Exploratory plot of track data
-# - Save extent as geojson
-#
-# To do:
-# - Add buffer for tracks extent
-# - Add option for envelope or hull
-#
-#
-
 from pathlib import Path
-
-# %%
 import geopandas as gpd
 import hvplot.pandas  # noqa
 import hvplot.xarray  # noqa
@@ -36,16 +7,16 @@ import param
 
 import ecodata as eco
 from ecodata.app.models import PMVCard, FileSelector
-from ecodata.panel_utils import param_widget, register_view, templater, try_catch
+from ecodata.panel_utils import param_widget, register_view, try_catch, rename_param_widgets
 from ecodata.plotting import map_tile_options, plot_tracks_with_tiles
+from ecodata.app.config import DEFAULT_TEMPLATE
 
 # from panel_jstree.widgets.jstree import FileTree
 
 
 class TracksExplorer(param.Parameterized):
-
     load_tracks_button = param_widget(pn.widgets.Button(button_type="primary", name="Load data"))
-    tracksfile = param_widget(FileSelector(constrain_path=False, expanded=None))
+    tracksfile = param_widget(FileSelector(expanded=None))
 
     # filetree = param_widget(FileTree("/Users/jmissik/Desktop/repos.nosync/ecodata/ecodata/datasets/user_datasets",
     # select_multiple=False))
@@ -85,7 +56,7 @@ class TracksExplorer(param.Parameterized):
             value=True,
         )
     )
-    map_tile = param_widget(pn.widgets.Select(options=map_tile_options, value="StamenTerrain", name="Map tile"))
+    map_tile = param_widget(pn.widgets.Select(options=map_tile_options, value="EsriWorldStreetMap", name="Map tile"))
 
     plot_pane = param.ClassSelector(
         class_=pn.pane.HoloViews,
@@ -106,19 +77,20 @@ class TracksExplorer(param.Parameterized):
         super().__init__(**params)
 
         # Reset names for panel widgets
-        self.load_tracks_button.name = "Load data"
-        self.tracksfile.name = "Track file"
-        # self.filetree.name = 'Track file'
-        # self.filetree = FileTree("/Users/jmissik/Desktop/repos.nosync/ecodata/ecodata/datasets/user_datasets",
-        # select_multiple=False)
-        self.output_fname.name = "Output file"
-        # self.output_file_button.name = 'Choose output file'
-        self.save_tracks_extent_button.name = "Save extent"
-        self.tracks_boundary_shape.name = "Boundary shape"
-        self.boundary_update.name = "Create boundary"
-        self.tracks_buffer.name = "Buffer size"
-        self.ds_checkbox.name = "Datashade tracks"
-        self.map_tile.name = "Map tile"
+        rename_param_widgets(
+            self,
+            [
+                "load_tracks_button",
+                "tracksfile",
+                "output_fname",
+                "save_tracks_extent_button",
+                "tracks_boundary_shape",
+                "boundary_update",
+                "tracks_buffer",
+                "ds_checkbox",
+                "map_tile",
+            ]
+        )
 
         self.file_card = PMVCard(
             self.tracksfile,
@@ -133,15 +105,14 @@ class TracksExplorer(param.Parameterized):
             self.boundary_update,
         )
 
-        self.widgets = pn.WidgetBox(
+        self.widgets = pn.Column(
             self.file_card,
-            # self.options_card,
-            # self.output_file_button,
             self.output_fname,
             self.save_tracks_extent_button,
+            sizing_mode="stretch_height"
         )
 
-        self.alert = pn.pane.Alert(self.status_text)
+        self.alert = pn.pane.Markdown(self.status_text)
 
         # # Add view
         # self.view = pn.Column(
@@ -150,11 +121,11 @@ class TracksExplorer(param.Parameterized):
         #         pn.pane.Alert(self.status_text),
         #         sizing_mode="stretch_both")
         # Add view
-        self.view[:] = [
-            pn.Row(self.plot_pane),
-            self.widgets,
-            self.alert,
-        ]
+        # self.view[:] = [
+        #     pn.Row(self.plot_pane),
+        #     self.widgets,
+        #     self.alert,
+        # ]
 
     @try_catch()
     @param.depends("load_tracks_button.value", watch=True)  # depends on load_tracks_button
@@ -249,7 +220,7 @@ class TracksExplorer(param.Parameterized):
             frame_width=600,
             active_tools=["wheel_zoom"],
         )
-        self.options_col.objects = [
+        self.options_col[:] = [
             self.tracks_boundary_shape,
             self.tracks_buffer,
             self.boundary_update,
@@ -266,13 +237,19 @@ class TracksExplorer(param.Parameterized):
 
 
 @register_view()
-def view(app):
+def view():
     viewer = TracksExplorer()
-    return templater(app.template, main=[viewer.view], sidebar=[viewer.options_col])
+    template = DEFAULT_TEMPLATE(
+        sidebar=[viewer.options_col],
+        main=[viewer.alert, viewer.plot_pane, viewer.widgets],
+        # header=viewer.alert
+    )
+    return template
+
 
 
 if __name__ == "__main__":
-    pn.serve({"tracks_explorer_app": view})
+    pn.serve({Path(__file__).name: view})
 
 if __name__.startswith("bokeh"):
     view()

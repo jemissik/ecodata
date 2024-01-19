@@ -33,7 +33,7 @@ jobs:
             miniforge-variant: Mambaforge
             miniforge-version: latest
             activate-environment: eco
-            environment-file: environment-clean-build.yml
+            environment-file: ecodata-env.yml
             use-mamba: true
 
       - name: Install package

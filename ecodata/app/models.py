@@ -1,24 +1,18 @@
 from __future__ import annotations
 
 import os
-from typing import AnyStr, ClassVar, Optional, Type
+from typing import AnyStr, ClassVar, Type
 from pathlib import Path
 
 import panel as pn
 import param
 import webbrowser
-from panel.io import PeriodicCallback
-from panel.layout import Column, Divider, ListPanel, Row
 from panel.util import fullpath
-from panel.viewable import Layoutable
-from panel.widgets.input import TextInput
 
 from ecodata.app import config
-from ecodata.panel_utils import param_widget, try_catch
+from ecodata.panel_utils import param_widget
 
 from distributed.dashboard.components.scheduler import TaskProgress
-from distributed.dashboard.components.shared import SystemMonitor
-from dask.distributed import LocalCluster
 
 
 class SimpleDashboardCard(param.Parameterized):
@@ -221,7 +215,7 @@ class FileSelector(pn.widgets.CompositeWidget):
     )
 
     constrain_path = param.Boolean(
-        default=True,
+        default=False,
         doc="""
         If True, will constrain the user to only go to subdirectories of directory
         or root_directory (if set).
@@ -279,7 +273,7 @@ class FileSelector(pn.widgets.CompositeWidget):
             for p in pn.viewable.Layoutable.param
             if p not in ("name", "height", "margin") and getattr(self, p) is not None
         }
-        sel_layout = dict(layout, sizing_mode="stretch_both", height=None, margin=0)
+        sel_layout = dict(layout, sizing_mode="stretch_width", )
         self._control_button = pn.widgets.Button(name="Select File")
 
         self._selector = pn.widgets.MultiSelect(size=self.size, **sel_layout)
@@ -403,7 +397,6 @@ class FileSelector(pn.widgets.CompositeWidget):
             elif os.path.isfile(check):
                 files.append(s)
 
-        paths = []
         paths = []
         for p in sorted(dirs) + sorted(files):
             if os.path.relpath(p, self._cwd).startswith("."):

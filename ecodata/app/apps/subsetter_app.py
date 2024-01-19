@@ -23,7 +23,8 @@ from panel.io.loading import start_loading_spinner, stop_loading_spinner
 # %% pycharm={"name": "#%%\n"}
 import ecodata as eco
 from ecodata.app.models import FileSelector
-from ecodata.panel_utils import param_widget, register_view, templater, try_catch
+from ecodata.panel_utils import param_widget, register_view, try_catch, rename_param_widgets
+from ecodata.app.config import DEFAULT_TEMPLATE
 
 logger = logging.getLogger(__file__)
 
@@ -94,21 +95,27 @@ class Subsetter(param.Parameterized):
     def __init__(self, **params):
         super().__init__(**params)
 
-        # Reset names
-        self.input_file.name = "GIS file"
-        self.buffer.name = "Buffer size"
-        self.clip.name = "Clip features at boundary edge"
-        self.output_file.name = "Output file"
-        self.bbox_latmin.name = "Lat min"
-        self.bbox_latmax.name = "Lat max"
-        self.bbox_lonmin.name = "Lon min"
-        self.bbox_lonmax.name = "Lon max"
-        self.tracks_file.name = "Track points file"
-        self.boundary_type_tracks.name = "Boundary type"
-        self.bounding_geom_file.name = "Bounding geometry file"
-        self.boundary_type_geom.name = "Boundary type"
-        self.show_plot.name = "Show plot of subset"
-        self.create_subset_button.name = "Create subset"
+
+        # Reset names for panel widgets
+        rename_param_widgets(
+            self,
+            [
+                "input_file",
+                "buffer",
+                "clip",
+                "output_file",
+                "bbox_latmin",
+                "bbox_latmax",
+                "bbox_lonmin",
+                "bbox_lonmax",
+                "tracks_file",
+                "boundary_type_tracks",
+                "bounding_geom_file",
+                "boundary_type_geom",
+                "show_plot",
+                "create_subset_button",
+            ]
+        )
 
         # Widget groups
         self.bbox_widgets = pn.Column(
@@ -138,7 +145,7 @@ class Subsetter(param.Parameterized):
             "status": 5,
         }
 
-        self.alert = pn.pane.Alert(self.status_text)
+        self.alert = pn.pane.Markdown(self.status_text)
 
         self.view = pn.Column(
             pn.pane.Markdown("## Create a subset!"),
@@ -146,7 +153,6 @@ class Subsetter(param.Parameterized):
             self.option_picker,
             self.bbox_widgets,
             self.shared_widgets,
-            self.alert,
         )
 
     @try_catch()
@@ -213,13 +219,16 @@ class Subsetter(param.Parameterized):
 
 
 @register_view()
-def view(app):
+def view():
     viewer = Subsetter()
-    return templater(app.template, main=[viewer.view])
+    template = DEFAULT_TEMPLATE(
+        main=[viewer.alert, viewer.view],
+    )
+    return template
 
 
 if __name__ == "__main__":
-    pn.serve({"subsetter_app": view})
+    pn.serve({Path(__file__).name: view})
 
 
 if __name__.startswith("bokeh"):
