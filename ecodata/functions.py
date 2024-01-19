@@ -2,7 +2,6 @@
 See the notebooks in the examples section for demos of how these are used."""
 from __future__ import annotations
 
-import glob
 import re
 import warnings
 from pathlib import Path
@@ -26,67 +25,6 @@ fiona.drvsupport.supported_drivers["KML"] = "rw"
 fiona.drvsupport.supported_drivers["LIBKML"] = "rw"
 
 TRACK_CRS = "EPSG:4326"
-
-
-def grib2nc(filein, fileout):
-    """
-    Converts .grib files from ECMWF to .nc format.
-
-    Parameters
-    ----------
-    filein : str
-        .grib file to convert
-    fileout : str
-        Output filename where the .nc file will be written
-    """
-
-    # Read the .grib file using xarray and the cfgrib engine
-    ds = xr.load_dataset(filein, engine="cfgrib")
-
-    # Write the dataset to a netcdf file
-    ds.to_netcdf(fileout)
-
-
-def geotif2nc(data_dir, fileout):
-    """
-    Convert a stack of geotif files to an xarray object and saves to a netcdf file. Returns the xarray Dataset.
-    Note: Currently only set up to handle MODIS geotif files.
-
-    Parameters
-    ----------
-    data_dir : str or pathlib.Path
-        Directory containing the tif files
-    fileout : str
-        Output filename where the netcdf will be written
-
-
-    Returns
-    -------
-    xarray.DataArray
-        DataArray of the
-    """
-
-    # Get a list of the tif files in the data directory
-    filenames = glob.glob(str(Path(data_dir) / "*.tif"))
-
-    # Create the time index from the filenames
-    time = xr.Variable("time", time_index_from_filenames(filenames))
-
-    # Concatenate to one dataset, and make sure it's sorted by time
-    ds = xr.concat([xr.open_rasterio(f) for f in filenames], dim=time)
-    ds = ds.sortby("time")
-
-    # Save dataset to netcdf
-    ds.to_netcdf(fileout)
-
-    return ds
-
-
-def time_index_from_filenames(filenames):
-    """Helper function to create a pandas DatetimeIndex from MODIS filenames
-    Note: this currently only works for MODIS filenames in the format:
-    MOD13A1.006__500m_16_days_NDVI_doy2021017_aid0001.tif"""
-    return pd.DatetimeIndex([pd.to_datetime(f[-19:-12], format="%Y%j") for f in filenames])
 
 
 def subset_data(

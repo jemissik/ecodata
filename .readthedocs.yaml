@@ -9,10 +9,11 @@ build:
     python: "mambaforge-4.10"
   jobs:
     post_install:
-    - conda list
+      - conda env update --name ${READTHEDOCS_VERSION} --file ecodata-dev-env.yml
+      - conda list
 
 conda:
-  environment: ecodata-dev-env.yml
+ environment: ecodata-env.yml
 
 # Build all downloadable formats
 formats: all

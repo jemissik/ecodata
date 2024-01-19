@@ -11,7 +11,7 @@ import gdown
 
 logger = logging.getLogger(__file__)
 
-__all__ = ["available", "get_path", "install_roads_dataset"]
+__all__ = ["available", "get_path", "install_test_datasets"]
 
 _module_path = Path(__file__).parent
 
@@ -114,10 +114,14 @@ def install_test_datasets():
 
     try:
         install_path.mkdir(exist_ok=True)
-        gdown.download_folder(url, output=str(install_path))
+        filenames = gdown.download_folder(url, output=str(install_path))
+        if not filenames:
+            raise IOError
         logger.info("Installed test datasets.")
-    except BaseException as e:
-        logger.exception(f"\nFailed to install datasets because of {e!r}")
+    except IOError as e:
+        raise IOError(f"\nFailed to install datasets because of {e!r}."
+                      "\nThis is most likely because of API rate limiting."
+                      "\nPlease try again later.")
 
 
 def _remove_temp_downloads():
