@@ -25,5 +25,5 @@ dependencies:
 - conda-forge::geocube
 - conda-forge::pyproj
 - conda-forge::ffmpeg
-- anaconda::git
+- git
 - conda-forge::gdown<4.6  # gdown 4.6.something has a problem with our gdrive files
