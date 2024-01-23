@@ -20,7 +20,9 @@ When it opens, it will display the main panel, showing the four apps. Click on a
 * Gridded Data Explorer App: <http://localhost:5006/gridded_data_explorer_app>
 * Subsetter App: <http://localhost:5006/subsetter_app>
 * Movie Maker App: <http://localhost:5006/movie_maker_app>
-* TimeExtractor App: <http://localhost:5006/timeExtractor>
+
+<!-- Added this to display timeExtractor -->
+* Time Extractor App: <http://localhost:5006/time_extractor_app>
 
 ![ecodata-prepare_panel](../images/ecodata-prepare_panel.png)
 

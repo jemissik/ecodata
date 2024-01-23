@@ -90,7 +90,6 @@ class MovieMaker(param.Parameterized):
 def view(app):
     return templater(app.template, main=[MovieMaker().view])
 
-
 if __name__ == "__main__":
     pn.serve({"movie_maker_app": view})
 

@@ -58,7 +58,7 @@ def geotif2nc(data_dir, fileout, filename_format):
 
     # Get a list of the tif files in the data directory
     filenames = [str(f) for f in Path(data_dir).glob("*.tif")]
-
+    
     # Create the time index from the filenames
     time = xr.Variable("time", time_index_from_filenames(filenames, filename_format))
 
@@ -118,7 +118,7 @@ def time_index_from_filenames(filenames,  fileFormat):
                 # print(actualYear)
                 # dateString += str(actualYear)
                 finalYear = str(actualYear)
-            elif file_format.count('#') == 2:
+            elif user_input.count('#') == 2:
                 if int(year) >= 0 and int(year) <= 29:
                     year = "20" + year
                 else:
@@ -170,9 +170,7 @@ def time_index_from_filenames(filenames,  fileFormat):
         if text_format:
             if finalFiles:
                 for index, value in enumerate(finalFiles):
-                    # print(f"Index {index}: {value}")
                     extract_date_time(value)
-                # print(dateTime)
             else:
                 print("No files selected.")
         else:
