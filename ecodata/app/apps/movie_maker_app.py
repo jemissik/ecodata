@@ -5,12 +5,12 @@ import panel as pn
 import param
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
 
+from ecodata.app.config import DEFAULT_TEMPLATE
 from ecodata.panel_utils import (
     make_mp4_from_frames,
     param_widget,
     register_view,
-    templater,
-    try_catch,
+    try_catch, rename_param_widgets,
 )
 from ecodata.app.models import FileSelector
 
@@ -40,11 +40,16 @@ class MovieMaker(param.Parameterized):
     def __init__(self, **params):
         super().__init__(**params)
 
-        # Reset names
-        self.frames_dir.name = "Frames directory"
-        self.output_file.name = "Output file"
-        self.frame_rate.name = "Frame rate"
-        self.go_button.name = "Make movie!"
+        # Reset names for panel widgets
+        rename_param_widgets(
+            self,
+            [
+                "frames_dir",
+                "output_file",
+                "frame_rate",
+                "go_button",
+            ]
+        )
 
         # Widget groups
         self.movie_widgets = pn.Card(
@@ -56,9 +61,9 @@ class MovieMaker(param.Parameterized):
         # View
         self.view_objects = {"movie_widgets": 0, "status": 1}
 
-        self.alert = pn.pane.Alert(self.status_text)
+        self.alert = pn.pane.Markdown(self.status_text)
 
-        self.view = pn.Column(self.movie_widgets, self.alert)
+        self.view = pn.Column(self.movie_widgets)
 
     @try_catch()
     @param.depends("status_text", watch=True)
@@ -87,11 +92,15 @@ class MovieMaker(param.Parameterized):
 
 
 @register_view()
-def view(app):
-    return templater(app.template, main=[MovieMaker().view])
+def view():
+    viewer = MovieMaker()
+    template = DEFAULT_TEMPLATE(
+        main=[viewer.alert, viewer.view],
+    )
+    return template
 
 if __name__ == "__main__":
-    pn.serve({"movie_maker_app": view})
+    pn.serve({Path(__file__).name: view})
 
 if __name__.startswith("bokeh"):
     view()

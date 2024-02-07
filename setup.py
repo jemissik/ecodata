@@ -12,8 +12,6 @@ DEV_ENV = Path(__file__).resolve().parent / "ecodata-dev-env.yml"
 # to "git+https/etc": "pkg_name @ git+https/etc"
 pkg_renames = {
     "dask=2023.4.0": "dask==2023.4.0",
-    "panel=0.14.4": "panel==0.14.4"
-
 }
 
 

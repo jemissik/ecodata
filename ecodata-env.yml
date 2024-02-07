@@ -18,11 +18,12 @@ dependencies:
 - rasterio
 - numpy<1.24  # numpy 1.24 is incompatible with numba
 - conda-forge::rioxarray
-- pyviz::hvplot
-- bokeh<3
-- pyviz::panel=0.14.4
-- pyviz::datashader
-- pyviz::geoviews
+- hvplot
+- panel>=1
+- datashader
+- geoviews>=1.10
 - conda-forge::geocube
+- conda-forge::pyproj
 - conda-forge::ffmpeg
-- conda-forge::gdown
+- git
+- conda-forge::gdown<4.6  # gdown 4.6.something has a problem with our gdrive files

@@ -6,7 +6,6 @@ dependencies:
 - ipykernel
 - ipython
 - pyinstaller
-- bokeh<3
 - bokeh::jupyter_bokeh  # Enables interactive widgets in vscode
 - jupytext
 - conda-forge::jupyterlab
