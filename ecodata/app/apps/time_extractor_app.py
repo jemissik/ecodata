@@ -35,7 +35,7 @@ class TimeExtractor(param.Parameterized):
     go_button = param_widget(pn.widgets.Button(name="Extract Time", button_type="primary"))
         
     # Status
-    status_text = param.String("Ready... \nReplaces numbers YEAR = '#' | DAY OF THE YEAR = '%' | MONTH = '&'| DAY OF MONTH = '$'")
+    status_text = param.String("Ready... \nReplaces numbers YEAR = '#' | DAY OF THE YEAR = '%' | MONTH = '&'| DAY OF MONTH = '$'. \nExample = MOD13A1.006__500m_16_days_NDVI_doy2020353_aid0001 to MOD13A1.006__500m_16_days_NDVI_doy####%%%_aid0001.")
 
     def __init__(self, **params):
         super().__init__(**params)
