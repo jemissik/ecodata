@@ -35,7 +35,7 @@ class TimeExtractor(param.Parameterized):
     go_button = param_widget(pn.widgets.Button(name="Extract Time", button_type="primary"))
         
     # Status
-    status_text = param.String("Ready...")
+    status_text = param.String("Ready... \nReplaces numbers YEAR = '#' | DAY OF THE YEAR = '%' | MONTH = '&'| DAY OF MONTH = '$'")
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -74,7 +74,7 @@ class TimeExtractor(param.Parameterized):
     @try_catch()
     @param.depends("go_button.clicks", watch=True)
     def extract_time(self):
-        self.status_text = "Extracting time..."
+        self.status_text = "Extracting time... \nReplaces numbers YEAR = '#' | DAY OF THE YEAR = '%' | MONTH = '&'| DAY OF MONTH = '$'"
         start_loading_spinner(self.view)
 
         try:

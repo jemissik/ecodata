@@ -96,9 +96,7 @@ def time_index_from_filenames(filenames,  fileFormat):
 
     for file_path in filenames:
         fileNameSplit = file_path.split("\\")
-        # fileNameSplit = file_path.split("/") #this doesn't work?
         finalFiles.append(fileNameSplit[len(fileNameSplit) - 1])
-        # result_label.config(text=f"Selected File: {fileNames}")
 
     dateTime = []
 
@@ -115,8 +113,6 @@ def time_index_from_filenames(filenames,  fileFormat):
             year = originalFileName[first_index:last_index+1]
             if user_input.count('#') == 4:
                 actualYear = datetime.strptime(year, "%Y").year
-                # print(actualYear)
-                # dateString += str(actualYear)
                 finalYear = str(actualYear)
             elif user_input.count('#') == 2:
                 if int(year) >= 0 and int(year) <= 29:
@@ -124,9 +120,6 @@ def time_index_from_filenames(filenames,  fileFormat):
                 else:
                     year = "19" + year
                 actualYear = datetime.strptime(year, "%Y")
-                # print(actualYear.strftime("%Y"))
-                # adds tothe string
-                # dateString += actualYear.strftime("%Y")
                 finalYear = actualYear.strftime("%Y")
 
         if user_input.count('%') > 0:
@@ -136,30 +129,20 @@ def time_index_from_filenames(filenames,  fileFormat):
             # print(date)
             actualDay = datetime.strptime(date, "%j")
             if(user_input.count('%') == 3):
-                # dateString += actualDay.strftime("-%m-%d")
                 finalDate = actualDay.strftime("-%d")
                 finalMonth = actualDay.strftime("-%m")
-            # else:
-            #     # dateString += "-" + actualDay.strftime("-%d")
-            #     finalDate = actualDay.strftime("-%d")
-            # dateString += str(actualDay)
 
         if user_input.count('&') > 0:
             first_index = user_input.find('&')
             last_index = user_input.rfind('&')
             month_str = originalFileName[first_index:last_index+1]
             month_int = int(month_str)
-            # month_abbreviation = calendar.month_abbr[month_int]
-            # print(f"Month is {month_abbreviation}")
-            # dateString += "-"+month_str
             finalMonth = "-"+month_str
 
         if user_input.count('$') > 0:
             first_index = user_input.find('$')
             last_index = user_input.rfind('$')
             day_str = originalFileName[first_index:last_index+1]
-            # print(f"day is {day_str}")
-            # dateString += day_str
             finalDate = "-"+day_str
 
         dateString = finalYear + finalMonth + finalDate
