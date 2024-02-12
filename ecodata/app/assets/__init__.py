@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import pathlib
 from typing import Union
-from bokeh.models import Box
-
 
 import jinja2
 import panel as pn
