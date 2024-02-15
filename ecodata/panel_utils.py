@@ -4,6 +4,7 @@ import functools
 import inspect
 import logging
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -146,11 +147,24 @@ def sanitize_filepath(filepath: str):
     return str(Path(filepath).absolute().resolve())
 
 
-def make_mp4_from_frames(frames_dir, output_file, frame_rate):
+def make_mp4_from_frames(frames_dir, output_file, frame_rate, start_frame=None, end_frame=None):
+
     frames_pattern = "Frame%d.png"
     temp_output_file = "output.mp4"
 
     frames_dir_sanitized = Path(frames_dir).absolute().resolve()
+
+    frames = list(sorted(frames_dir_sanitized.glob("Frame*.png")))
+    logger.info(f"Found {len(frames)} frames in {frames_dir_sanitized}")
+    if not frames:
+        raise ValueError(f"No frames with file pattern {frames_pattern} found in {frames_dir_sanitized}")
+
+    if start_frame is None:
+        start_frame = int(re.search(r"Frame(\d+)", str(frames[0].stem)).group(1))
+    if end_frame is None:
+        n_frames = len(frames)
+    else:
+        n_frames = end_frame - start_frame + 1
 
     if Path(output_file).root == "":
         output_file = frames_dir_sanitized / output_file
@@ -161,9 +175,9 @@ def make_mp4_from_frames(frames_dir, output_file, frame_rate):
         print("Moving to frames directory...")
         os.chdir(frames_dir_sanitized)
         print(f"In directory: {os.getcwd()}")
-        cmd = f"""ffmpeg -framerate {frame_rate} -i {frames_pattern}
-        -vf pad='width=ceil(iw/2)*2:height=ceil(ih/2)*2'
-        -c:v libx264 -pix_fmt yuv420p -y {temp_output_file} """
+        cmd = f"""ffmpeg -start_number {start_frame} -framerate {frame_rate} -i {frames_pattern} -frames:v {n_frames}
+        -vf pad='width=ceil(iw/2)*2:height=ceil(ih/2)*2' -c:v libx265 -pix_fmt yuv420p -tag:v hvc1
+        -y {temp_output_file}"""
 
         subprocess.run(split_shell_command(cmd))
         print("ffmpeg done!")
