@@ -2,25 +2,26 @@ name: eco
 channels:
 - conda-forge
 dependencies:
-- python=3.11
+- python=3.12
 - cartopy
-- geopandas
+- geopandas<1.1
 - matplotlib
-- pandas
-- shapely<2.0
-- xarray
-- dask
+- pandas>2.0,<2.3
+- shapely>2.0,<=2.1
+- xarray<=2025.03.1
+- dask<=2025.3.0
 - netCDF4
 - bottleneck
 - cfgrib
 - rasterio
-- numpy<1.24  # numpy 1.24 is incompatible with numba
-- rioxarray
-- hvplot
-- bokeh<3.4
-- panel>=1,<1.4
+- numpy>=2,<3
+- rioxarray<0.19
+- hvplot<0.12
+- bokeh<4
+- panel>=1.6,<1.7
 - datashader
 - geoviews>=1.10
 - geocube
 - ffmpeg
+- fiona
 - gdown<4.6  # gdown 4.6.something has a problem with our gdrive files
