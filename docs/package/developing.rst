@@ -9,22 +9,6 @@ Installation options
         mamba activate eco-dev
         mamba env update -n eco-dev -f ecodata-dev-env.yml
 
-* To do a full install (not editable):
-
-  * Create a clean build environment (including only ecodata's requirements, not ecodata)::
-
-        mamba env create --file ecodata-clean-build-env.yml
-
-  * If you want to keep a copy of the clean environment, make a new copy where ecodata will be installed::
-
-        mamba create --clone eco-build-clean --name eco-build
-        mamba activate eco-build
-
-  * build and install ecodata (must be in the repository's root directory)::
-
-        python -m build
-        pip install dist/ecodata-0.0.0.tar.gz
-
 
 Package Building
 --------------------

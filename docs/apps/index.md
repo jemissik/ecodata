@@ -22,7 +22,49 @@ For help, submit a GitHub issue or contact XXXXX.
 
 ## Python package
 
-The functions underlying the ECODATA-Prepare apps can also be used directly as a python package (i.e. without the GUI inferface). The package documentation is here
+The functions underlying the ECODATA-Prepare apps can also be used directly as a python package (i.e. without the GUI inferface). The package documentation is XXXXX
+
+## Reviewers: How to Install and Run the Anonymous Version of the Code
+
+You will need to have conda installed on your computer. If you are on Windows, sometimes the Anaconda terminal needs to be run as an administrator when installing packages, depending on how your system is set up.
+
+With conda installed, from the root of the repository, run the following command to install all of the dependencies:
+
+```bash
+conda env create --file ecodata-env.yml
+````
+
+Then activate the environment:
+
+```bash
+conda activate eco
+```
+
+To install the test data bundle, run the following command:
+
+```bash
+python -c "import ecodata as eco; eco.install_test_datasets()"
+```
+
+Which will install the test data bundle under {repo dir}/ecodata/datasets/test_datasets
+
+To run the app, run the following command:
+
+```bash
+python -m ecodata.app
+```
+
+This should automatically launch the app in your default web browser. If it doesn't, you can manually navigate to `http://localhost:5006` in your web browser. 
+
+From here, you can choose which app you want to run. The test data bundle includes example data for each of the apps, which you can use to test the functionality of the app. Once you click on an app, it should load the app up, and clicking Home in the top left corner will take you back to the app selection page.
+
+For the Gridded Data Explorer App, you can also use {repo dir}/ecodata/datasets/test_datasets/NASA_public_caribou.nc for the dataset. Load the dataset, and select a variable of interest, then create the plot. Then use {repo dir}/ecodata/datasets/test_datasets/public_caribou_lakes/public_caribou_lakes.shp for the polygon file, which with the filters on the left allow masking of the first dataset.
+
+For the Tracks Explorer App, you can use {repo dir}/ecodata/datasets/test_datasets/public_caribou_tracks.csv
+
+For the Subsetter App, you can use {repo dir}/ecodata/datasets/test_datasets/public_caribou_lakes/public_caribou_lakes.shp for the initial dataset, and then create a bounding box, bounding geometry, or if you want to use track points, you can use {repo dir}/ecodata/datasets/test_datasets/public_caribou_tracks.csv
+
+For the Movie Maker App, you can use {repo dir}/ecodata/datasets/test_datasets/animation_test_frames for the test animation frames
 
 # Contents
 
