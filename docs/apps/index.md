@@ -1,5 +1,9 @@
 # Welcome to ECODATA-Prepare!
 
+This anonymized version of the repository is submitted as part of a double-blind peer review. Note that identifying
+information, including links to online documentation, respsitories, and datasets, has been removed from the code and
+documentation.
+
 ## Overview
 
 ECODATA-Prepare is a set of Python-based apps to access and process remote sensing and other environmental data products and prepare them for further use along with animal movement data. ECODATA-Prepare is designed to be used along with the ECODATA-Animate tool to create customized movies of animal movement data, and can also be used to prepare input to resource, habitat and step selection models. Development is supported by MathWorks® and the NASA Earth Science Division, Ecological Forecasting Program, as part of XXXXX project.
