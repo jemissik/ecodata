@@ -21,7 +21,7 @@ environment.
 
 ### Download ecodata
 
-Clone the ecodata repository from [ecodata's GitHub page](https://github.com/jemissik/ecodata/).
+Clone the ecodata repository from ecodata's GitHub page.
 
 ### Install ecodata and its dependencies
 

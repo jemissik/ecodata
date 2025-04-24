@@ -39,7 +39,7 @@ The following steps currently only work with full releases
 
 Once the release has been made, you will need the release's sha. You can get this from the github release with this command from a linux or mac (replace {tag of release} with the actual tag::
 
-    curl -sL https://github.com/jemissik/ecodata/archive/refs/tags/{tag of release}.tar.gz | openssl sha256
+    curl -sL XXXXX | openssl sha256
 
 Follow `Conda | example workflow for updating a package`_ for the `ecodata feedstock`_.
 
@@ -55,4 +55,4 @@ In the ecodata repo actions tab, click on the conda_constructor CI tab on the le
 
 
 .. _`Conda | example workflow for updating a package`: https://conda-forge.org/docs/maintainer/updating_pkgs.html#example-workflow-for-updating-a-package
-.. _`ecodata feedstock`: https://github.com/conda-forge/ecodata-feedstock
+.. _`ecodata feedstock`: XXXXX

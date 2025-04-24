@@ -10,7 +10,7 @@ With the Movie Maker App, you can
 
 ## Using the app
 
-1. Paste the full path to a folder of images to use as frames of the animation. You can create these frames using [ECODATA-Animate](https://www.movebank.org/cms/movebank-content/ecodata#ecodata-animate). Make sure there are no other files in the folder.
+1. Paste the full path to a folder of images to use as frames of the animation. You can create these frames using ECODATA-Animate. Make sure there are no other files in the folder.
 2. Select the frame rate for the video, in frames per second.
 3. Optionally, change the filename and filepath defining where to save the output.
 4. Click "Make movie". The movie will be saved as a .mp4 file in the selected folder. Be sure not to change the folder location or name while the app is processing.

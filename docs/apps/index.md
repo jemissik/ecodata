@@ -2,7 +2,7 @@
 
 ## Overview
 
-ECODATA-Prepare is a set of Python-based apps to access and process remote sensing and other environmental data products and prepare them for further use along with animal movement data. ECODATA-Prepare is designed to be used along with the [ECODATA-Animate](https://ecodata-animate.readthedocs.io/en/latest/) tool to create customized movies of animal movement data, and can also be used to prepare input to resource, habitat and step selection models. Development is supported by MathWorks® and the NASA Earth Science Division, Ecological Forecasting Program, as part of [Room to Roam: Y2Y Wildlife Movements](https://ceg.osu.edu/Y2Y_Room2Roam) project.
+ECODATA-Prepare is a set of Python-based apps to access and process remote sensing and other environmental data products and prepare them for further use along with animal movement data. ECODATA-Prepare is designed to be used along with the ECODATA-Animate tool to create customized movies of animal movement data, and can also be used to prepare input to resource, habitat and step selection models. Development is supported by MathWorks® and the NASA Earth Science Division, Ecological Forecasting Program, as part of XXXXX project.
 
 Within ECODATA-Prepare,
 
@@ -14,15 +14,15 @@ Within ECODATA-Prepare,
 
 - The [**Movie Maker App**](user_guide/movie_maker) produces an animation file out of a stack of static maps which were produced by the ECODATA-Animate program.
 
-[Read our overview](https://www.movebank.org/cms/movebank-content/ecodata#how_to_use_ecodata) of how to use Movebank, MoveApps, ECODATA-Animate and ECODATA-Prepare to discover and process tracking data, remote sensing data, shapefiles and other layers to create custom visualizations and input for ecological analysis. To try the software before working with your own data, see [our example](https://www.movebank.org/cms/movebank-content/ecodata#example_ecodata_animation) based on publicly-available data sources.
+XXXXX of how to use Movebank, MoveApps, ECODATA-Animate and ECODATA-Prepare to discover and process tracking data, remote sensing data, shapefiles and other layers to create custom visualizations and input for ecological analysis. To try the software before working with your own data, see our example based on publicly-available data sources.
 
-For help, [submit a GitHub issue](https://ecodata-apps.readthedocs.io/en/latest/support.html) or contact support@movebank.org.
+For help, submit a GitHub issue or contact XXXXX.
 
 ![ecodata_workflow](https://www.movebank.org/cms/serve/images/ecodata_workflow.png)
 
 ## Python package
 
-The functions underlying the ECODATA-Prepare apps can also be used directly as a python package (i.e. without the GUI inferface). The package documentation is [here](https://ecodata.readthedocs.io).
+The functions underlying the ECODATA-Prepare apps can also be used directly as a python package (i.e. without the GUI inferface). The package documentation is here
 
 # Contents
 

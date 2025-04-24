@@ -6,14 +6,14 @@
 Download installers for the latest release:
 | OS             | Architecture          | Download                                                                                                                        |
 |----------------|-----------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| Windows        | x86_64                | [ecodata-0.2.7-Windows-x86_64](https://github.com/jemissik/ecodata/releases/latest/download/ecodata-0.2.7-Windows-x86_64.exe)   |
-| macOS 14       | arm64 (Apple Silicon) | [ecodata-0.2.7-MacOSX-arm64.pkg](https://github.com/jemissik/ecodata/releases/latest/download/ecodata-0.2.7-MacOSX-arm64.pkg)   |
-| `(*)` macOS 13 | x86_64                | [ecodata-0.2.7-MacOSX-x86_64.pkg](https://github.com/jemissik/ecodata/releases/latest/download/ecodata-0.2.7-MacOSX-x86_64.pkg) |
-| Linux          | x86_64                | [ecodata-0.2.7-Linux-x86_64.sh](https://github.com/jemissik/ecodata/releases/latest/download/ecodata-0.2.7-Linux-x86_64.sh)     |
+| Windows        | x86_64                | XXXXX |
+| macOS 14       | arm64 (Apple Silicon) | XXXXX |
+| `(*)` macOS 13 | x86_64                | XXXXX |
+| Linux          | x86_64                | XXXXX |
 
 `(*)` Use this installer for all Macs that are **not** an Apple Silicon (M-series) Mac running macOS 14 (i.e., use for all x86 (Intel chip) Macs, or any Mac running macOS 13).
 
-Relase notes for the latest release can be found <a href="https://github.com/jemissik/ecodata/releases/latest" target="_blank">here</a>, along with all available installers. Command line (.sh) installers for Mac are also available. You can see all releases (including previous versions and pre-releases) <a href="https://github.com/jemissik/ecodata/releases/" target="_blank">here</a>.
+Relase notes for the latest release can be found XXXXX
 
 1. Download the correct installer for your operating system.
 2. Run the installer and follow the prompts. You can change the default installation location if you wish. This installation location is where the program files will be installed (i.e., files not intended to be accessed by the user after installation). If you have a previous version already installed in the default location, you will need to remove the previous version before installing the new version, or install the new version in a different location.
@@ -29,7 +29,7 @@ The apps can also be installed from the command line. If you have issues with th
 computer's security settings are preventing the installer from running), you can use this method as a backup.
 
 ### Install using conda (recommended)
-ECODATA is [available on conda-forge](https://anaconda.org/conda-forge/ecodata) and can be installed directly using conda. This method requires installing conda.
+ECODATA is available on conda-forge and can be installed directly using conda. This method requires installing conda.
 
 #### Install ECODATA using conda
 1. Download and install Miniconda. [See instructions for installing Miniconda and download installers here](https://docs.anaconda.com/free/miniconda/index.html). If you already have conda installed, you can skip this step.
@@ -40,7 +40,7 @@ ECODATA is [available on conda-forge](https://anaconda.org/conda-forge/ecodata) 
     **Windows**: Run the commands from the Anaconda Powershell Prompt (this was installed by Miniconda). You can find this by
     searching for "Anaconda Powershell Prompt" in the Start menu.
 
-    You can check that your conda installation was successful by running `conda list`. If conda has been installed correctly, a list of installed packages appears.
+    You can check that your Conda installation was successful by running `conda list`. If Conda has been installed correctly, a list of installed packages will appear.
 
 3. Install ECODATA in a new conda environment:
 
@@ -103,7 +103,7 @@ conda activate eco
 conda list ecodata
 ```
 
-You can see new releases on the [releases page](https://github.com/jemissik/ecodata/releases)
+You can see new releases on the releases page
 
 If you want to install a new release, you can update your version of the apps by running the command below:
 
@@ -152,7 +152,7 @@ The apps are still under development, and installation will be simplified soon!
     You should see the environment file in the output, for example:
 
     ```bash
-        Directory: C:\Users\jmissik\Downloads
+        Directory: XXXXX
 
 
     Mode                LastWriteTime       Length Name
@@ -189,14 +189,14 @@ If your directory has many files, replace "ls" with "ls -lt" to sort files by th
 
     ```bash
     conda activate eco
-    pip install git+https://github.com/jemissik/ecodata.git@main
+    pip install XXXXXt@main
     ```
 
-After the installation is complete, you can [get started](https://ecodata-apps.readthedocs.io/en/latest/user_guide/index.html#).
+After the installation is complete, you can get started
 
 #### Launch using Anaconda
 
-If you have [installed Anadonda](https://ecodata-apps.readthedocs.io/en/latest/installation.html#install-using-anaconda-alternative-method) (Anaconda PowerShell for Windows, Anaconda Navigator for Mac), you can also launch ECODATA-Prepare through this program.
+If you have installed Anadonda (Anaconda PowerShell for Windows, Anaconda Navigator for Mac), you can also launch ECODATA-Prepare through this program.
 
 To launch in Windows,
 

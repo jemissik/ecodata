@@ -6,7 +6,7 @@ ECODATA-Prepare is a set of four Python-based apps to read, process, and create 
 * a .csv file of tracking data, in Movebank’s .csv format
 * NetCDF files of environmental data (you can [order these](../environmental_data) from NASA or ECMWF)
 * shapefiles
-* a folder of sequentially-numbered .png files that are frames for an animation (you can create these with [ECODATA-Animate](https://ecodata-animate.readthedocs.io/en/latest/))
+* a folder of sequentially-numbered .png files that are frames for an animation (you can create these with ECODATA-Animate
 
 If needed, see the [installation instructions](../installation) to install or update the program.
 

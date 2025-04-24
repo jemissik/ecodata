@@ -18,7 +18,6 @@ class TracksExplorer(param.Parameterized):
     load_tracks_button = param_widget(pn.widgets.Button(button_type="primary", name="Load data"))
     tracksfile = param_widget(FileSelector(expanded=None))
 
-    # filetree = param_widget(FileTree("/Users/jmissik/Desktop/repos.nosync/ecodata/ecodata/datasets/user_datasets",
     # select_multiple=False))
     # file_selector = param_widget(FileSelector("~", root_directory="/"))
 

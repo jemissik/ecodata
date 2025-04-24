@@ -1,7 +1,7 @@
 # User guide
 
 ```{tip}
-Want a downloadable version of the docs? This documentation is also [available for download](https://readthedocs.org/projects/ecodata-apps/downloads/) as a PDF, Epub, or zipped HTML.
+Want a downloadable version of the docs? This documentation is also available for download as a PDF, Epub, or zipped HTML.
 ```
 
 ## Contents

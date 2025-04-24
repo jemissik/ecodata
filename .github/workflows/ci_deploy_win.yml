@@ -38,5 +38,5 @@ jobs:
           cd ~
           pwd
           ls
-          pip install git+https://github.com/jemissik/ecodata.git@${{ github.sha }}
+          pip install XXXXX{{ github.sha }}
           python -c 'import ecodata; print(ecodata.available()); import ecodata.app.apps.tracks_explorer_app'

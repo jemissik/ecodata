@@ -14,8 +14,8 @@ multiproject_projects = {
 }
 
 # -- General configuration ---------------------------------------------------
-copyright = "2023, Justine Missik"
-author = "Justine Missik"
+copyright = "2023, XXXXX"
+author = "XXXXX"
 
 
 # Add any Sphinx extension module names here, as strings. They can be
@@ -90,7 +90,7 @@ html_theme = 'pydata_sphinx_theme'
 # html_static_path = ['_static']
 
 html_theme_options = {
-    "github_url": "https://github.com/jemissik/ecodata",
+    "github_url": "XXXXX",
     #   "show_nav_level": 4,
     "use_edit_page_button": True,
 
@@ -100,7 +100,7 @@ html_context = {
     # Fix the "edit on" links.
     "conf_py_path": f"/docs/{docset}/",
     "display_github": True, # Integrate GitHub
-    "github_user": "jemissik", # Username
+    "github_user": "XXXXX", # Username
     "github_repo": "ecodata", # Repo name
     "github_version": "develop", # Version
 }
