@@ -52,7 +52,7 @@ jobs:
                     cd scripts
                     bash build.sh
             - name: upload artifacts
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                 path: scripts/ecodata*
                 name: ecodata-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}
@@ -98,7 +98,7 @@ jobs:
                     cd scripts
                     .\build.ps1
             - name: upload artifacts
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                 path: scripts/ecodata*
                 name: ecodata-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}
