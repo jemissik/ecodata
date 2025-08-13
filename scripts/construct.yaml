@@ -1,7 +1,7 @@
 {% set name = os.environ.get("ECODATA_NAME", "ecodata") %}
 {% set version = os.environ.get("ECODATA_VERSION", "0.0.0") %}
 
-name: {{ name }}
+name: {{ name }}-{{ version }}
 version: {{ version }}
 
 
