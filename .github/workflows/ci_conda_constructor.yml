@@ -22,10 +22,10 @@ jobs:
                     -   os: macos-13
                         ARCH: x86_64
                         OS_NAME: "MacOSX"
-#                    # ARM MACOS
-#                    -   os: macos-14
-#                        ARCH: arm64
-#                        OS_NAME: "MacOSX"
+                    # ARM MACOS
+                    -   os: macos-latest
+                        ARCH: arm64
+                        OS_NAME: "MacOSX"
         env:
             PYTHONUNBUFFERED: True
         steps:
