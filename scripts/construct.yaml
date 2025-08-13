@@ -15,9 +15,7 @@ channels:
 
 register_envs: false
 default_location_pkg: Library
-pkg_name: {{ name }}
 
- 
 specs:
   - python >=3.11
   - conda >=23.10
