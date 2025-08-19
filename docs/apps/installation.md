@@ -3,22 +3,13 @@
 (installers)=
 ## Installers
 
-Download installers for the latest release:
-| OS             | Architecture          | Download                                                                                                                        |
-|----------------|-----------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| Windows        | x86_64                | [ecodata-0.2.7-Windows-x86_64](https://github.com/jemissik/ecodata/releases/latest/download/ecodata-0.2.7-Windows-x86_64.exe)   |
-| macOS 14       | arm64 (Apple Silicon) | [ecodata-0.2.7-MacOSX-arm64.pkg](https://github.com/jemissik/ecodata/releases/latest/download/ecodata-0.2.7-MacOSX-arm64.pkg)   |
-| `(*)` macOS 13 | x86_64                | [ecodata-0.2.7-MacOSX-x86_64.pkg](https://github.com/jemissik/ecodata/releases/latest/download/ecodata-0.2.7-MacOSX-x86_64.pkg) |
-| Linux          | x86_64                | [ecodata-0.2.7-Linux-x86_64.sh](https://github.com/jemissik/ecodata/releases/latest/download/ecodata-0.2.7-Linux-x86_64.sh)     |
-
-`(*)` Use this installer for all Macs that are **not** an Apple Silicon (M-series) Mac running macOS 14 (i.e., use for all x86 (Intel chip) Macs, or any Mac running macOS 13).
+{{ installers_table }}
 
 Relase notes for the latest release can be found <a href="https://github.com/jemissik/ecodata/releases/latest" target="_blank">here</a>, along with all available installers. Command line (.sh) installers for Mac are also available. You can see all releases (including previous versions and pre-releases) <a href="https://github.com/jemissik/ecodata/releases/" target="_blank">here</a>.
 
 1. Download the correct installer for your operating system.
 2. Run the installer and follow the prompts. You can change the default installation location if you wish. This installation location is where the program files will be installed (i.e., files not intended to be accessed by the user after installation). If you have a previous version already installed in the default location, you will need to remove the previous version before installing the new version, or install the new version in a different location.
 If opening the .pkg in Mac, you might get a message that it "cannot be opened because it is from an unidentified developer". If this happens, you can right-click or press ``Control`` click on the application, and then select Open. You can then select Open to run the installer.
-3. A file used to launch the apps (``ecodata.command`` for Mac and ``ecodata.bat`` for Windows) will be copied to your Downloads folder. You can move this file to a convenient location after the installer is finished running. **Note**: If you already have an ``ecodata.command`` or ``ecodata.bat`` file in your Downloads folder from a previous installation, remove it before installing the new version.
 
 After the installation is complete, you can [get started](./user_guide/index).
 

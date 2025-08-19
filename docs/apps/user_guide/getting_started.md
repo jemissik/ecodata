@@ -26,8 +26,7 @@ See [below](#opening-ecodata-prepare) for instructions to open the program. When
 These instructions assume that you installed ECODATA using the [Installers](installers). If you installed ECODATA using one of the [alternative methods](alternative-installation), you will need to launch the apps using the instructions there.
 ```
 
-Double-click on the launch file (``ecodata.command`` for Mac, ``ecodata.bat`` for Windows). A terminal window will open,
-indicating that the apps are launching. When the apps finish launching, a window will open on your default web browser,
+Launch the ecodata app. A terminal window will open, indicating that the apps are launching. When the apps finish launching, a window will open on your default web browser,
 showing the app gallery. The apps are running locally at `localhost:5006`. *Note: There may be a short wait (10+ seconds)
 before the browser window opens, particularly if you are launching the apps for the first time.*
 
