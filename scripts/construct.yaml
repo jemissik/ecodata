@@ -1,19 +1,26 @@
 {% set name = os.environ.get("ECODATA_NAME", "ecodata") %}
 {% set version = os.environ.get("ECODATA_VERSION", "0.0.0") %}
 
-name: {{ name }}
+name: {{ name }}-{{ version }}
 version: {{ version }}
 
+
 installer_type: all
+initialize_conda: false
 initialize_by_default: False
-post_install: post_install.sh  # [unix]
-post_install: post_install.bat  # [win]
+
 
 channels:
-  - https://conda.anaconda.org/conda-forge/
+  - conda-forge
+
+register_envs: false
+default_location_pkg: Library
 
 specs:
-  - python
-  - conda
-  - mamba
-  - ecodata=={{ version }}
+  - python >=3.11
+  - conda >=23.10
+  - conda-libmamba-solver
+  - ecodata={{ version }}
+  - ecodata-menu={{ version }}
+menu_packages:
+  - ecodata-menu
