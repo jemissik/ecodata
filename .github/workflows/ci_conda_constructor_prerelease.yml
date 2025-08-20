@@ -1,0 +1,94 @@
+name: conda_constructor_prerelease
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch of Release'
+        default: 'develop'
+        required: true
+
+jobs:
+    Unix-like:
+        name: ${{ matrix.os }}
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    # UBUNTU
+                    -   os: ubuntu-latest
+                        ARCH: x86_64
+                        OS_NAME: "Linux"
+                    # x86_64 MACOS
+                    -   os: macos-13
+                        ARCH: x86_64
+                        OS_NAME: "MacOSX"
+                    # ARM MACOS
+                    -   os: macos-latest
+                        ARCH: arm64
+                        OS_NAME: "MacOSX"
+        env:
+            PYTHONUNBUFFERED: True
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Setup Miniconda
+              uses: conda-incubator/setup-miniconda@v3
+              with:
+                  auto-update-conda: true
+
+            - name: Install constructor
+              shell: bash -l {0}
+              run: |
+                conda install constructor -y
+                conda install -c conda-forge jinja2 -y
+
+            - name: Run conda constructor
+              shell: bash -l {0}
+              run: |
+                    cd scripts
+                    bash build_dev.sh ${{ inputs.branch }}
+            - name: upload artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                path: scripts/ecodata*
+                name: ecodata-dev-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}
+
+
+    Windows:
+        name: ${{ matrix.os }}
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    # WINDOWS
+                    -   os: windows-latest
+                        ARCH: x86_64
+                        OS_NAME: "Windows"
+        env:
+            PYTHONUNBUFFERED: True
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Setup Miniconda
+              uses: conda-incubator/setup-miniconda@v3
+              with:
+                  auto-update-conda: true
+
+            - name: Install constructor
+              run: |
+                conda install constructor -y
+                conda install -c conda-forge jinja2 -y
+
+            - name: Run conda constructor
+              run: |
+                    cd scripts
+                    .\build_dev.ps1 ${{ inputs.branch }}
+            - name: upload artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                path: scripts/ecodata*
+                name: ecodata-dev-${{ matrix.OS_NAME }}-${{ matrix.ARCH }}
