@@ -17,7 +17,7 @@ def safe_open_nc_with_time_decoding(path):
     """
 
     try:
-        ds = xr.open_dataset(path, decode_times=False, chunks="auto")
+        ds = xr.open_dataset(path, decode_times=False)
 
         time_name = _detect_time_name(ds)
         if time_name is None:
@@ -55,30 +55,6 @@ def safe_open_nc_with_time_decoding(path):
 
     except Exception as e:
        raise RuntimeError(f"[ERROR] Failed to decode time using cftime for {path}: {e}")
-    
-#### *** Attempt at optimization
-def get_nc_timerange_for_selected(env_var_map: dict, selected_env_vars: list[str]):
-    """
-    Return union [nc_start, nc_end] across all selected variables.
-    If time is missing for all → (None, None).
-    """
-    nc_start, nc_end = None, None
-    for v in (selected_env_vars or []):
-        nc_path = env_var_map.get(v)
-        if not nc_path:
-            continue
-        ds = safe_open_nc_with_time_decoding(nc_path)
-        try:
-            if ("time" in ds.coords) or ("time" in ds.variables):
-                tmin = pd.to_datetime(ds["time"].values.min())
-                tmax = pd.to_datetime(ds["time"].values.max())
-                nc_start = tmin if (nc_start is None or tmin < nc_start) else nc_start
-                nc_end   = tmax if (nc_end   is None or tmax > nc_end)   else nc_end
-        finally:
-            ds.close()
-    return nc_start, nc_end
-
-#### *** 
 
 def get_nc_bounds(nc_path: str):
     """
@@ -162,14 +138,6 @@ def start_annotation_process(env_var_map, selected_env_vars, movebank_path, sele
     if df_filtered.empty:
         print("[WARNING] No points within the boundary.")
         return
-    
-    # ===*** Time prefiltering (union across selected variables) ===
-    nc_start, nc_end = get_nc_timerange_for_selected(env_var_map, selected_env_vars)
-    df_filtered = filter_points_within_timerange(df_filtered, nc_start, nc_end)
-    if df_filtered.empty:
-        print("[WARNING] No points within the NC time window after prefiltering.")
-        return
-    # ===*** 
 
     # === Step 2: Loading and interpolation of environmental data ===
     result = load_selected_environmental_data(df_filtered, env_var_map,
@@ -181,7 +149,7 @@ def start_annotation_process(env_var_map, selected_env_vars, movebank_path, sele
 
     df_annotated, nc_start, nc_end = result
 
-#### diagnostic
+#### diagnistic
     var = selected_env_vars[0] if selected_env_vars else None
     if var in df_annotated.columns:
         in_nc = df_annotated["timestamp"].between(
@@ -293,13 +261,9 @@ def filter_points_within_boundary(movebank_path, selected_ids, boundary_path=Non
 # UNUSED OPTION
 def filter_points_within_timerange(df: pd.DataFrame, nc_start: pd.Timestamp, nc_end: pd.Timestamp) -> pd.DataFrame:
     df = df.copy()
-    if nc_start is None or nc_end is None:
-        print("[INFO] NC union time range unavailable. Skipping time prefilter.")
-        return df
-    df["timestamp"] = pd.to_datetime(df["timestamp"], dayfirst=True, errors="coerce")
-    before = len(df)
+    df["timestamp"] = pd.to_datetime(df["timestamp"], dayfirst=True, errors="coerce") #? pd.to_datetime
     filtered_df = df[(df["timestamp"] >= nc_start) & (df["timestamp"] <= nc_end)]
-    print(f"[INFO] Time-prefiltered rows: {len(filtered_df)} / {before} within [{nc_start} .. {nc_end}]")
+    print(f"[INFO] Filtered {len(filtered_df)} / {len(df)} rows within NetCDF time range: {nc_start} — {nc_end}")
     return filtered_df
 
 def interpolate_missing_coordinates(df: pd.DataFrame) -> pd.DataFrame:
@@ -341,7 +305,7 @@ def load_selected_environmental_data(df, env_var_map, selected_vars,
       - "IDW (time-linear)"
     """
     label = (interpolation_method or "").strip().lower()
-    label = label.replace("neighbor", "neighbour") # Normalise US/UK spelling
+    label = label.replace("neighbor", "neighbour") ###??
 
     is_nearest = label.startswith("nearest")
     is_idw = ("idw" in label) or ("inverse distance" in label)
@@ -355,7 +319,7 @@ def load_selected_environmental_data(df, env_var_map, selected_vars,
     
 def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothing_k: int = 2):
     """
-    Temporal: vectorised linear interpolation over time (per grid-cell group)
+    Temporal: linear interpolation (1D per-point)
     Spatial: nearest neighbour (1 grid node per point)
     """
     from shapely.geometry import Point
@@ -364,20 +328,9 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
     out["timestamp"] = pd.to_datetime(out["timestamp"], dayfirst=True, errors="coerce")
     out = out.dropna(subset=["timestamp", "location_lat", "location_lon"])
 
-    # placeholders for nearest grid coords
-    nc_latitudes = np.full(len(out), np.nan, dtype="float64")
-    nc_longitudes = np.full(len(out), np.nan, dtype="float64")
-
-    # precompute numeric times for vectorised interp
-    tgt_times = out["timestamp"].to_numpy("datetime64[ns]").astype("int64")
-
-    # helper: vectorised nearest-index for monotonic arrays
-    def _nearest_indices_vectorized(arr, vals):
-        idx = np.searchsorted(arr, vals)
-        idx = np.clip(idx, 0, len(arr) - 1)
-        left = np.maximum(idx - 1, 0)
-        take_left = (idx > 0) & (np.abs(arr[left] - vals) <= np.abs(arr[idx] - vals))
-        return np.where(take_left, left, idx)
+    # coordinate placeholders
+    nc_latitudes = np.full(len(out), np.nan)
+    nc_longitudes = np.full(len(out), np.nan)
 
     for var in selected_vars:
         file_path = env_var_map.get(var)
@@ -390,32 +343,30 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
             ds = safe_open_nc_with_time_decoding(file_path)
             if var not in ds:
                 print(f"[WARNING] Variable {var} not in {file_path}")
-                ds.close()
                 continue
 
             da = ds[var]
-            # detect dims
+            #  determine basic axes
             dims = list(da.dims)
             lat_dim = "lat" if "lat" in dims else "latitude"
             lon_dim = "lon" if "lon" in dims else "longitude"
             ds = _ensure_sorted(ds, lat_dim, lon_dim)
             da = ds[var]
             dims = list(da.dims)
-
-            # unify time dim to "time"
             time_dim = "time" if "time" in dims else next(
-                (d for d in ("valid_time","forecast_time","verification_time","t","Time") if d in dims), None
+                (d for d in ("valid_time","forecast_time","verification_time","t","Time") if d in dims),
+                None
             )
             if time_dim is None:
-                ds.close()
                 raise ValueError(f"No time-like dimension in {var}: dims={dims}")
             if time_dim != "time":
                 ds = ds.rename({time_dim: "time"})
                 da = ds[var]
                 dims = list(da.dims)
+                time_dim = "time"
 
-            # slice away extra dims once (pressure level, ensemble, etc.)
-            extra = [d for d in dims if d not in ("time", lat_dim, lon_dim)]
+            # Cut out unnecessary dimentions: pressure_level, number, expver, etc.
+            extra = [d for d in dims if d not in (time_dim, lat_dim, lon_dim)]
             if extra:
                 sel = {}
                 for d in extra:
@@ -424,70 +375,49 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
                         coord = ds.coords[d] if d in ds.coords else ds[d]
                     except Exception:
                         coord = None
+
                     if dl in ("pressure_level", "isobaricinhpa", "level"):
                         idx = 0
                         if coord is not None:
                             try:
                                 vals = np.asarray(coord.values, dtype=float)
+                                # обрати рівень, найближчий до 1000 гПа (як у вашому файлі)
+                                #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                                 idx = int(np.nanargmin(np.abs(vals - 1000.0)))
                             except Exception:
                                 idx = 0
                         sel[d] = idx
                     else:
+                        # інші дод. виміри → беремо перший елемент
                         sel[d] = 0
-                da = da.isel(**sel).squeeze()  # -> (time, lat, lon)
+
+                da = da.isel(**sel).squeeze()  # (time, lat, lon)
 
             glat = ds[lat_dim].values
             glon = ds[lon_dim].values
-            gtime = pd.to_datetime(ds["time"].values).to_numpy("datetime64[ns]").astype("int64")
+            gtime = pd.to_datetime(ds["time"].values).values  # datetime64[ns]
+            gtime_ts = pd.to_datetime(gtime)  # Timestamp indexable
 
-            # Vectorised nearest-cell lookup for all point
-            lat_idx = _nearest_indices_vectorized(glat, out["location_lat"].to_numpy(dtype="float64"))
-            lon_idx = _nearest_indices_vectorized(glon, out["location_lon"].to_numpy(dtype="float64"))
+            # one line at a time — only one series of 1 grid
+            for idx, row in out.iterrows():
+                t = row["timestamp"]
+                xlat = row["location_lat"]
+                xlon = row["location_lon"]
 
-            # Store nc_lat/nc_lon
-            nc_latitudes[:] = glat[lat_idx]
-            nc_longitudes[:] = glon[lon_idx]
-
-            # Group by grid cell; map cell code -> unique index
-            cell_code = (lat_idx.astype(np.int64) * len(glon)) + lon_idx.astype(np.int64)
-            unique_cells, inverse = np.unique(cell_code, return_inverse=True)
-
-            # Cache per-cell time series (to avoid re-reading the .nc repeatedly)
-            series_cache = {}
-
-            # Vectorised interpolation for each group
-            for g, code in enumerate(unique_cells):
-                ii = int(code // len(glon))
-                jj = int(code % len(glon))
-
-                # take all positions in this cell
-                pos = np.nonzero(inverse == g)[0]
-                xi = tgt_times[pos]
-
-                # we read the time series of this cell only once
-                key = (ii, jj)
-                if key not in series_cache:
-                    # .values ​​reads (time,) one series; with dask it's 1 read/calculation
-                    series_cache[key] = da.isel({lat_dim: ii, lon_dim: jj}).values.astype("float64")
-                y = series_cache[key]
-
-                # mask of valid
-                m = np.isfinite(y)
-                if m.sum() < 2:
-                    out.iloc[pos, out.columns.get_loc(var)] = np.nan
+                # out of time range → NaN
+                if t < gtime_ts.min() or t > gtime_ts.max():
                     continue
 
-                x = gtime[m]
-                yy = y[m]
+                ii = _nearest_index(glat, xlat)
+                jj = _nearest_index(glon, xlon)
 
-                # np.interp: fast, but does not put NaN out of range -  will set it ourselves
-                vals = np.interp(xi, x, yy)
-                vals[(xi < x.min()) | (xi > x.max())] = np.nan
-
-                out.iloc[pos, out.columns.get_loc(var)] = vals
-
-            ds.close()
+                # extract the time series of one grid
+                # expect dims ("time", lat_dim, lon_dim)
+                series = da.isel({lat_dim: ii, lon_dim: jj}).values  # (time,)
+                val = _interp1d_time(gtime_ts, series, t)
+                out.at[idx, var] = val
+                nc_latitudes[idx] = glat[ii]
+                nc_longitudes[idx] = glon[jj]
 
         except Exception as e:
             print(f"[ERROR] {var}: {e}")
@@ -500,11 +430,8 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
 
 def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k: int = 2):
     """
-    Temporal: linear (1D), vectorised in time via np.interp with a cache of per-cell time series.
-    Spatial: IDW over k nearest grid nodes (k = smoothing_k).
-    No external libraries. Cache:
-    - series_cache[(ii, jj)] -> (x_valid_int64, y_valid_float64) for cell (lat_idx, lon_idx).
-    This removes repeated da.isel(...).values calls for the same neighbouring cells across rows.
+    Temporal: linear (1D per-point per-neighbour)
+    Spatial: IDW over k nearest grid nodes (k = smoothing_k, chosen in UI)
     """
     from shapely.geometry import Point
 
@@ -514,11 +441,6 @@ def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k:
     out = out.dropna(subset=["timestamp", "location_lat", "location_lon"])
     out["nc_lat"] = out["location_lat"].values
     out["nc_lon"] = out["location_lon"].values
-
-    # Target times as int64 ns (for fast np.interp)
-    tgt_times = out["timestamp"].to_numpy("datetime64[ns]").astype("int64")
-    lat_vals = out["location_lat"].to_numpy(dtype="float64")
-    lon_vals = out["location_lon"].to_numpy(dtype="float64")
 
     for var in selected_vars:
         file_path = env_var_map.get(var)
@@ -531,105 +453,69 @@ def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k:
             ds = safe_open_nc_with_time_decoding(file_path)
             if var not in ds:
                 print(f"[WARNING] Variable {var} not in {file_path}")
-                ds.close()
                 continue
 
             da = ds[var]
-            dims = list(da.dims)
+            dims = set(da.dims)
             lat_dim = "lat" if "lat" in dims else "latitude"
             lon_dim = "lon" if "lon" in dims else "longitude"
             ds = _ensure_sorted(ds, lat_dim, lon_dim)
             da = ds[var]
-            dims = list(da.dims)
 
-            
-            time_dim = "time" if "time" in dims else next(
-                (d for d in ("valid_time", "forecast_time", "verification_time", "t", "Time") if d in dims), None
+            # — find the name of the time dimension and unify to "time"
+            dims_list = list(da.dims)
+            time_dim = "time" if "time" in dims_list else next(
+                (d for d in ("valid_time", "forecast_time", "verification_time", "t", "Time") if d in dims_list), None
             )
             if time_dim is None:
-                ds.close()
-                raise ValueError(f"No time-like dimension in {var}: dims={dims}")
+                raise ValueError(f"No time-like dimension in {var}: dims={dims_list}")
             if time_dim != "time":
                 ds = ds.rename({time_dim: "time"})
                 da = ds[var]
-                dims = list(da.dims)
+                dims_list = list(da.dims)
 
-            # Remove unnecessary measurements (pressure/ensemble/expver → 0th or closest to 1000 hPa)
-            extra_dims = [d for d in dims if d not in ("time", lat_dim, lon_dim)]
+            # — remove unnecessary measurements (pressure, ensemble, etc.)
+            extra_dims = [d for d in dims_list if d not in ("time", lat_dim, lon_dim)]
             if extra_dims:
                 sel = {}
+                # special logic for pressure levels: take 1000 hPa if it exists; otherwise the first
+                level_keys = {"pressure_level", "isobaricInhPa", "level"}
                 for d in extra_dims:
-                    dl = d.lower()
-                    try:
-                        coord = ds.coords[d] if d in ds.coords else ds[d]
-                    except Exception:
-                        coord = None
-                    if dl in ("pressure_level", "isobaricinhpa", "level"):
-                        idx = 0
-                        if coord is not None:
-                            try:
-                                vals = np.asarray(coord.values, dtype=float)
-                                idx = int(np.nanargmin(np.abs(vals - 1000.0)))
-                            except Exception:
-                                idx = 0
-                        sel[d] = idx
+                    if d in da.coords and d.lower() in {k.lower() for k in level_keys}:
+                        try:
+                            lev = np.asarray(ds[d].values, dtype=float)
+                            sel[d] = int(np.nanargmin(np.abs(lev - 1000.0)))  # closest to 1000 hPa
+                        except Exception:
+                            sel[d] = 0
                     else:
                         sel[d] = 0
-                da = da.isel(**sel).squeeze()  # -> (time, lat, lon)
+                da = da.isel(**sel).squeeze()
 
             glat = ds[lat_dim].values
             glon = ds[lon_dim].values
-            gtime_int = pd.to_datetime(ds["time"].values).to_numpy("datetime64[ns]").astype("int64")
+            gtime = pd.to_datetime(ds["time"].values).values
+            gtime_ts = pd.to_datetime(gtime)
 
-            # *** CACHE of per-cell time series ***
-            # key: (ii, jj) -> (x_int64_valid, y_float64_valid)
-            series_cache: dict[tuple[int, int], tuple[np.ndarray, np.ndarray]] = {}
-            col_idx = out.columns.get_loc(var)
+            for idx, row in out.iterrows():
+                t = row["timestamp"]
+                xlat = row["location_lat"]
+                xlon = row["location_lon"]
 
-            # # Main loop over rows (without repeated da.isel reads now)
-            for idx in range(len(out)):
-                t_i = tgt_times[idx]
-                xlat = lat_vals[idx]
-                xlon = lon_vals[idx]
-
-                # out of time range → NaN
-                if t_i < gtime_int.min() or t_i > gtime_int.max():
+                if t < gtime_ts.min() or t > gtime_ts.max():
                     continue
 
-                # find k neighbors (window around nearest)
+                # find k nearest nodes through local window
                 nn_idx = _k_nearest_indices(glat, glon, xlat, xlon, k)
-                vals = np.empty(k, dtype="float64")
-                dists = np.empty(k, dtype="float64")
 
-                for j, (ii, jj) in enumerate(nn_idx):
-                    key = (ii, jj)
-                    if key not in series_cache:
-                        # read the cell's time series once
-                        y = da.isel({lat_dim: ii, lon_dim: jj}).values.astype("float64")
-                        m = np.isfinite(y)
-                        if m.sum() >= 2:
-                            x = gtime_int[m]
-                            yy = y[m]
-                        else:
-                            x = np.empty(0, dtype="int64")
-                            yy = np.empty(0, dtype="float64")
-                        series_cache[key] = (x, yy)
+                vals = []
+                dists = []
+                for ii, jj in nn_idx:
+                    series = da.isel({lat_dim: ii, lon_dim: jj}).values  # (time,)
+                    v = _interp1d_time(gtime_ts, series, t)
+                    vals.append(v)
+                    dists.append(np.hypot(glat[ii] - xlat, glon[jj] - xlon))
 
-                    x, yy = series_cache[key]
-                    if x.size < 2:
-                        vals[j] = np.nan
-                    else:
-                        v = np.interp(t_i, x, yy)
-                        if (t_i < x.min()) or (t_i > x.max()):
-                            v = np.nan
-                        vals[j] = v
-
-                    # Geodistance (planar Euclidean in degrees; as before)
-                    dists[j] = np.hypot(glat[ii] - xlat, glon[jj] - xlon)
-
-                out.iloc[idx, col_idx] = _idw(vals, dists, p=2)
-
-            ds.close()
+                out.at[idx, var] = _idw(vals, dists, p=2)
 
         except Exception as e:
             print(f"[ERROR] {var}: {e}")
@@ -638,10 +524,9 @@ def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k:
     out["geometry"] = [Point(lon, lat) for lon, lat in zip(out["nc_lon"], out["nc_lat"])]
     return out, pd.NaT, pd.NaT
 
-
 def convert_tif_to_nc_before_annotation(tif_paths, output_dir):
     """
-    Converts a list of .tif files into a single NetCDF, creating a separate DataArray per variable.
+    onverts a list of .tif files into a single NetCDF, creating a separate DataArray per variable.
     For each variable, builds a data(time, lat, lon) array.
     Returns the path to the generated .nc file.
     """

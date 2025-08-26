@@ -89,7 +89,7 @@ class movebank_annotation_engine(param.Parameterized):
     )
     interpolation_method = pn.widgets.Select(
         name="Interpolation method (spatial)",
-        options=["Nearest neighbour (time-linear)", "Inverse Distance Weighting (time-linear)"],
+        options=["Nearest neighbor (time-linear)", "Inverse Distance Weighting (time-linear)"],
         value="Inverse Distance Weighting (time-linear)"
     )
     make_annotation_button = pn.widgets.Button(name="Make annotated file", button_type="primary")
@@ -133,7 +133,7 @@ class movebank_annotation_engine(param.Parameterized):
 
     tif_interpolation_method = pn.widgets.Select(
         name="Interpolation method (spatial)",
-        options=["Nearest neighbour (time-linear)", "Inverse Distance Weighting (time-linear)"],
+        options=["Nearest neighbor (time-linear)", "Inverse Distance Weighting (time-linear)"],
         value="Inverse Distance Weighting (time-linear)"
     )
     tif_make_annotation_button = pn.widgets.Button(name="Make annotated file", button_type="primary")
@@ -936,7 +936,7 @@ class movebank_annotation_engine(param.Parameterized):
 
         # Interpolation and time-fit options (prefer TIF-tab widgets; fallback to NC-tab)
         interp_widget = getattr(self, "tif_interpolation_method", None)
-        interp_method = getattr(interp_widget, "value", "Nearest neighbour (time-linear)")
+        interp_method = getattr(interp_widget, "value", "Nearest neighbor (time-linear)")
 
         # Output CSV path (optional)
         out_widget = getattr(self, "tif_output_path", None)
@@ -1304,7 +1304,7 @@ class movebank_annotation_engine(param.Parameterized):
 
     def _update_smoothing_options(self, event):
         """Updates options for control_smoothing depending on interpolation method (.nc)."""
-        if event.new.startswith("Nearest neighbour"):
+        if event.new.startswith("Nearest neighbor"):
             self.control_smoothing.options = ["1"]
             self.control_smoothing.value = "1"
         else:
@@ -1314,7 +1314,7 @@ class movebank_annotation_engine(param.Parameterized):
 
     def _update_smoothing_options_tif(self, event):
         """Updates options for control_smoothing depending on interpolation method(.tif)."""
-        if event.new.startswith("Nearest neighbour"):
+        if event.new.startswith("Nearest neighbor"):
             self.tif_control_smoothing.options = ["1"]
             self.tif_control_smoothing.value = "1"
         else:
