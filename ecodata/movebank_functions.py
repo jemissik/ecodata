@@ -22,11 +22,6 @@ import re
 
 TIME_COLUMN = 'timestamp' # Set to "eobs:start-timestamp" or "timestamp" as needed
 
-# --- Utilities ---
-from datetime import datetime
-import pandas as pd
-import re
-
 def parse_timestamp(s: str) -> datetime:
     """
     Robust timestamp parser:
@@ -561,22 +556,28 @@ def process_csv_interp_or_averaging(start_time_str, end_time_str, interval_minut
         "eobs_start_timestamp", "eobs_temperature",
         "ground_speed", "height_above_ellipsoid"
     ]
-    try:
-        df_check = normalize_column_names(pd.read_csv(session_output_path, low_memory=False))
-        numeric_cols_to_fix = [col for col in cols_to_check_for_nan if col in df_check.columns and df_check[col].dtype in ["float64", "int64"] and df_check[col].isna().any()]
+    if result_paths:  # перевірка, що є створені файли
+        last_file = result_paths[-1]
+        try:
+            df_check = normalize_column_names(pd.read_csv(last_file, low_memory=False))
+            numeric_cols_to_fix = [
+                col for col in cols_to_check_for_nan
+                if col in df_check.columns
+                and df_check[col].dtype in ["float64", "int64"]
+                and df_check[col].isna().any()
+            ]
 
-        if numeric_cols_to_fix:
-            df_check["timestamp"] = pd.to_datetime(df_check["timestamp"], errors="coerce")
-            df_check = df_check.set_index("timestamp")
-            df_check[numeric_cols_to_fix] = df_check[numeric_cols_to_fix].interpolate(method="time", limit_direction="both")
-            df_check = df_check.reset_index()
-            df_check.to_csv(session_output_path, index=False)
-            print(f"Interpolated missing values in: {numeric_cols_to_fix} for file {session_output_path}")
-    except Exception as e:
-        print(f"Interpolation post-check failed for {session_output_path}: {e}")
-
-        result_paths.append(session_output_path)
-        print(f"Subset {session_output_path} has been created.")
+            if numeric_cols_to_fix:
+                df_check["timestamp"] = pd.to_datetime(df_check["timestamp"], errors="coerce")
+                df_check = df_check.set_index("timestamp")
+                df_check[numeric_cols_to_fix] = df_check[numeric_cols_to_fix].interpolate(
+                    method="time", limit_direction="both"
+                )
+                df_check = df_check.reset_index()
+                df_check.to_csv(last_file, index=False)
+                print(f"Interpolated missing values in: {numeric_cols_to_fix} for file {last_file}")
+        except Exception as e:
+            print(f"Interpolation post-check failed for {last_file}: {e}")
 
     return result_paths
 
@@ -590,9 +591,8 @@ def merge_csv_files_from_folder(folder_path: Path, delete_empty_columns: bool) -
         delete_empty_columns (bool): If True, remove non-overlapping columns.
 
     Returns:
-        tuple: (merged DataFrame, list of removed column names)
+        tuple: (merged DataFrame, list of removed column names, list of source CSV file paths)
     """
-
     csv_files = sorted(folder_path.glob("*.csv"))
     if not csv_files:
         raise ValueError("No CSV files found in the selected folder.")
@@ -606,7 +606,7 @@ def merge_csv_files_from_folder(folder_path: Path, delete_empty_columns: bool) -
         merged_df = pd.concat(cleaned_dataframes, ignore_index=True)
     else:
         merged_df = pd.concat(dataframes, ignore_index=True)
-    return merged_df, sorted(missing_columns)
+    return merged_df, sorted(missing_columns), [str(p) for p in csv_files]
 
 # --- Filename ---
 def safe_filename(name: str, replacement: str = "_") -> str:
@@ -974,3 +974,22 @@ def resolve_id_key(fieldnames) -> str | None:
         if nk in norm_to_orig:
             return norm_to_orig[nk]
     return None
+
+def delete_files(paths: list[str], keep: list[str] | None = None) -> list[str]:
+    """
+    Delete files by absolute/relative paths.
+    Returns a list of successfully deleted paths.
+    """
+    from pathlib import Path
+    keep_set = {str(Path(k).resolve()) for k in (keep or [])}
+    deleted = []
+    for p in paths:
+        try:
+            rp = str(Path(p).resolve())
+            if rp in keep_set:
+                continue
+            Path(rp).unlink(missing_ok=True)
+            deleted.append(rp)
+        except Exception as e:
+            print(f"[delete_files] Failed to delete {p}: {e}")
+    return deleted

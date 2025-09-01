@@ -50,7 +50,8 @@ from ecodata.movebank_functions import(
     process_csv_interp_or_averaging, # noqa
     validate_and_process_csv,
     merge_csv_files_from_folder,
-    generate_individual_csvs_for_local_ids
+    generate_individual_csvs_for_local_ids,
+    delete_files
 )
 from ecodata.annotation_eng_func import(
     load_vector_extent_info,

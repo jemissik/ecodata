@@ -10,7 +10,7 @@ from ecodata.app.config import DEFAULT_TEMPLATE
 from datetime import datetime
 import re
 from ecodata import validate_and_process_csv, load_vector_extent_info, load_taxa_and_ids_from_csv 
-from ecodata.movebank_functions import merge_csv_files_from_folder, generate_individual_csvs_for_local_ids, interpolate_missing_values_only 
+from ecodata.movebank_functions import merge_csv_files_from_folder, generate_individual_csvs_for_local_ids, interpolate_missing_values_only, delete_files 
 from ecodata.annotation_eng_func import start_annotation_process,convert_tif_to_nc_before_annotation, get_nc_bounds, safe_open_nc_with_time_decoding
 
 logger = logging.getLogger(__file__)
@@ -327,7 +327,6 @@ class movebank_annotation_engine(param.Parameterized):
         self.tif_interpolation_method.param.watch(self._update_smoothing_options_tif, 'value')
         
 
-       
     @try_catch("Error loading Individual IDs")
     def load_ids_from_file(self, *events):
         self.status_text = "Loading IDs..."
@@ -391,6 +390,7 @@ class movebank_annotation_engine(param.Parameterized):
 
         self.id_multiselect.options = ids
         self.id_multiselect.value = ids
+
 
     @try_catch("Error generating CSV")
     def run_make_csv(self, *events):
@@ -458,6 +458,7 @@ class movebank_annotation_engine(param.Parameterized):
         self.time_selection_ID.end = tmax
         self.time_selection_ID.value = (tmin, tmax)
 
+
     @try_catch("Error merging files from folder")
     def run_merge_files(self, *events):
         try:
@@ -475,6 +476,7 @@ class movebank_annotation_engine(param.Parameterized):
 
         self.alert.object = self.status_text
     
+
     @try_catch("Error loading environmental data")
     def load_env_data(self, *events):
         """We select exactly one .nc, update File/Time/Spatial and the list of 3D variables."""
@@ -513,7 +515,7 @@ class movebank_annotation_engine(param.Parameterized):
         # Auxiliary coordinate name candidates
         time_candidates = ("time","Time","datetime","date","valid_time","forecast_time","verification_time")
         lat_candidates  = ("lat", "latitude", "y")
-        lon_candidates  = ("lon", "longitude", "x")
+        lon_candidates  = ("lon", "longitude", "x", "long")
 
         try:
             ds = safe_open_nc_with_time_decoding(nc_path)
@@ -535,11 +537,40 @@ class movebank_annotation_engine(param.Parameterized):
                     lon_max = float(ds[lon_name].max())
                     spatial_text = f"lat[{lat_min:.3f}..{lat_max:.3f}], lon[{lon_min:.3f}..{lon_max:.3f}]"
 
-                # List of 3D variables (have at least 3 dimensions) -
+                # ---- Перелік змінних з підтримкою вертикальних рівнів ----
+                LEVEL_DIM_CANDIDATES = ("isobaricInhPa", "isobaric_in_hPa", "level", "lev", "plev", "pressure", "pressure_level")
+
                 for var in ds.data_vars:
                     da = ds[var]
-                    if da.ndim >= 3:
+                    if da.ndim < 3:
+                        continue  # нам потрібні щонайменше time/lat/lon
+
+                    dims = list(da.dims)
+
+                    # шукаємо назву координати рівня серед типових для ERA5/ECMWF
+                    level_dim = next((d for d in LEVEL_DIM_CANDIDATES if d in dims), None)
+
+                    if level_dim is None:
+                        # звичайна 3D-змінна без рівнів — як і раніше
                         var_file_map[var] = nc_path
+                        continue
+
+                    # якщо є рівні — додаємо по опції на кожен рівень: var_1000, var_975, ...
+                    try:
+                        level_vals = ds[level_dim].values
+                    except Exception:
+                        level_vals = []
+
+                    for lv in level_vals:
+                        try:
+                            # за замовчуванням показуємо цілими hPa (1000, 975, 950 …)
+                            lv_int = int(round(float(lv)))
+                            label = f"{var}_{lv_int}"
+                            var_file_map[label] = nc_path
+                        except Exception:
+                            # якщо рівень нечисловий — пропускаємо конкретне значення
+                            continue
+
             finally:
                 ds.close()
         except Exception as e:
@@ -566,7 +597,8 @@ class movebank_annotation_engine(param.Parameterized):
         self.status_text = f"Loaded {len(var_file_map)} variable(s) from 1 file."
         self.alert.object = self.status_text
         self._sync_nc_column_heights()
-        
+
+
     @try_catch("Error loading boundary data")
     def load_boundary_data(self, *events):
         self.status_text = "Loading boundary data..."
@@ -604,6 +636,7 @@ class movebank_annotation_engine(param.Parameterized):
             self.status_text = f"Failed to read vector file: {e}"
         self.alert.object = self.status_text
         self._sync_nc_column_heights()
+
 
     @try_catch("Error loading movement data")
     def load_movement_data(self, *events):
@@ -723,6 +756,7 @@ class movebank_annotation_engine(param.Parameterized):
             self.status_text = f"Annotation failed: {e}"
 
         self.alert.object = self.status_text
+
 
     ####TIF
     @try_catch("Error loading TIF environmental data")
@@ -871,6 +905,7 @@ class movebank_annotation_engine(param.Parameterized):
         )
         self.alert.object = self.status_text
 
+
     @try_catch("Error running TIF annotation")
     def run_annotation_tif(self, *events):
         """
@@ -902,7 +937,7 @@ class movebank_annotation_engine(param.Parameterized):
         self.status_text = "Starting annotation (TIF)…"
         self.alert.object = self.status_text
 
-        # --- 0) Validate inputs ---------------------------------------------------
+        # --- 0) Validate inputs ---
         # Movebank CSV (required)
         movebank_path = getattr(self.tif_movement_data_selector, "value", None)
         if not movebank_path or not Path(str(movebank_path)).is_file():
@@ -982,7 +1017,6 @@ class movebank_annotation_engine(param.Parameterized):
             self.status_text = "No 3D (time/lat/lon) variables found in the generated NetCDF."
             self.alert.object = self.status_text
             return
-
 
         # --- 4) Which variables to annotate? --------------------------------------
         ms_widget = getattr(self, "tif_env_data_multiselect", None)
@@ -1078,6 +1112,7 @@ class movebank_annotation_engine(param.Parameterized):
             self.status_text = f"Failed to read vector file: {e}"
         self.alert.object = self.status_text
 
+
     @try_catch("Error loading TIF movement data")
     def load_movement_data_tif(self, *events):
         self.status_text = "Loading TIF movement data..."
@@ -1130,6 +1165,7 @@ class movebank_annotation_engine(param.Parameterized):
 
             self.tif_movement_info.object = "<br>".join(lines)
         self.alert.object = self.status_text
+
 
     @try_catch("Interpolation (missing only) failed")
     def run_interpolate_missing_only(self, *events):
@@ -1184,6 +1220,7 @@ class movebank_annotation_engine(param.Parameterized):
             self.status_text = "Interpolation complete. No files created (no eligible gaps ≤ 1 day)."
         self.alert.object = self.status_text
 
+
     def update_annotation_ids_by_taxon_tif(self, event):
         if self.df is None:
             return
@@ -1227,6 +1264,7 @@ class movebank_annotation_engine(param.Parameterized):
                 updated_lines.append(line)
         self.movement_info.object = "<br>".join(updated_lines)
 
+
     def update_env_info_text_tif(self, selected_vars):
         current = self.tif_env_info.object or ""
         if not current:
@@ -1243,6 +1281,7 @@ class movebank_annotation_engine(param.Parameterized):
         if not found:
             updated.insert(1, f"Environment parameters: {', '.join(selected_vars) if selected_vars else '-'}")
         self.tif_env_info.object = "<br>".join(updated)
+
 
     def update_movement_info_text_tif(self, section, new_values):
         current = self.tif_movement_info.object or ""
@@ -1298,9 +1337,11 @@ class movebank_annotation_engine(param.Parameterized):
             height=height,
         )
     
+
     def _auto_height(self, pane, line_px=22, padding=8):
         lines = [l for l in (pane.object or "").split("<br>") if l.strip()]
         pane.height = line_px * max(1, len(lines)) + padding
+
 
     def _update_smoothing_options(self, event):
         """Updates options for control_smoothing depending on interpolation method (.nc)."""
@@ -1312,6 +1353,7 @@ class movebank_annotation_engine(param.Parameterized):
             if self.control_smoothing.value == "1":
                 self.control_smoothing.value = "4"
 
+
     def _update_smoothing_options_tif(self, event):
         """Updates options for control_smoothing depending on interpolation method(.tif)."""
         if event.new.startswith("Nearest neighbor"):
@@ -1321,6 +1363,7 @@ class movebank_annotation_engine(param.Parameterized):
             self.tif_control_smoothing.options = ["2", "4", "6", "8"]
             if self.tif_control_smoothing.value == "1":
                 self.tif_control_smoothing.value = "4"
+
 
     def _sync_nc_column_heights(self):
         """Adjusts the height of the 2nd and 3rd columns to the 1st."""
@@ -1335,6 +1378,7 @@ class movebank_annotation_engine(param.Parameterized):
         else:
             self._apply_nc_height_from_first()
 
+
     def _apply_nc_height_from_first(self):
         first = self._nc_col1
         if not first:
@@ -1344,6 +1388,7 @@ class movebank_annotation_engine(param.Parameterized):
             return
         self._nc_col2.height = h
         self._nc_col3.height = h 
+
 
     def reset_boundary_data(self, *events):
         """
@@ -1364,8 +1409,8 @@ class movebank_annotation_engine(param.Parameterized):
 
         self.status_text = "Boundary reset to default (auto from .nc)."
         self.alert.object = self.status_text
-
         self._sync_nc_column_heights()   
+
 
 @register_view()
 def view():
