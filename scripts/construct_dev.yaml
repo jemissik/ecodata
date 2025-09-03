@@ -1,6 +1,8 @@
 {% set name = "ecodata" %}
 {% set menu_version = os.environ.get("ECODATA_VERSION", "0.0.0") %}
 {% set ecodata_install_branch = os.environ.get("ECODATA_INSTALL_BRANCH", "develop") %}
+{% set ecodata_repo = os.environ.get("REPO", "jemissik/ecodata") %}
+
 
 name: {{ name }}-dev
 pkg_name: {{ name }}-dev
@@ -19,6 +21,7 @@ default_location_pkg: Library
 
 script_env_variables:
   ECODATA_INSTALL_BRANCH: {{ ecodata_install_branch }}
+  REPO: {{ ecodata_repo }}
 
 post_install: post_install.sh  # [unix]
 post_install: post-install.bat  # [win]

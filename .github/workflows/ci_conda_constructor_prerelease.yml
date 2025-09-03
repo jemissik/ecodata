@@ -7,6 +7,11 @@ on:
         default: 'develop'
         required: true
 
+env:
+  PYTHONUNBUFFERED: true
+  REPO: ${{ github.repository }}
+  ECODATA_INSTALL_BRANCH: ${{ inputs.branch }}
+
 jobs:
     Unix-like:
         name: ${{ matrix.os }}
@@ -27,8 +32,6 @@ jobs:
                     -   os: macos-latest
                         ARCH: arm64
                         OS_NAME: "MacOSX"
-        env:
-            PYTHONUNBUFFERED: True
         steps:
             - name: Checkout code
               uses: actions/checkout@v3
@@ -67,8 +70,6 @@ jobs:
                     -   os: windows-latest
                         ARCH: x86_64
                         OS_NAME: "Windows"
-        env:
-            PYTHONUNBUFFERED: True
         steps:
             - name: Checkout code
               uses: actions/checkout@v3
