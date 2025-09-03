@@ -1,0 +1,36 @@
+{% set name = "ecodata" %}
+{% set menu_version = os.environ.get("ECODATA_VERSION", "0.0.0") %}
+{% set ecodata_install_branch = os.environ.get("ECODATA_INSTALL_BRANCH", "develop") %}
+{% set ecodata_repo = os.environ.get("REPO", "jemissik/ecodata") %}
+
+
+name: {{ name }}-dev
+pkg_name: {{ name }}-dev
+version: dev
+
+installer_type: all
+initialize_conda: false
+initialize_by_default: False
+
+
+channels:
+  - conda-forge
+
+register_envs: false
+default_location_pkg: Library
+
+script_env_variables:
+  ECODATA_INSTALL_BRANCH: {{ ecodata_install_branch }}
+  REPO: {{ ecodata_repo }}
+
+post_install: post_install.sh  # [unix]
+post_install: post-install.bat  # [win]
+post_install_desc: Install ecodata development version
+
+specs:
+  - python >=3.11
+  - conda >=23.10
+  - conda-libmamba-solver
+  - ecodata-menu={{ menu_version }}
+menu_packages:
+  - ecodata-menu
