@@ -23,6 +23,9 @@ script_env_variables:
   ECODATA_INSTALL_BRANCH: {{ ecodata_install_branch }}
   REPO: {{ ecodata_repo }}
 
+pre_install: pre_install_dev_menu.sh  # [unix]
+pre_install: pre_install_dev_menu.bat  # [win]
+pre_install_desc: Update ecodata-menu for prerelease version
 post_install: post_install.sh  # [unix]
 post_install: post_install.bat  # [win]
 post_install_desc: Install ecodata development version
