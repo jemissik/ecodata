@@ -13,7 +13,7 @@ if not defined menudir (
 )
 
 if exist "%menudir%\ecodata-menu-prerelease.json" (
-    move "%menudir%\ecodata-menu-prerelease.json" "%menudir%\ecodata-menu.json"
+    copy "%menudir%\ecodata-menu-prerelease.json" "%menudir%\ecodata-menu.json"
     echo Renamed prerelease menu file in %menudir%
 ) else (
     echo Prerelease JSON not found in %menudir%
