@@ -31,7 +31,7 @@ specs:
   - python >=3.11
   - conda >=23.10
   - conda-libmamba-solver
-  - ecodata-menu={{ menu_version }}
+  - ecodata-menu-dev={{ menu_version }}
   - git
 menu_packages:
-  - ecodata-menu
+  - ecodata-menu-dev
