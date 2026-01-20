@@ -24,7 +24,7 @@ script_env_variables:
   REPO: {{ ecodata_repo }}
 
 post_install: post_install.sh  # [unix]
-post_install: post-install.bat  # [win]
+post_install: post_install.bat  # [win]
 post_install_desc: Install ecodata development version
 
 specs:
