@@ -7,6 +7,7 @@ from shapely.geometry import Point
 import numpy as np
 from datetime import datetime
 import rasterio
+from pyproj import CRS, Transformer
 
 LEVEL_DIM_CANDIDATES = ("isobaricInhPa","isobaric_in_hPa","level","lev","plev","pressure","pressure_level")
 
@@ -418,17 +419,26 @@ def load_selected_environmental_data(df, env_var_map, selected_vars,
     Supports:
       - "Nearest neighbour (time-linear)"
       - "IDW (time-linear)"
+      - "Bilinear (projected x/y, time-linear)"
+
     """
     label = (interpolation_method or "").strip().lower()
     label = label.replace("neighbor", "neighbour") # Normalise US/UK spelling
 
     is_nearest = label.startswith("nearest")
     is_idw = ("idw" in label) or ("inverse distance" in label)
+    is_bilinear = "bilinear" in label
+
 
     if is_nearest:
         return annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothing_k=smoothing_k, env_coord_names=env_coord_names)
     elif is_idw:
         return annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k=smoothing_k, env_coord_names=env_coord_names)
+    elif is_bilinear:
+        return annotate_env_bilinear_projected(
+            df, env_var_map, selected_vars, movebank_path,
+            env_coord_names=env_coord_names
+        )
     else:
         raise ValueError(f"Unknown interpolation method: {interpolation_method}")
 
@@ -841,7 +851,168 @@ def annotate_env_IDW(
     out["geometry"] = [Point(lon, lat) for lon, lat in zip(out["nc_lon"], out["nc_lat"])]
     return out, pd.NaT, pd.NaT
 
+def annotate_env_bilinear_projected(
+    df,
+    env_var_map,
+    selected_vars,
+    movebank_path,
+    env_coord_names: dict | None = None,
+):
+    """
+    Annotate movement points with environmental values using:
+      - Spatial: bilinear interpolation on a 1D projected grid (x/y)
+      - Temporal: linear interpolation in time (xarray interp)
 
+    Tracks input:
+      - requires lon/lat columns: location_lon, location_lat
+      - projects lon/lat -> x/y into the env dataset's native CRS using CF metadata
+
+    Env input:
+      - dataset has 1D x and y coordinate vectors (projected grid)
+      - dataset provides CF projection metadata so `read_crs_from_cf()` can infer CRS
+
+    Returns: (out_df, pd.NaT, pd.NaT) for signature compatibility.
+    """
+    out = df.copy()
+    out["timestamp"] = pd.to_datetime(out["timestamp"], dayfirst=True, errors="coerce")
+
+    # Require lon/lat (your code already normalizes movement columns sometimes)
+    required = ["timestamp", "location_lat", "location_lon"]
+    out = out.dropna(subset=required)
+
+    env_coord_names = env_coord_names or {}
+    time_name = env_coord_names.get("env_time")  # optional
+    x_name    = env_coord_names.get("env_x")
+    y_name    = env_coord_names.get("env_y")
+
+    if not x_name or not y_name:
+        raise ValueError(
+            "Bilinear (projected) requires env_coord_names['env_x'] and ['env_y'] "
+            "(Projected (x/y) mode)."
+        )
+    if env_coord_names.get("env_lat") or env_coord_names.get("env_lon"):
+        raise ValueError("Bilinear (projected) requires Projected (x/y) spatial mode, not Geographic (lat/lon).")
+
+    # Target time values (vectorized)
+    tgt_t = out["timestamp"].to_numpy("datetime64[ns]")
+
+    # Track lon/lat arrays
+    lon = pd.to_numeric(out["location_lon"], errors="coerce").to_numpy(dtype="float64")
+    lat = pd.to_numeric(out["location_lat"], errors="coerce").to_numpy(dtype="float64")
+
+    # Drop any rows with bad numeric lon/lat
+    good = np.isfinite(lon) & np.isfinite(lat) & out["timestamp"].notna().to_numpy()
+    if not good.all():
+        out = out.loc[good].copy()
+        tgt_t = tgt_t[good]
+        lon = lon[good]
+        lat = lat[good]
+
+    # QA columns
+    out["x"] = np.nan
+    out["y"] = np.nan
+
+    # Cache CRS/transformer per file path (since you may have multiple labels/files)
+    crs_cache: dict[str, "CRS"] = {}
+
+    for label in selected_vars:
+        file_path = env_var_map.get(label)
+        out[label] = np.nan
+
+        if not file_path or not Path(file_path).is_file():
+            print(f"[WARNING] File for {label} not found: {file_path}")
+            continue
+
+        base_var, target_level = _split_var_and_level(label)
+
+        try:
+            ds = safe_open_nc_with_time_decoding(file_path, time_name=time_name)
+
+            if base_var not in ds:
+                print(f"[WARNING] Base variable '{base_var}' not found in {file_path}")
+                ds.close()
+                continue
+
+            da = ds[base_var]
+            dims = list(da.dims)
+
+            # Must be able to interpolate along x/y dims
+            x_dim = x_name if x_name in dims else None
+            y_dim = y_name if y_name in dims else None
+            if x_dim is None or y_dim is None:
+                ds.close()
+                raise ValueError(
+                    f"Bilinear requires x/y to be dims of {base_var!r}.\n"
+                    f"  Requested x dim: {x_name!r} (is_dim={x_name in dims})\n"
+                    f"  Requested y dim: {y_name!r} (is_dim={y_name in dims})\n"
+                    f"  Available dims: {dims}"
+                )
+
+            # Sort for interpolation stability
+            ds = _ensure_sorted(ds, y_dim, x_dim)
+            da = ds[base_var]
+            dims = list(da.dims)
+
+            if "time" not in dims:
+                ds.close()
+                raise ValueError(f"No 'time' dim after decoding for '{base_var}'. dims={dims}")
+
+            # Validate 1D x/y coordinate vectors
+            gx = np.asarray(ds[x_dim].values)
+            gy = np.asarray(ds[y_dim].values)
+            if gx.ndim != 1 or gy.ndim != 1:
+                ds.close()
+                raise ValueError(
+                    f"Bilinear method requires 1D coordinate vectors for '{y_dim}' and '{x_dim}'. "
+                    f"Got shapes: {y_dim}={gy.shape}, {x_dim}={gx.shape}."
+                )
+
+            # Handle extra dims (pressure level, ensemble, expver, etc.)
+            extra_dims = [d for d in dims if d not in ("time", y_dim, x_dim)]
+            if extra_dims:
+                sel = {}
+                for d in extra_dims:
+                    if d in LEVEL_DIM_CANDIDATES:
+                        sel[d] = _pick_level_index(ds, d, target_level)
+                    else:
+                        sel[d] = 0
+                da = da.isel(**sel).squeeze()  # -> (time, y, x)
+
+            # --- CRS inference + projection lon/lat -> x/y -------------------------
+            if file_path not in crs_cache:
+                # Prefer variable-specific grid_mapping lookup by passing base_var
+                crs_cache[file_path] = read_crs_from_cf(ds, var_name=base_var)
+
+            target_crs = crs_cache[file_path]
+            x_pts, y_pts = project_tracks_lonlat_to_xy(lon, lat, target_crs=target_crs)
+
+            # Store for QA
+            out["x"] = x_pts
+            out["y"] = y_pts
+
+            # --- vectorized xarray interpolation -----------------------------------
+            pts = xr.Dataset(
+                coords={"points": np.arange(len(out))},
+                data_vars={
+                    "time": ("points", tgt_t),
+                    x_dim: ("points", x_pts),
+                    y_dim: ("points", y_pts),
+                },
+            )
+
+            sampled = da.interp({x_dim: pts[x_dim], y_dim: pts[y_dim], "time": pts["time"]})
+            out[label] = sampled.to_numpy()
+
+            ds.close()
+
+        except Exception as e:
+            print(f"[ERROR] {label}: {e}")
+            continue
+
+    # If you want: geometry in projected CRS (x,y). Comment out if not needed.
+    out["geometry"] = [Point(x, y) for x, y in zip(out["x"], out["y"])]
+
+    return out, pd.NaT, pd.NaT
 def convert_tif_to_nc_before_annotation(tif_paths, output_dir):
     """
     Converts a list of .tif files into a single NetCDF, creating a separate DataArray per variable.
@@ -1096,3 +1267,117 @@ def _pick_level_index(ds, level_dim: str, target_level: float | None):
         return int(np.nanargmin(np.abs(vals - ref)))
     except Exception:
         return 0
+
+def read_crs_from_cf(ds: xr.Dataset, var_name: str | None = None) -> CRS:
+    """
+    Infer the projected coordinate reference system (CRS) of a gridded
+    environmental dataset using CF-convention metadata.
+
+    The function attempts, in order:
+    1) to read a CF-compliant ``grid_mapping`` attribute from a data variable,
+    2) to construct a CRS from global dataset attributes (e.g. WKT or PROJ),
+    3) to read CRS information from a standalone ``crs`` variable.
+
+    This is intended for datasets on projected grids (e.g. NARR, ERA5-Land,
+    regional climate models) where track data in WGS84 lon/lat must be
+    transformed to native x/y coordinates before spatial interpolation.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Environmental dataset containing projected horizontal coordinates
+        and CF-compliant projection metadata.
+    var_name : str or None, optional
+        Name of a data variable whose ``grid_mapping`` attribute should be
+        inspected first. If None, variable-specific metadata are skipped.
+
+    Returns
+    -------
+    pyproj.CRS
+        Coordinate reference system describing the dataset's native
+        horizontal projection.
+
+    Raises
+    ------
+    ValueError
+        If no usable CRS information can be inferred from the dataset.
+    """
+
+    # 1) If a data variable is given, try its grid_mapping attribute
+    grid_mapping_name = None
+    if var_name is not None and var_name in ds:
+        grid_mapping_name = ds[var_name].attrs.get("grid_mapping")
+
+    # 2) If we have a grid mapping variable, parse it as CF
+    if grid_mapping_name and grid_mapping_name in ds.variables:
+        gm = ds[grid_mapping_name]
+        # xarray keeps attrs as dict; pyproj can build CRS from CF dict
+        try:
+            return CRS.from_cf(gm.attrs)
+        except Exception:
+            pass
+
+    # 3) Common alternate places: global attrs
+    # Try "crs_wkt", "spatial_ref" (GDAL), "proj4", "proj"
+    for key in ("crs_wkt", "spatial_ref", "proj_wkt", "wkt"):
+        wkt = ds.attrs.get(key)
+        if isinstance(wkt, str) and wkt.strip():
+            return CRS.from_wkt(wkt)
+
+    for key in ("proj4", "proj4text", "proj", "projection"):
+        proj = ds.attrs.get(key)
+        if isinstance(proj, str) and proj.strip():
+            return CRS.from_string(proj)
+
+    # 4) Sometimes there is a standalone "crs" variable with WKT in attrs
+    if "crs" in ds.variables:
+        crs_var = ds["crs"]
+        for key in ("crs_wkt", "spatial_ref"):
+            wkt = crs_var.attrs.get(key)
+            if isinstance(wkt, str) and wkt.strip():
+                return CRS.from_wkt(wkt)
+        # Or CF attrs
+        try:
+            return CRS.from_cf(crs_var.attrs)
+        except Exception:
+            pass
+
+    raise ValueError("Could not infer CRS from dataset (no usable CF grid_mapping / WKT / proj string found).")
+
+
+def project_tracks_lonlat_to_xy(
+    lon: np.ndarray,
+    lat: np.ndarray,
+    target_crs: CRS,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Project track locations from geographic coordinates (longitude, latitude)
+    to the native x/y coordinate system of a projected environmental grid.
+
+    This function is used to transform animal tracking locations
+    (WGS84 lon/lat) into the coordinate system of gridded datasets such as
+    NARR before spatial interpolation using xarray.
+
+    Parameters
+    ----------
+    lon : array-like
+        Longitudes of track locations in degrees east (EPSG:4326).
+    lat : array-like
+        Latitudes of track locations in degrees north (EPSG:4326).
+    target_crs : pyproj.CRS
+        Target projected CRS describing the environmental dataset grid.
+
+    Returns
+    -------
+    x : numpy.ndarray
+        Projected x-coordinates of track locations in the target CRS.
+    y : numpy.ndarray
+        Projected y-coordinates of track locations in the target CRS.
+    """
+
+    lon = np.asarray(lon, dtype=float)
+    lat = np.asarray(lat, dtype=float)
+
+    transformer = Transformer.from_crs("EPSG:4326", target_crs, always_xy=True)
+    x, y = transformer.transform(lon, lat)
+    return np.asarray(x, dtype=float), np.asarray(y, dtype=float)

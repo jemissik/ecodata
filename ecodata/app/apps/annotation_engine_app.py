@@ -103,7 +103,7 @@ class movebank_annotation_engine(param.Parameterized):
     )
     interpolation_method = pn.widgets.Select(
         name="Interpolation method (spatial)",
-        options=["Nearest neighbor (time-linear)", "Inverse Distance Weighting (time-linear)"],
+        options=["Nearest neighbor (time-linear)", "Inverse Distance Weighting (time-linear)", "Bilinear (projected x/y, time-linear)"],
         value="Inverse Distance Weighting (time-linear)"
     )
     make_annotation_button = pn.widgets.Button(name="Make annotated file", button_type="primary")
@@ -806,19 +806,26 @@ class movebank_annotation_engine(param.Parameterized):
                         self.alert.object = self.status_text
                         return
 
-                    try:
-                        bounds = get_nc_bounds(nc_path, env_coord_names=env_coord_names )  # {"S":..., "N":..., "W":..., "E":...}
-                        bbox = bounds
-                        # Updating the border information panel
+                    # Only attempt lat/lon bbox when we are in Geographic mode
+                    if self.env_spatial_mode.value == "Geographic (lat/lon)":
+                        try:
+                            bounds = get_nc_bounds(nc_path, env_coord_names=env_coord_names)
+                            bbox = bounds
+                            self.boundary_info_str.object = (
+                                "Boundary file: not selected (auto from .nc) <br>"
+                                f"Spatial range: lat[{bounds['S']:.3f}..{bounds['N']:.3f}], "
+                                f"lon[{bounds['W']:.3f}..{bounds['E']:.3f}]"
+                            )
+                        except Exception as e:
+                            self.status_text = f"Failed to derive boundary from .nc: {e}"
+                            self.alert.object = self.status_text
+                            return
+                    else:
+                        # Projected mode: don't attempt lat/lon bbox
                         self.boundary_info_str.object = (
-                            "Boundary file: not selected (auto from .nc) <br>"
-                            f"Spatial range: lat[{bounds['S']:.3f}..{bounds['N']:.3f}], "
-                            f"lon[{bounds['W']:.3f}..{bounds['E']:.3f}]"
+                            "Boundary file: not selected <br>"
+                            "Spatial range: using projected grid extent (x/y); bbox cropping disabled."
                         )
-                    except Exception as e:
-                        self.status_text = f"Failed to derive boundary from .nc: {e}"
-                        self.alert.object = self.status_text
-                        return
 
                 self.status_text = "Annotation started."
                 # pass bbox (or None, if the user did choose shp)
