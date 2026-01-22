@@ -3,15 +3,16 @@ from pathlib import Path
 import panel as pn
 import param
 import pandas as pd
+import xarray as xr
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
 from ecodata.app.models import FileSelector
 from ecodata.panel_utils import param_widget, register_view, try_catch, rename_param_widgets
 from ecodata.app.config import DEFAULT_TEMPLATE
 from datetime import datetime
 import re
-from ecodata import validate_and_process_csv, load_vector_extent_info, load_taxa_and_ids_from_csv 
-from ecodata.movebank_functions import merge_csv_files_from_folder, generate_individual_csvs_for_local_ids, interpolate_missing_values_only, delete_files 
-from ecodata.annotation_eng_func import start_annotation_process,convert_tif_to_nc_before_annotation, get_nc_bounds, safe_open_nc_with_time_decoding
+from ecodata import validate_and_process_csv, load_vector_extent_info, load_taxa_and_ids_from_csv
+from ecodata.movebank_functions import merge_csv_files_from_folder, generate_individual_csvs_for_local_ids, interpolate_missing_values_only, delete_files
+from ecodata.annotation_eng_func import start_annotation_process,convert_tif_to_nc_before_annotation, get_nc_bounds, open_nc_metadata, detect_env_coord_names, safe_open_nc_with_time_decoding
 
 logger = logging.getLogger(__file__)
 
@@ -68,7 +69,20 @@ class movebank_annotation_engine(param.Parameterized):
     load_movement_button = pn.widgets.Button(name="Load movement data", button_type="primary")
     load_bound_button = pn.widgets.Button(name="Load boundary data", button_type="primary")
     reset_bound_button = pn.widgets.Button(name="(!) Reset boundary", button_type="primary")
-    env_data_multiselect = pn.widgets.MultiSelect(name="Environmental variables (use Ctrl for multiple)", options=[], height = 140 ) 
+
+    # Selections for netcdf variable labels
+    env_time_select = pn.widgets.Select(name="Env time coordinate", options=[], value=None)
+    env_spatial_mode = pn.widgets.RadioButtonGroup(name="Env spatial coordinate mode",
+                                                   options=["Geographic (lat/lon)", "Projected (x/y)"],
+                                                   value="Geographic (lat/lon)",
+                                                   button_type="default",
+                                                   )
+    env_lat_select  = pn.widgets.Select(name="Latitude", options=[], value=None)
+    env_lon_select  = pn.widgets.Select(name="Longitude", options=[], value=None)
+    env_x_select    = pn.widgets.Select(name="X coordinate", options=[], value=None)
+    env_y_select    = pn.widgets.Select(name="Y coordinate", options=[], value=None)
+
+    env_data_multiselect = pn.widgets.MultiSelect(name="Environmental variables (use Ctrl for multiple)", options=[], height = 140 )
     taxon_multiselect = pn.widgets.MultiSelect(name="Select Taxon (use Ctrl for multiple)", height = 140)
     id_multiselect = pn.widgets.MultiSelect(name="Select ID (use Ctrl for multiple)", height = 140)
     env_info = pn.pane.HTML("File: not selected <br>Environment parameters: - <br>Time range: - <br>Spatial range: - <br>",
@@ -93,7 +107,7 @@ class movebank_annotation_engine(param.Parameterized):
         value="Inverse Distance Weighting (time-linear)"
     )
     make_annotation_button = pn.widgets.Button(name="Make annotated file", button_type="primary")
-    
+
 
     status_text = param.String("Ready...")
     #TIF widgets
@@ -155,7 +169,7 @@ class movebank_annotation_engine(param.Parameterized):
                 "make_csv", "merge_files",
                 "delete_individual_ID_files","folder_to_merge",
                 "delete_empty_columns", "out_merged_csv_name",
-                "merge_files_button", 
+                "merge_files_button",
                  # === NC Annotation tab ===
                   "env_data_selector",
                 "bound_data_selector", "movement_data_selector",
@@ -163,13 +177,13 @@ class movebank_annotation_engine(param.Parameterized):
                 "load_movement_button", "env_data_multiselect",
                 "taxon_multiselect",  "id_multiselect",
                 "boundary_info_str", "interpolation_method",
-                "control_smoothing", 
+                "control_smoothing",
                 "env_info", "movement_info" ,"output_path",
                 "make_annotation_button",
                 # === TIF Annotation tab ===
                 "tif_env_data_selector",
                 "tif_movement_data_selector",
-                "tif_bound_data_selector","tif_reset_bound_button", 
+                "tif_bound_data_selector","tif_reset_bound_button",
                 "tif_env_data_multiselect",
                 "tif_taxon_multiselect",
                 "tif_id_multiselect",
@@ -178,15 +192,20 @@ class movebank_annotation_engine(param.Parameterized):
                 "tif_make_annotation_button"
             ]
         )
-
+        self._latlon_widgets = pn.Column(self.env_lat_select, self.env_lon_select, sizing_mode="stretch_width")
+        self._xy_widgets     = pn.Column(self.env_x_select,   self.env_y_select,   sizing_mode="stretch_width")
         self.df = None
         self.alert = pn.pane.Markdown(self.status_text)
-        NC_H = 1080 
+        NC_H = 1080
         # === NC tab  ===
         self._nc_col1 = self._section(
             "Environmental data (.nc)",
             pn.Column(self.env_data_selector, sizing_mode="stretch_width"),
             self.load_env_button,
+            self.env_time_select,
+            self.env_spatial_mode,
+            self._latlon_widgets,
+            self._xy_widgets,
             self.env_data_multiselect,
             self.env_info,
             self.interpolation_method,
@@ -224,7 +243,7 @@ class movebank_annotation_engine(param.Parameterized):
         )
 
         # TIF
-        TIF_H = 1080  
+        TIF_H = 1080
         self._tif_col1 = self._section(
             "Environmental data (.tif) - select one (of)",
             pn.Column(self.tif_env_data_selector, sizing_mode="stretch_width"),
@@ -240,7 +259,7 @@ class movebank_annotation_engine(param.Parameterized):
 
         self._tif_col2 = self._section(
             "Movebank data (.csv)",
-            pn.Column(self.tif_movement_data_selector, sizing_mode="stretch_width"), 
+            pn.Column(self.tif_movement_data_selector, sizing_mode="stretch_width"),
             self.tif_load_movement_button,
             self.tif_taxon_multiselect,
             self.tif_movement_info,
@@ -249,7 +268,7 @@ class movebank_annotation_engine(param.Parameterized):
 
         self._tif_col3 = self._section(
             "Boundary data (.shp/.geojson)",
-            pn.Column(self.tif_bound_data_selector, sizing_mode="stretch_width"), 
+            pn.Column(self.tif_bound_data_selector, sizing_mode="stretch_width"),
             pn.Row(self.tif_load_bound_button, self.tif_reset_bound_button),
             self.tif_id_multiselect,
             self.tif_boundary_info_str,
@@ -297,8 +316,8 @@ class movebank_annotation_engine(param.Parameterized):
             ("Annotation engine - .tif", self.anotation_engine_tif_tab),
             ("Crop & interpolate csv", self.crop_interpolate_tab),
             ("Merge csv", self.merge_tab),
-        )    
-        
+        )
+
         self.simple_interp_button.on_click(self.run_interpolate_missing_only)
         self.load_data_button.on_click(self.load_ids_from_file)
         self.make_csv.on_click(self.run_make_csv)
@@ -325,7 +344,11 @@ class movebank_annotation_engine(param.Parameterized):
         self.tif_taxon_multiselect.param.watch(lambda e: self.update_movement_info_text_tif("Taxons", e.new), "value")
         self.tif_id_multiselect.param.watch(lambda e: self.update_movement_info_text_tif("IDs", e.new), "value")
         self.tif_interpolation_method.param.watch(self._update_smoothing_options_tif, 'value')
-        
+
+        # environmental spatial mode
+        self.env_spatial_mode.param.watch(lambda e: self._apply_env_spatial_mode(), "value")
+        self._apply_env_spatial_mode()  # set initial enabled/disabled state
+
 
     @try_catch("Error loading Individual IDs")
     def load_ids_from_file(self, *events):
@@ -443,7 +466,7 @@ class movebank_annotation_engine(param.Parameterized):
         candidates = ("timestamp", "eobs_start_timestamp", "time", "datetime", "date")
         time_col = next((c for c in candidates if c in df.columns), None)
         if not time_col:
-            return  
+            return
 
         ts = pd.to_datetime(df[time_col], errors="coerce")
         ts = ts[ts.notna()]
@@ -475,11 +498,24 @@ class movebank_annotation_engine(param.Parameterized):
             self.status_text = f"Failed: {e}"
 
         self.alert.object = self.status_text
-    
+
 
     @try_catch("Error loading environmental data")
     def load_env_data(self, *events):
-        """We select exactly one .nc, update File/Time/Spatial and the list of 3D variables."""
+        """
+        Load a single environmental NetCDF for UI inspection (metadata only).
+
+        This method:
+        1) Opens the dataset without time decoding (fast metadata read),
+        2) Detects candidate coordinate names (time/x/y/lat/lon),
+        3) Populates the variable list (including pressure-level-expanded labels),
+        4) Updates the info pane (File/Spatial + optionally Time if readily decodable).
+
+        Notes
+        -----
+        - This function is intended for UI responsiveness. It avoids CF-time decoding
+        unless explicitly needed later (e.g., during annotation).
+        """
         self.status_text = "Loading environmental data..."
         self.alert.object = self.status_text
 
@@ -509,33 +545,73 @@ class movebank_annotation_engine(param.Parameterized):
         self._auto_height(self.env_info)
 
         var_file_map: dict[str, str] = {}
-        time_text = "-"
+        time_text = "-"  # will remain "-" unless we can decode reliably/cheaply
         spatial_text = "-"
 
-        # Auxiliary coordinate name candidates
-        time_candidates = ("time","Time","datetime","date","valid_time","forecast_time","verification_time")
-        lat_candidates  = ("lat", "latitude", "y")
-        lon_candidates  = ("lon", "longitude", "x", "long")
-
         try:
-            ds = safe_open_nc_with_time_decoding(nc_path)
+            ds = open_nc_metadata(nc_path)
             try:
-                # ---- TIME ----
-                time_name = next((c for c in time_candidates if c in ds.coords or c in ds.variables), None)
-                if time_name is not None:
-                    tmin = pd.to_datetime(ds[time_name].values.min())
-                    tmax = pd.to_datetime(ds[time_name].values.max())
-                    time_text = f"{tmin.strftime('%Y-%m-%d')} — {tmax.strftime('%Y-%m-%d')}"
+                # Autodetect coordinate names
+                coord_guess = detect_env_coord_names(ds)
 
-                # ---- SPATIAL ----
-                lat_name = next((c for c in lat_candidates if c in ds.coords or c in ds.variables), None)
-                lon_name = next((c for c in lon_candidates if c in ds.coords or c in ds.variables), None)
-                if lat_name and lon_name:
-                    lat_min = float(ds[lat_name].min())
-                    lat_max = float(ds[lat_name].max())
-                    lon_min = float(ds[lon_name].min())
-                    lon_max = float(ds[lon_name].max())
-                    spatial_text = f"lat[{lat_min:.3f}..{lat_max:.3f}], lon[{lon_min:.3f}..{lon_max:.3f}]"
+                # Populate dropdown menus
+                self._populate_env_coord_dropdowns(ds, coord_guess)
+
+                # Auto-set spatial mode based on available coordinates
+                has_latlon = bool(self.env_lat_select.value and self.env_lon_select.value)
+                has_xy = bool(self.env_x_select.value and self.env_y_select.value)
+
+                if has_latlon and not has_xy:
+                    self.env_spatial_mode.value = "Geographic (lat/lon)"
+                elif has_xy and not has_latlon:
+                    self.env_spatial_mode.value = "Projected (x/y)"
+                # if both exist, don’t override user choice
+
+
+                env_time = self.env_time_select.value
+                env_lat  = self.env_lat_select.value
+                env_lon  = self.env_lon_select.value
+                env_x    = self.env_x_select.value
+                env_y    = self.env_y_select.value
+
+                # Update spatial_text with range from dataset (prefer lat/lon, fallback to x/y)
+                if env_lat and env_lon and (env_lat in ds) and (env_lon in ds):
+                    try:
+                        lat_min = float(ds[env_lat].min())
+                        lat_max = float(ds[env_lat].max())
+                        lon_min = float(ds[env_lon].min())
+                        lon_max = float(ds[env_lon].max())
+                        spatial_text = (
+                            f"{env_lat}[{lat_min:.3f}..{lat_max:.3f}], "
+                            f"{env_lon}[{lon_min:.3f}..{lon_max:.3f}]"
+                        )
+                    except Exception:
+                        spatial_text = "-"
+                elif env_x and env_y and (env_x in ds) and (env_y in ds):
+                    # Projected coordinates (units may be meters)
+                    try:
+                        x_min = float(ds[env_x].min())
+                        x_max = float(ds[env_x].max())
+                        y_min = float(ds[env_y].min())
+                        y_max = float(ds[env_y].max())
+                        spatial_text = (
+                            f"{env_y}[{y_min:.3f}..{y_max:.3f}], "
+                            f"{env_x}[{x_min:.3f}..{x_max:.3f}]"
+                        )
+                    except Exception:
+                        spatial_text = "-"
+
+                # Update time_text with time range if time decoding is cheap
+                if env_time and (env_time in ds.coords or env_time in ds.variables):
+                    try:
+                        # Only attempt lightweight decode when CF-like units are present
+                        decoded_times = xr.decode_cf(ds[[env_time]], decode_times=True)[env_time]
+                        tmin = decoded_times.min()
+                        tmax = decoded_times.max()
+                        time_text = f"{tmin.strftime('%Y-%m-%d')} — {tmax.strftime('%Y-%m-%d')}"
+                    except Exception:
+                        time_text = "-"
+
 
                 # ---- Перелік змінних з підтримкою вертикальних рівнів ----
                 LEVEL_DIM_CANDIDATES = ("isobaricInhPa", "isobaric_in_hPa", "level", "lev", "plev", "pressure", "pressure_level")
@@ -704,6 +780,7 @@ class movebank_annotation_engine(param.Parameterized):
         self.status_text = "Running annotation..."
         self.alert.object = self.status_text
         try:
+            env_coord_names = self._get_env_coord_names_from_ui()
             selected_vars = self.env_data_multiselect.value
             selected_ids = self.id_multiselect.value
             env_var_map = getattr(self, "env_variable_sources", {})
@@ -730,7 +807,7 @@ class movebank_annotation_engine(param.Parameterized):
                         return
 
                     try:
-                        bounds = get_nc_bounds(nc_path)  # {"S":..., "N":..., "W":..., "E":...}
+                        bounds = get_nc_bounds(nc_path, env_coord_names=env_coord_names )  # {"S":..., "N":..., "W":..., "E":...}
                         bbox = bounds
                         # Updating the border information panel
                         self.boundary_info_str.object = (
@@ -748,7 +825,7 @@ class movebank_annotation_engine(param.Parameterized):
                 start_annotation_process(
                     env_var_map, selected_vars, movebank_path, selected_ids,
                     boundary_path, interpolation_method, bbox=bbox, smoothing_k=smoothing_points,
-                    out_csv_path=self.output_path.value
+                    out_csv_path=self.output_path.value, env_coord_names=env_coord_names
                 )
                 self.status_text = "Annotation finished."
 
@@ -1060,8 +1137,8 @@ class movebank_annotation_engine(param.Parameterized):
                 selected_ids=selected_ids,
                 boundary_path=str(boundary_path) if boundary_path else None,
                 interpolation_method=interp_method,
-                bbox=bbox,                                              
-                smoothing_k=int(self.tif_control_smoothing.value),      
+                bbox=bbox,
+                smoothing_k=int(self.tif_control_smoothing.value),
                 out_csv_path=output_csv_path
             )
             self.status_text = "Annotation finished successfully (TIF)."
@@ -1076,7 +1153,7 @@ class movebank_annotation_engine(param.Parameterized):
             except Exception:
                 pass
 
-    
+
     @try_catch("Error loading TIF boundary data")
     def load_boundary_data_tif(self, *events):
         self.status_text = "Loading TIF boundary data..."
@@ -1142,7 +1219,7 @@ class movebank_annotation_engine(param.Parameterized):
             if lines:
                 lines[0] = f"File: {Path(file_path).name}"
 
-            # 
+            #
             try:
                 ts = pd.to_datetime(df["timestamp"], errors="coerce")
                 lat = pd.to_numeric(df["location_lat"], errors="coerce")
@@ -1336,7 +1413,7 @@ class movebank_annotation_engine(param.Parameterized):
             sizing_mode="stretch_width",
             height=height,
         )
-    
+
 
     def _auto_height(self, pane, line_px=22, padding=8):
         lines = [l for l in (pane.object or "").split("<br>") if l.strip()]
@@ -1387,7 +1464,7 @@ class movebank_annotation_engine(param.Parameterized):
         if h is None:
             return
         self._nc_col2.height = h
-        self._nc_col3.height = h 
+        self._nc_col3.height = h
 
 
     def reset_boundary_data(self, *events):
@@ -1409,7 +1486,82 @@ class movebank_annotation_engine(param.Parameterized):
 
         self.status_text = "Boundary reset to default (auto from .nc)."
         self.alert.object = self.status_text
-        self._sync_nc_column_heights()   
+        self._sync_nc_column_heights()
+
+    def _populate_env_coord_dropdowns(self, ds: xr.Dataset, coord_guess: dict) -> None:
+        """
+        Populate environmental coordinate dropdown menus from a dataset and autodetection.
+
+        Parameters
+        ----------
+        ds : xarray.Dataset
+            Environmental dataset opened for metadata inspection.
+        coord_guess : dict
+            Output from `detect_env_coord_names(ds)`. Expected keys:
+            'env_time', 'env_x', 'env_y', 'env_lat', 'env_lon'. Values may be None.
+
+        Returns
+        -------
+        None
+            Updates UI widgets in-place.
+        """
+        # Options: include both coords and variables (some datasets store coords as variables)
+        coord_names = list(ds.coords.keys())
+        var_names = list(ds.variables.keys())  # includes coords too, but that's fine
+        options = sorted(set(coord_names) | set(var_names))
+
+        # Helper to set widget options + default value safely
+        def _set_select(widget: pn.widgets.Select, guess_value: str | None) -> None:
+            widget.options = options
+            if guess_value in options:
+                widget.value = guess_value
+            else:
+                widget.value = widget.value if widget.value in options else None
+
+        _set_select(self.env_time_select, coord_guess.get("env_time"))
+        _set_select(self.env_lat_select,  coord_guess.get("env_lat"))
+        _set_select(self.env_lon_select,  coord_guess.get("env_lon"))
+        _set_select(self.env_x_select,    coord_guess.get("env_x"))
+        _set_select(self.env_y_select,    coord_guess.get("env_y"))
+
+    def _get_env_coord_names_from_ui(self) -> dict:
+        mode = self.env_spatial_mode.value
+        env_time = self.env_time_select.value
+
+        if not env_time:
+            raise ValueError("Select Env time coordinate.")
+
+        if mode == "Geographic (lat/lon)":
+            if not self.env_lat_select.value or not self.env_lon_select.value:
+                raise ValueError("Select both Env latitude coordinate and Env longitude coordinate.")
+            return {
+                "env_time": env_time,
+                "env_lat": self.env_lat_select.value,
+                "env_lon": self.env_lon_select.value,
+                "env_x": None,
+                "env_y": None,
+            }
+
+        # Projected (x/y)
+        if not self.env_x_select.value or not self.env_y_select.value:
+            raise ValueError("Select both Env x coordinate and Env y coordinate.")
+
+        return {
+            "env_time": env_time,
+            "env_lat": None,
+            "env_lon": None,
+            "env_x": self.env_x_select.value,
+            "env_y": self.env_y_select.value,
+        }
+
+
+    def _apply_env_spatial_mode(self) -> None:
+        mode = self.env_spatial_mode.value
+
+        use_latlon = (mode == "Geographic (lat/lon)")
+
+        self._latlon_widgets.visible = use_latlon
+        self._xy_widgets.visible     = not use_latlon
 
 
 @register_view()

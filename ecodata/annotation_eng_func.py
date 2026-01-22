@@ -11,20 +11,87 @@ import rasterio
 LEVEL_DIM_CANDIDATES = ("isobaricInhPa","isobaric_in_hPa","level","lev","plev","pressure","pressure_level")
 
 
-def safe_open_nc_with_time_decoding(path):
+def open_nc_metadata(path: str) -> xr.Dataset:
+    """
+    Open a NetCDF dataset for metadata inspection only.
+
+    Notes
+    -----
+    - This function is intended for UI/metadata purposes (listing variables/coords/dims).
+    - It does not decode time and should avoid heavy computation.
+
+    Parameters
+    ----------
+    path : str
+        Path to a NetCDF file.
+
+    Returns
+    -------
+    xarray.Dataset
+        Opened dataset (time not decoded).
+    """
+    # decode_times=False prevents CF time decoding and avoids cftime edge cases during UI inspection
+    return xr.open_dataset(path, decode_times=False, chunks="auto")
+
+
+def detect_env_coord_names(ds: xr.Dataset) -> dict:
+    """
+    Detect coordinate names for an environmental dataset.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Environmental dataset.
+
+    Returns
+    -------
+    dict
+        Dictionary with keys: 'env_time', 'env_x', 'env_y', 'env_lat', 'env_lon'.
+        Values may be None if not detected.
+    """
+
+    # time
+    env_time = _detect_time_name(ds)
+
+    # projected axes
+    x_candidates = ["x", "X", "projection_x_coordinate", "eastings", "easting"]
+    y_candidates = ["y", "Y", "projection_y_coordinate", "northings", "northing"]
+
+    env_x = next((c for c in x_candidates if c in ds.coords and c in ds.dims), None)
+    env_y = next((c for c in y_candidates if c in ds.coords and c in ds.dims), None)
+
+    # geographic coords (can be 1D or 2D)
+    lat_candidates = ["lat", "latitude", "Latitude"]
+    lon_candidates = ["lon", "longitude", "long", "Longitude"]
+
+    env_lat = next((c for c in lat_candidates if c in ds.coords or c in ds.variables), None)
+    env_lon = next((c for c in lon_candidates if c in ds.coords or c in ds.variables), None)
+
+    return {
+        "env_time": env_time,
+        "env_x": env_x,
+        "env_y": env_y,
+        "env_lat": env_lat,
+        "env_lon": env_lon,
+    }
+
+
+def safe_open_nc_with_time_decoding(path, time_name: str | None = None):
     """
     Opens a NetCDF file with support for non-standard calendars:
     julian, gregorian, 360_day, noleap, etc.
-    Always returns the 'time' coordinate as a pd.DatetimeIndex, 
+    Always returns the 'time' coordinate as a pd.DatetimeIndex,
     even if it was originally of cftime type.
     """
 
     try:
         ds = xr.open_dataset(path, decode_times=False, chunks="auto")
 
-        time_name = _detect_time_name(ds)
+        if time_name is None:
+            time_name = _detect_time_name(ds)
         if time_name is None:
             raise ValueError("No time-like coordinate/variable found (e.g., 'time', 'valid_time').")
+
 
         # if time is in variables but not in coords — make it a coordinate
         if time_name in ds.variables and time_name not in ds.coords:
@@ -58,19 +125,20 @@ def safe_open_nc_with_time_decoding(path):
 
     except Exception as e:
        raise RuntimeError(f"[ERROR] Failed to decode time using cftime for {path}: {e}")
-    
 
-def get_nc_timerange_for_selected(env_var_map: dict, selected_env_vars: list[str]):
+
+def get_nc_timerange_for_selected(env_var_map: dict, selected_env_vars: list[str], time_name: str | None = None):
     """
     Return union [nc_start, nc_end] across all selected variables.
     If time is missing for all → (None, None).
     """
+
     nc_start, nc_end = None, None
     for v in (selected_env_vars or []):
         nc_path = env_var_map.get(v)
         if not nc_path:
             continue
-        ds = safe_open_nc_with_time_decoding(nc_path)
+        ds = safe_open_nc_with_time_decoding(nc_path, time_name=time_name)
         try:
             if ("time" in ds.coords) or ("time" in ds.variables):
                 tmin = pd.to_datetime(ds["time"].values.min())
@@ -82,26 +150,25 @@ def get_nc_timerange_for_selected(env_var_map: dict, selected_env_vars: list[str
     return nc_start, nc_end
 
 
-def get_nc_bounds(nc_path: str):
+def get_nc_bounds(nc_path: str, env_coord_names: dict | None = None):
     """
     Returns a dictionary of boundaries from .nc in CRS WGS84: {"S": ..., "N": ..., "W": ..., "E": ...}
     """
-    ds = safe_open_nc_with_time_decoding(nc_path)
-    # candidate coordinate names
-    try:
-        lat_candidates = ("lat", "latitude", "y")
-        lon_candidates = ("lon", "longitude", "x","long")
+    env_coord_names = env_coord_names or {}
+    time_name = env_coord_names.get("env_time")
+    lat_name  = env_coord_names.get("env_lat")
+    lon_name  = env_coord_names.get("env_lon")
 
-        lat_name = next((c for c in lat_candidates if c in ds.coords or c in ds.variables), None)
-        lon_name = next((c for c in lon_candidates if c in ds.coords or c in ds.variables), None)
+    ds = safe_open_nc_with_time_decoding(nc_path)
+    try:
         if lat_name is None or lon_name is None:
-            raise ValueError("Could not detect lat/lon coordinate names in NetCDF")
+            raise ValueError("Could not determine lat/lon bounds.")
 
         lat_min = float(ds[lat_name].min())
         lat_max = float(ds[lat_name].max())
         lon_min = float(ds[lon_name].min())
         lon_max = float(ds[lon_name].max())
-        return {"S": lat_min, "N": lat_max, "W": lon_min, "E": lon_max} 
+        return {"S": lat_min, "N": lat_max, "W": lon_min, "E": lon_max}
     finally:
         ds.close()
 
@@ -118,7 +185,7 @@ def load_vector_extent_info(path):
         return path, south, north, west, east
     except Exception as e:
         raise RuntimeError(f"Failed to load vector file: {e}")
-    
+
 
 def load_taxa_and_ids_from_csv(file_path):
     """
@@ -144,17 +211,18 @@ def load_taxa_and_ids_from_csv(file_path):
 
     except Exception as e:
         return None, [], [], str(e)
-    
+
 
 def start_annotation_process(env_var_map, selected_env_vars, movebank_path, selected_ids,
                              boundary_path, interpolation_method, bbox=None, smoothing_k: int = 2,
-                             out_csv_path=None):
+                             out_csv_path=None, env_coord_names: dict | None = None):
     """
     env_var_map: dict[str, str] — variable → file path
     selected_env_vars: list[str] — selected variables
     movebank_path: str — path to the Movebank CSV
     selected_ids: list[str] — IDs for annotation
     boundary_path: str — path to .shp or .geojson
+    env_coord_names: dict — mapping of coordinate names for env datasets
     """
     print("[DEBUG] Annotation started")
     print("Selected variables:", selected_env_vars)
@@ -169,19 +237,20 @@ def start_annotation_process(env_var_map, selected_env_vars, movebank_path, sele
     if df_filtered.empty:
         print("[WARNING] No points within the boundary.")
         return
-    
+
     # ===*** Time prefiltering (union across selected variables) ===
-    nc_start, nc_end = get_nc_timerange_for_selected(env_var_map, selected_env_vars)
+    time_var = env_coord_names.get("env_time") if env_coord_names else None
+    nc_start, nc_end = get_nc_timerange_for_selected(env_var_map, selected_env_vars, time_name=time_var)
     df_filtered = filter_points_within_timerange(df_filtered, nc_start, nc_end)
     if df_filtered.empty:
         print("[WARNING] No points within the NC time window after prefiltering.")
         return
-    # ===*** 
+    # ===***
 
     # === Step 2: Loading and interpolation of environmental data ===
     result = load_selected_environmental_data(df_filtered, env_var_map,
                                                selected_env_vars, movebank_path,
-                                               interpolation_method, smoothing_k=smoothing_k)
+                                               interpolation_method, smoothing_k=smoothing_k, env_coord_names=env_coord_names,)
     if result is None:
         print("[ERROR] Environmental data was not loaded.")
         return
@@ -266,7 +335,7 @@ def filter_points_within_boundary(movebank_path, selected_ids, boundary_path=Non
         except Exception as e:
             print(f"[ERROR] Failed to save (bbox) data: {e}")
         return gdf_filtered, output_path
-    
+
     #  case: boundary from shp/geojson
     df["geometry"] = [Point(lon, lat) for lon, lat in zip(df["location_lon"], df["location_lat"])]
     gdf_points = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
@@ -342,7 +411,8 @@ def interpolate_missing_coordinates(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def load_selected_environmental_data(df, env_var_map, selected_vars,
-                                      movebank_path, interpolation_method="Nearest neighbour", smoothing_k: int = 2):
+                                      movebank_path, interpolation_method="Nearest neighbour", smoothing_k: int = 2,
+                                      env_coord_names: dict | None = None):
     """
     Wrapper that calls the appropriate annotation function depending on the interpolation method.
     Supports:
@@ -356,14 +426,14 @@ def load_selected_environmental_data(df, env_var_map, selected_vars,
     is_idw = ("idw" in label) or ("inverse distance" in label)
 
     if is_nearest:
-        return annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothing_k=smoothing_k)
+        return annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothing_k=smoothing_k, env_coord_names=env_coord_names)
     elif is_idw:
-        return annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k=smoothing_k)
+        return annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k=smoothing_k, env_coord_names=env_coord_names)
     else:
         raise ValueError(f"Unknown interpolation method: {interpolation_method}")
-    
 
-def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothing_k: int = 4):
+
+def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothing_k: int = 4, env_coord_names: dict | None = None):
     """
     Annotate movement points with environmental values using:
       - Spatial: nearest grid node
@@ -386,6 +456,9 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
         Used only for output file placement upstream in the pipeline.
     smoothing_k : int
         Unused in the nearest-neighbour branch (kept for signature symmetry).
+    env_coord_names : dict | None
+        Mapping of coordinate names for env datasets. Expected keys:
+        'env_time', 'env_x', 'env_y', 'env_lat', 'env_lon'.
 
     Returns
     -------
@@ -433,7 +506,14 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
         base_var, target_level = _split_var_and_level(label)
 
         try:
-            ds = safe_open_nc_with_time_decoding(file_path)
+            env_coord_names = env_coord_names or {}
+            time_name = env_coord_names.get("env_time")
+            lat_name  = env_coord_names.get("env_lat")
+            lon_name  = env_coord_names.get("env_lon")
+            x_name    = env_coord_names.get("env_x")
+            y_name    = env_coord_names.get("env_y")
+
+            ds = safe_open_nc_with_time_decoding(file_path, time_name=time_name)
             if base_var not in ds:
                 print(f"[WARNING] Base variable '{base_var}' not found in {file_path}")
                 ds.close()
@@ -442,25 +522,47 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
             da = ds[base_var]
             dims = list(da.dims)
 
-            # Detect lat/lon names; keep dataset sorted in both
-            lat_dim = "lat" if "lat" in dims else "latitude"
-            lon_dim = "lon" if "lon" in dims else "longitude"
+            # coordinate/dimension selection
+            lat_dim = lat_name if (lat_name in dims) else None
+            lon_dim = lon_name if (lon_name in dims) else None
+
+            if lat_dim is None or lon_dim is None:
+                # Optional strict fallback to x/y if user provided them AND they are dims
+                x_dim = x_name if (x_name in dims) else None
+                y_dim = y_name if (y_name in dims) else None
+
+                if x_dim is not None and y_dim is not None:
+                    lat_dim = y_dim
+                    lon_dim = x_dim
+                else:
+                    ds.close()
+                    raise ValueError(
+                        "Could not resolve spatial dimensions from the provided env_coord_names.\n"
+                        f"  Requested lat dim: {lat_name!r} (is_dim={lat_name in dims if lat_name else False})\n"
+                        f"  Requested lon dim: {lon_name!r} (is_dim={lon_name in dims if lon_name else False})\n"
+                        f"  Requested y dim:   {y_name!r} (is_dim={y_name in dims if y_name else False})\n"
+                        f"  Requested x dim:   {x_name!r} (is_dim={x_name in dims if x_name else False})\n"
+                        f"  Available dims for {base_var!r}: {dims}"
+                    )
+
             ds = _ensure_sorted(ds, lat_dim, lon_dim)
             da = ds[base_var]
             dims = list(da.dims)
 
-            # Unify/ensure time dimension is named 'time'
-            time_dim = "time" if "time" in dims else next(
-                (d for d in ("valid_time", "forecast_time", "verification_time", "t", "Time") if d in dims),
-                None
-            )
-            if time_dim is None:
+            # Validate that lat/lon dims are 1D coordinate vectors
+            glat = np.asarray(ds[lat_dim].values)
+            glon = np.asarray(ds[lon_dim].values)
+            if glat.ndim != 1 or glon.ndim != 1:
                 ds.close()
-                raise ValueError(f"No time-like dimension in '{base_var}': dims={dims}")
-            if time_dim != "time":
-                ds = ds.rename({time_dim: "time"})
-                da = ds[base_var]
-                dims = list(da.dims)
+                raise ValueError(
+                    f"Nearest-grid method requires 1D coordinate vectors for '{lat_dim}' and '{lon_dim}'. "
+                    f"Got shapes: {lat_dim}={glat.shape}, {lon_dim}={glon.shape}."
+    )
+
+            # time dim should already be 'time' because safe_open... renames it, but keep the fallback
+            if "time" not in dims:
+                ds.close()
+                raise ValueError(f"No 'time' dim after decoding for '{base_var}'. dims={dims}")
 
             # Resolve extra dimensions (pressure level, ensemble, expver, etc.)
             # For the "level" dim: pick closest to `target_level` (or 1000 hPa by default).
@@ -538,7 +640,14 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
     return out, pd.NaT, pd.NaT
 
 
-def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k: int = 2):
+def annotate_env_IDW(
+    df,
+    env_var_map,
+    selected_vars,
+    movebank_path,
+    smoothing_k: int = 2,
+    env_coord_names: dict | None = None,
+):
     """
     Annotate movement points with environmental values using:
       - Spatial: Inverse Distance Weighting (IDW) over k nearest grid nodes
@@ -562,7 +671,9 @@ def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k:
         Kept for signature symmetry with the rest of the pipeline (output path handled upstream).
     smoothing_k : int
         Number of nearest grid nodes for IDW (>=2).
-
+    env_coord_names : dict | None
+        Mapping of coordinate names for env datasets. Expected keys:
+        'env_time', 'env_x', 'env_y', 'env_lat', 'env_lon'.
     Returns
     -------
     (out_df, nc_start, nc_end)
@@ -597,7 +708,15 @@ def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k:
         base_var, target_level = _split_var_and_level(label)
 
         try:
-            ds = safe_open_nc_with_time_decoding(file_path)
+            env_coord_names = env_coord_names or {}
+            time_name = env_coord_names.get("env_time")
+            lat_name = env_coord_names.get("env_lat")
+            lon_name = env_coord_names.get("env_lon")
+            x_name = env_coord_names.get("env_x")
+            y_name = env_coord_names.get("env_y")
+
+            ds = safe_open_nc_with_time_decoding(file_path, time_name=time_name)
+
             if base_var not in ds:
                 print(f"[WARNING] Base variable '{base_var}' not in {file_path}")
                 ds.close()
@@ -606,24 +725,47 @@ def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k:
             da = ds[base_var]
             dims = list(da.dims)
 
-            # Detect coordinate names and sort dataset (required by nearest/k-nearest search)
-            lat_dim = "lat" if "lat" in dims else "latitude"
-            lon_dim = "lon" if "lon" in dims else "longitude"
+            # coordinate/dimension selection
+            lat_dim = lat_name if (lat_name in dims) else None
+            lon_dim = lon_name if (lon_name in dims) else None
+
+            if lat_dim is None or lon_dim is None:
+                # Strict fallback to x/y only if user provided them AND they are dims
+                x_dim = x_name if (x_name in dims) else None
+                y_dim = y_name if (y_name in dims) else None
+
+                if x_dim is not None and y_dim is not None:
+                    lat_dim = y_dim
+                    lon_dim = x_dim
+                else:
+                    ds.close()
+                    raise ValueError(
+                        "Could not resolve spatial dimensions from the provided env_coord_names.\n"
+                        f"  Requested lat dim: {lat_name!r} (is_dim={lat_name in dims if lat_name else False})\n"
+                        f"  Requested lon dim: {lon_name!r} (is_dim={lon_name in dims if lon_name else False})\n"
+                        f"  Requested y dim:   {y_name!r} (is_dim={y_name in dims if y_name else False})\n"
+                        f"  Requested x dim:   {x_name!r} (is_dim={x_name in dims if x_name else False})\n"
+                        f"  Available dims for {base_var!r}: {dims}"
+                    )
+
             ds = _ensure_sorted(ds, lat_dim, lon_dim)
             da = ds[base_var]
             dims = list(da.dims)
 
-            # Unify time dimension name to 'time'
-            time_dim = "time" if "time" in dims else next(
-                (d for d in ("valid_time", "forecast_time", "verification_time", "t", "Time") if d in dims), None
-            )
-            if time_dim is None:
+            # Validate that lat/lon dims are 1D coordinate vectors
+            glat = np.asarray(ds[lat_dim].values)
+            glon = np.asarray(ds[lon_dim].values)
+            if glat.ndim != 1 or glon.ndim != 1:
                 ds.close()
-                raise ValueError(f"No time-like dimension in '{base_var}': dims={dims}")
-            if time_dim != "time":
-                ds = ds.rename({time_dim: "time"})
-                da = ds[base_var]
-                dims = list(da.dims)
+                raise ValueError(
+                    f"IDW method requires 1D coordinate vectors for '{lat_dim}' and '{lon_dim}'. "
+                    f"Got shapes: {lat_dim}={glat.shape}, {lon_dim}={glon.shape}."
+                )
+
+            # time dim should already be 'time' because safe_open... renames it
+            if "time" not in dims:
+                ds.close()
+                raise ValueError(f"No 'time' dim after decoding for '{base_var}'. dims={dims}")
 
             # Resolve extra dimensions (pressure level, ensemble, expver, etc.)
             extra_dims = [d for d in dims if d not in ("time", lat_dim, lon_dim)]
@@ -907,7 +1049,7 @@ def _idw(values, distances, p=2):
 
 def _detect_time_name(ds):
     # 1)quick candidates by name
-    name_candidates = ("time","valid_time","forecast_time","verification_time","t","Time","datetime","date")
+    name_candidates = ("time", "timestamp", "Timestamp", "Time", "valid_time", "forecast_time", "verification_time", "t", "Time", "datetime", "date")
     for c in name_candidates:
         if c in ds.coords or c in ds.variables:
             return c
