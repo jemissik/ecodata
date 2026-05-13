@@ -107,6 +107,18 @@ def get_nc_bounds(nc_path: str):
     finally:
         ds.close()
 
+def remove_temporary_trimmed_file(trimmed_path):
+    """Remove temporary trimmed.csv created during spatial filtering."""
+    if trimmed_path is None:
+        return
+
+    try:
+        path = Path(trimmed_path)
+        if path.exists() and path.is_file():
+            path.unlink()
+            print(f"[INFO] Temporary file removed: {path}")
+    except Exception as e:
+        print(f"[WARNING] Could not remove temporary trimmed.csv: {e}")
 
 def load_vector_extent_info(path):
     try:
@@ -172,9 +184,13 @@ def start_annotation_process(env_var_map, selected_env_vars, movebank_path, sele
     print("Interpolation method:", interpolation_method)
 
      # === Step 1: Spatial filtering ===
-    df_filtered, _ = filter_points_within_boundary(movebank_path, selected_ids, boundary_path, bbox=bbox)
+    df_filtered, trimmed_path = filter_points_within_boundary(
+        movebank_path, selected_ids, boundary_path, bbox=bbox
+    )
+
     if df_filtered.empty:
         print("[WARNING] No points within the boundary.")
+        remove_temporary_trimmed_file(trimmed_path)
         return
     
     # ===*** Time prefiltering (union across selected variables) ===
@@ -182,6 +198,7 @@ def start_annotation_process(env_var_map, selected_env_vars, movebank_path, sele
     df_filtered = filter_points_within_timerange(df_filtered, nc_start, nc_end)
     if df_filtered.empty:
         print("[WARNING] No points within the NC time window after prefiltering.")
+        remove_temporary_trimmed_file(trimmed_path)
         return
     # ===*** 
 
@@ -194,6 +211,7 @@ def start_annotation_process(env_var_map, selected_env_vars, movebank_path, sele
                                                categorical_vars=categorical_vars)
     if result is None:
         print("[ERROR] Environmental data was not loaded.")
+        remove_temporary_trimmed_file(trimmed_path)
         return
 
     df_annotated, ann_nc_start, ann_nc_end = result
@@ -246,7 +264,6 @@ def start_annotation_process(env_var_map, selected_env_vars, movebank_path, sele
         print(f"[DEBUG] Filled '{var}': total={filled_total}, within-NC-window={filled_in_nc}")
     else:
         print(f"[WARNING] Column '{var}' not found in annotated DataFrame.")
-#####
 
     # === Step 3: Time filtering ===
     df_time_filtered = df_annotated.copy()
@@ -276,6 +293,7 @@ def start_annotation_process(env_var_map, selected_env_vars, movebank_path, sele
         print(f"[INFO] Saved {len(unique_ids)} individual files to {output_folder}")
     else:
         print("[WARNING] Column 'individual_local_identifier' not found. Skipping per-ID export.")
+    remove_temporary_trimmed_file(trimmed_path)
 
 
 def filter_points_within_boundary(movebank_path, selected_ids, boundary_path=None, bbox=None):
