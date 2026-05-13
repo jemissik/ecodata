@@ -9,6 +9,7 @@ dependencies:
 - conda-forge::jupyterlab
 - pytest
 - pip
+- geographiclib
 - pip:
   - black
   - isort

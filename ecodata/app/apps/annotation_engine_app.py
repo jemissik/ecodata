@@ -19,10 +19,10 @@ class movebank_annotation_engine(param.Parameterized):
     local_ID_file = param_widget(FileSelector(constrain_path=False, expanded=True, size=10))
     load_data_button = param_widget(pn.widgets.Button(name="Load data", button_type="primary"))
     taxon_name_val = param_widget(
-        pn.widgets.MultiSelect(name="Taxon name (press Ctrl for multiple selection)", options=[], height = 140, disabled=True)
+        pn.widgets.MultiSelect(name="Taxon name (use Ctrl or ⌘ for multiple selection)", options=[], height = 140, disabled=True)
     )
     individual_ID = param_widget(
-        pn.widgets.MultiSelect(name="Individual ID (press Ctrl for multiple selection)", options=[], height = 140, disabled=True)
+        pn.widgets.MultiSelect(name="Individual ID (use Ctrl or ⌘ for multiple selection)", options=[], height = 140, disabled=True)
     )
     simple_interp_button = param_widget(pn.widgets.Button(name="Simple interpolation (missing ≤ 1 day)", button_type="primary"))
     deployment_time_gap = param_widget(
@@ -68,9 +68,21 @@ class movebank_annotation_engine(param.Parameterized):
     load_movement_button = pn.widgets.Button(name="Load movement data", button_type="primary")
     load_bound_button = pn.widgets.Button(name="Load boundary data", button_type="primary")
     reset_bound_button = pn.widgets.Button(name="(!) Reset boundary", button_type="primary")
-    env_data_multiselect = pn.widgets.MultiSelect(name="Environmental variables (use Ctrl for multiple)", options=[], height = 140 ) 
-    taxon_multiselect = pn.widgets.MultiSelect(name="Select Taxon (use Ctrl for multiple)", height = 140)
-    id_multiselect = pn.widgets.MultiSelect(name="Select ID (use Ctrl for multiple)", height = 140)
+    nc_time_var = pn.widgets.Select(name="Time variable", options=[], value=None)
+    nc_lat_var  = pn.widgets.Select(name="Latitude variable", options=[], value=None)
+    nc_lon_var  = pn.widgets.Select(name="Longitude variable", options=[], value=None)
+    env_continuous_selector = pn.widgets.MultiSelect(
+    name="Continuous (use Ctrl or ⌘ for multiple selection)",
+    options=[], value=[], height=180
+    )
+
+    env_categorical_selector = pn.widgets.MultiSelect(
+        name="Categorical (use Ctrl or ⌘ for multiple selection)",
+        options=[], value=[], height=180
+    )
+
+    taxon_multiselect = pn.widgets.MultiSelect(name="Select Taxon (use Ctrl or ⌘ for multiple)", height = 140)
+    id_multiselect = pn.widgets.MultiSelect(name="Select ID (use Ctrl or ⌘ for multiple)", height = 140)
     env_info = pn.pane.HTML("File: not selected <br>Environment parameters: - <br>Time range: - <br>Spatial range: - <br>",
                              sizing_mode="stretch_width")
     movement_info = pn.pane.HTML("File: not selected <br>Taxons: - <br>IDs: - <br>Time range: - <br>Spatial range: - <br>",
@@ -118,9 +130,14 @@ class movebank_annotation_engine(param.Parameterized):
         options=["2", "4", "6", "8"],
         value="4"
     )
-    tif_env_data_multiselect = pn.widgets.MultiSelect(name="netCDF Environmental variables", options=[], height = 140)
-    tif_taxon_multiselect = pn.widgets.MultiSelect(name="Select Taxon", height = 140)
-    tif_id_multiselect = pn.widgets.MultiSelect(name="Select ID", height = 140)
+    tif_env_data_multiselect = pn.widgets.MultiSelect(name="Environmental variables (use Ctrl or ⌘ for multiple)", options=[], height = 140)
+    # TIF variable type: continuous vs categorical
+    tif_continuous_vars = pn.widgets.MultiSelect(name="Continuous variables (use Ctrl or ⌘ for multiple)", options=[], value=[], size=8)
+    tif_categorical_vars = pn.widgets.MultiSelect(name="Categorical/QC variables (use Ctrl or ⌘ for multiple)", options=[], value=[], size=8)
+    # prevent recursive watcher updates
+    _syncing_tif_var_types = False
+    tif_taxon_multiselect = pn.widgets.MultiSelect(name="Select Taxon (use Ctrl or ⌘ for multiple)", height = 140)
+    tif_id_multiselect = pn.widgets.MultiSelect(name="Select ID (use Ctrl or ⌘ for multiple)", height = 140)
     tif_env_info = pn.pane.HTML("File: not selected <br>Environment parameters: - <br>Time range: - <br>Spatial range: - <br>",
                             sizing_mode="stretch_width")
     tif_movement_info = pn.pane.HTML("File: not selected <br>Taxons: - <br>IDs: - <br>Time range: - <br>Spatial range: - <br>",
@@ -129,6 +146,14 @@ class movebank_annotation_engine(param.Parameterized):
     tif_boundary_info_str = pn.pane.HTML(
         "Boundary file: not selected <br> Spatial range: = environment data boundary",
         sizing_mode="stretch_width"
+    )
+    # --- TIF scaling (optional) ---
+    tif_apply_scale = pn.widgets.Checkbox(name="Apply scale factor / offset", value=False)
+    tif_scale_factor = pn.widgets.FloatInput(
+        name="Scale factor", value=1.0, step=0.0001, start=None, disabled=True
+    )
+    tif_add_offset = pn.widgets.FloatInput(
+        name="Add offset", value=0.0, step=0.1, start=None, disabled=True
     )
 
     tif_interpolation_method = pn.widgets.Select(
@@ -144,6 +169,8 @@ class movebank_annotation_engine(param.Parameterized):
 
         self.interpolation_method.name = "Spatial interpolation method (.nc)"
         self.tif_interpolation_method.name = "Spatial interpolation method (.tif)"
+        self._wire_env_split_guards()
+        self._apply_env_selector_labels()
         rename_param_widgets(
             self,
             [
@@ -160,20 +187,23 @@ class movebank_annotation_engine(param.Parameterized):
                   "env_data_selector",
                 "bound_data_selector", "movement_data_selector",
                 "load_env_button", "load_bound_button", "reset_bound_button",
-                "load_movement_button", "env_data_multiselect",
+                "load_movement_button", "env_continuous_selector", "env_categorical_selector",
                 "taxon_multiselect",  "id_multiselect",
                 "boundary_info_str", "interpolation_method",
                 "control_smoothing", 
                 "env_info", "movement_info" ,"output_path",
                 "make_annotation_button",
+                 "nc_time_var", "nc_lat_var","nc_lon_var",
                 # === TIF Annotation tab ===
                 "tif_env_data_selector",
                 "tif_movement_data_selector",
-                "tif_bound_data_selector","tif_reset_bound_button", 
+                "tif_bound_data_selector", "tif_reset_bound_button",
                 "tif_env_data_multiselect",
+                "tif_continuous_vars", "tif_categorical_vars",
                 "tif_taxon_multiselect",
                 "tif_id_multiselect",
                 "tif_interpolation_method", "tif_control_smoothing",
+                "tif_apply_scale", "tif_scale_factor", "tif_add_offset",
                 "tif_env_info", "tif_movement_info",
                 "tif_make_annotation_button"
             ]
@@ -184,32 +214,36 @@ class movebank_annotation_engine(param.Parameterized):
         NC_H = 1080 
         # === NC tab  ===
         self._nc_col1 = self._section(
-            "Environmental data (.nc)",
+            "1. Environmental data (.nc)",
             pn.Column(self.env_data_selector, sizing_mode="stretch_width"),
             self.load_env_button,
-            self.env_data_multiselect,
+            self.env_continuous_selector,
+            self.env_categorical_selector,
             self.env_info,
+            self.nc_time_var, self.nc_lat_var, self.nc_lon_var,
             self.interpolation_method,
             self.control_smoothing,
             self.output_path,
-            self.make_annotation_button,
-            height=NC_H,
+            height=NC_H + 400,
         )
         self._nc_col2 = self._section(
-            "Movebank data (.csv)",
+            "2. Movebank data (.csv)",
             pn.Column(self.movement_data_selector, sizing_mode="stretch_width"),
             self.load_movement_button,
             self.taxon_multiselect,
+            self.id_multiselect,
             self.movement_info,
-            height=NC_H,
+            height=NC_H + 400,
         )
         self._nc_col3 = self._section(
-            "Boundary data (.shp/.geojson)",
+            "3. Boundary data (.shp/.geojson)",
             pn.Column(self.bound_data_selector, sizing_mode="stretch_width"),
             pn.Row(self.load_bound_button, self.reset_bound_button),
-            self.id_multiselect,
             self.boundary_info_str,
-            height=NC_H,
+            pn.layout.Divider(),
+            pn.pane.Markdown("### 4. Start annotation"),
+            self.make_annotation_button,
+            height=NC_H + 400,
         )
 
         # synchronize heights after rendering
@@ -220,39 +254,50 @@ class movebank_annotation_engine(param.Parameterized):
             pn.GridBox(
                 self._nc_col1, self._nc_col2, self._nc_col3,
                 ncols=3, sizing_mode="stretch_width",
+                height=1400, 
+                scroll=True,
             ),
         )
 
         # TIF
-        TIF_H = 1080  
+        TIF_H = 1500  
         self._tif_col1 = self._section(
-            "Environmental data (.tif) - select one (of)",
+            "1. Environmental data (.tif) - select one (of)",
             pn.Column(self.tif_env_data_selector, sizing_mode="stretch_width"),
             self.tif_load_env_button,
-            self.tif_env_data_multiselect,
+            self.tif_continuous_vars,
+            self.tif_categorical_vars,
+
+            pn.layout.Divider(),
             self.tif_env_info,
             self.tif_interpolation_method,
             self.tif_control_smoothing,
             self.tif_output_path,
-            self.tif_make_annotation_button,
+            pn.pane.Markdown("### Post-sampling correction for continuous variables"),
+            self.tif_apply_scale,
+            self.tif_scale_factor,
+            self.tif_add_offset,
             height=TIF_H,
         )
 
         self._tif_col2 = self._section(
-            "Movebank data (.csv)",
+            "2. Movebank data (.csv)",
             pn.Column(self.tif_movement_data_selector, sizing_mode="stretch_width"), 
             self.tif_load_movement_button,
             self.tif_taxon_multiselect,
+            self.tif_id_multiselect,
             self.tif_movement_info,
             height=TIF_H,
         )
 
         self._tif_col3 = self._section(
-            "Boundary data (.shp/.geojson)",
+            "3. Boundary data (.shp/.geojson)",
             pn.Column(self.tif_bound_data_selector, sizing_mode="stretch_width"), 
             pn.Row(self.tif_load_bound_button, self.tif_reset_bound_button),
-            self.tif_id_multiselect,
             self.tif_boundary_info_str,
+            pn.layout.Divider(),
+            pn.pane.Markdown("### 4. Start annotation"),
+            self.tif_make_annotation_button,
             height=TIF_H,
         )
 
@@ -310,7 +355,8 @@ class movebank_annotation_engine(param.Parameterized):
         self.load_movement_button.on_click(self.load_movement_data)
         self.taxon_multiselect.param.watch(self.update_annotation_ids_by_taxon, 'value')
         self.make_annotation_button.on_click(self.run_annotation)
-        self.env_data_multiselect.param.watch(lambda e: self.update_env_info_text(e.new), "value")
+        self.env_continuous_selector.param.watch(lambda e: self.update_env_info_text(self._get_selected_env_vars()), "value")
+        self.env_categorical_selector.param.watch(lambda e: self.update_env_info_text(self._get_selected_env_vars()), "value")
         self.taxon_multiselect.param.watch(lambda e: self.update_movement_info_text("Taxons", e.new), "value")
         self.id_multiselect.param.watch(lambda e: self.update_movement_info_text("IDs", e.new), "value")
         self.interpolation_method.param.watch(self._update_smoothing_options, 'value')
@@ -321,10 +367,31 @@ class movebank_annotation_engine(param.Parameterized):
         self.tif_load_movement_button.on_click(self.load_movement_data_tif)
         self.tif_make_annotation_button.on_click(self.run_annotation_tif)
         self.tif_taxon_multiselect.param.watch(self.update_annotation_ids_by_taxon_tif, 'value')
-        self.tif_env_data_multiselect.param.watch(lambda e: self.update_env_info_text_tif(e.new), "value")
+        self.tif_continuous_vars.param.watch(
+            lambda e: self.update_env_info_text_tif(
+                list(self.tif_continuous_vars.value or []) + [
+                    v for v in list(self.tif_categorical_vars.value or [])
+                    if v not in list(self.tif_continuous_vars.value or [])
+                ]
+            ),
+            "value"
+        )
+        self.tif_categorical_vars.param.watch(
+            lambda e: self.update_env_info_text_tif(
+                list(self.tif_continuous_vars.value or []) + [
+                    v for v in list(self.tif_categorical_vars.value or [])
+                    if v not in list(self.tif_continuous_vars.value or [])
+                ]
+            ),
+            "value"
+        )
         self.tif_taxon_multiselect.param.watch(lambda e: self.update_movement_info_text_tif("Taxons", e.new), "value")
         self.tif_id_multiselect.param.watch(lambda e: self.update_movement_info_text_tif("IDs", e.new), "value")
         self.tif_interpolation_method.param.watch(self._update_smoothing_options_tif, 'value')
+        self.tif_apply_scale.param.watch(self._update_tif_scale_widgets, "value")
+        self._update_tif_scale_widgets()
+        self.tif_continuous_vars.param.watch(self._sync_tif_variable_type_selection, "value")
+        self.tif_categorical_vars.param.watch(self._sync_tif_variable_type_selection, "value")
         
 
     @try_catch("Error loading Individual IDs")
@@ -476,6 +543,96 @@ class movebank_annotation_engine(param.Parameterized):
 
         self.alert.object = self.status_text
     
+    def _is_categorical_var(self, var_name: str, da) -> bool:
+        """
+        Heuristic classification:
+        - QC/flag/mask/class/category in name -> categorical
+        - integer dtype + flag_values/flag_meanings attrs -> categorical
+        - integer dtype + small number of unique values (sample) -> categorical
+        """
+        name = (var_name or "").lower()
+        name_hits = ["qc", "quality", "flag", "mask", "class", "category", "type", "landcover", "biome"]
+        if any(h in name for h in name_hits):
+            return True
+
+        try:
+            import numpy as np
+            if np.issubdtype(da.dtype, np.integer):
+                attrs = getattr(da, "attrs", {}) or {}
+                if ("flag_values" in attrs) or ("flag_meanings" in attrs):
+                    return True
+
+                # sample uniqueness (avoid loading whole array)
+                # take first time slice if possible
+                sample = da
+                for dim in da.dims:
+                    if dim.lower() in ("time",):
+                        sample = sample.isel({dim: 0})
+                        break
+                vals = sample.values
+                flat = vals.ravel()
+                flat = flat[:5000]  # cap
+                flat = flat[~np.isnan(flat)] if flat.dtype.kind == "f" else flat
+                uniq = np.unique(flat)
+                if len(uniq) <= 32:
+                    return True
+        except Exception:
+            pass
+
+        return False
+
+    def _enforce_env_split_unique(self, changed: str, new_values: list):
+        """
+        Ensure the same variable cannot be selected in both selectors.
+        changed: "cont" or "cat"
+        """
+        cont = list(self.env_continuous_selector.value or [])
+        cat  = list(self.env_categorical_selector.value or [])
+
+        if changed == "cont":
+            # remove from categorical...
+            overlap = set(new_values) & set(cat)
+            if overlap:
+                self.env_categorical_selector.value = [v for v in cat if v not in overlap]
+
+        elif changed == "cat":
+            overlap = set(new_values) & set(cont)
+            if overlap:
+                self.env_continuous_selector.value = [v for v in cont if v not in overlap]
+
+
+    def _wire_env_split_guards(self):
+        """
+        Attach watchers for mutual exclusivity.
+        Call once in __init__.
+        """
+        self.env_continuous_selector.param.watch(
+            lambda e: self._enforce_env_split_unique("cont", list(e.new or [])),
+            "value"
+        )
+        self.env_categorical_selector.param.watch(
+            lambda e: self._enforce_env_split_unique("cat", list(e.new or [])),
+            "value"
+        )
+
+
+    def _normalize_interp_key(self, ui_value: str) -> str:
+        """
+        Convert UI label -> internal key expected by annotation engine.
+        Returns 'nearest' or 'idw' (fallback: original string).
+        """
+        s = (ui_value or "").strip().lower()
+        if s.startswith("nearest"):
+            return "nearest"
+        if s.startswith("inverse") or "idw" in s:
+            return "idw"
+        return ui_value  # fallback
+
+    def _apply_env_selector_labels(self):
+        """Make selector purposes obvious in UI."""
+        self.env_continuous_selector.name = "Continuous (use Ctrl or ⌘ for multiple)"
+        self.env_categorical_selector.name = "Categorical/QC (use Ctrl or ⌘ for multiple)"
+
 
     @try_catch("Error loading environmental data")
     def load_env_data(self, *events):
@@ -508,14 +665,70 @@ class movebank_annotation_engine(param.Parameterized):
         self._update_info_lines(self.env_info, {"File:": Path(nc_path).name})
         self._auto_height(self.env_info)
 
+        ####################
         var_file_map: dict[str, str] = {}
         time_text = "-"
         spatial_text = "-"
 
-        # Auxiliary coordinate name candidates
-        time_candidates = ("time","Time","datetime","date","valid_time","forecast_time","verification_time")
-        lat_candidates  = ("lat", "latitude", "y")
-        lon_candidates  = ("lon", "longitude", "x", "long")
+        # Coordinate name candidates
+        time_candidates = ["time", "Time", "datetime", "date", "valid_time"]
+        lat_candidates  = ["lat", "latitude", "Latitude", "y"]
+        lon_candidates  = ["lon", "longitude", "Longitude", "x"]
+
+        try:
+            ds = safe_open_nc_with_time_decoding(nc_path)
+
+            all_vars = sorted(list(ds.variables.keys()))
+
+            # Populate dropdowns
+            self.nc_time_var.options = all_vars
+            self.nc_lat_var.options  = all_vars
+            self.nc_lon_var.options  = all_vars
+
+            def pick_first(candidates):
+                for c in candidates:
+                    if c in all_vars:
+                        return c
+                return None
+
+            # Preselect defaults (only if user hasn't selected yet)
+            if not self.nc_time_var.value:
+                self.nc_time_var.value = pick_first(time_candidates)
+            if not self.nc_lat_var.value:
+                self.nc_lat_var.value = pick_first(lat_candidates)
+            if not self.nc_lon_var.value:
+                self.nc_lon_var.value = pick_first(lon_candidates)
+
+            # -------- TIME INFO --------
+            time_name = self.nc_time_var.value
+            if time_name and time_name in ds:
+                tvals = pd.to_datetime(ds[time_name].values)
+                time_text = f"{tvals.min().date()} — {tvals.max().date()}"
+
+            # ------ SPATIAL INFO -------
+            lat_name = self.nc_lat_var.value
+            lon_name = self.nc_lon_var.value
+            if lat_name in ds and lon_name in ds:
+                lat_min = float(ds[lat_name].min())
+                lat_max = float(ds[lat_name].max())
+                lon_min = float(ds[lon_name].min())
+                lon_max = float(ds[lon_name].max())
+                spatial_text = f"lat[{lat_min:.3f}..{lat_max:.3f}], lon[{lon_min:.3f}..{lon_max:.3f}]"
+
+        finally:
+            ds.close()
+        
+
+        def _pick(cands):
+            for c in cands:
+                if c in all_vars:
+                    return c
+            return None
+
+        # defalts
+        self.nc_time_var.value = _pick(["time","Time","datetime","date","valid_time","forecast_time","verification_time"])
+        self.nc_lat_var.value  = _pick(["lat","latitude","y"])
+        self.nc_lon_var.value  = _pick(["lon","longitude","x","long"])
 
         try:
             ds = safe_open_nc_with_time_decoding(nc_path)
@@ -537,25 +750,23 @@ class movebank_annotation_engine(param.Parameterized):
                     lon_max = float(ds[lon_name].max())
                     spatial_text = f"lat[{lat_min:.3f}..{lat_max:.3f}], lon[{lon_min:.3f}..{lon_max:.3f}]"
 
-                # ---- Перелік змінних з підтримкою вертикальних рівнів ----
+                # List of variables with support for vertical levels 
                 LEVEL_DIM_CANDIDATES = ("isobaricInhPa", "isobaric_in_hPa", "level", "lev", "plev", "pressure", "pressure_level")
 
                 for var in ds.data_vars:
                     da = ds[var]
                     if da.ndim < 3:
-                        continue  # нам потрібні щонайменше time/lat/lon
+                        continue
 
                     dims = list(da.dims)
 
-                    # шукаємо назву координати рівня серед типових для ERA5/ECMWF
                     level_dim = next((d for d in LEVEL_DIM_CANDIDATES if d in dims), None)
 
                     if level_dim is None:
-                        # звичайна 3D-змінна без рівнів — як і раніше
                         var_file_map[var] = nc_path
                         continue
 
-                    # якщо є рівні — додаємо по опції на кожен рівень: var_1000, var_975, ...
+                    # options for each level: var_1000, var_975, ...
                     try:
                         level_vals = ds[level_dim].values
                     except Exception:
@@ -563,12 +774,12 @@ class movebank_annotation_engine(param.Parameterized):
 
                     for lv in level_vals:
                         try:
-                            # за замовчуванням показуємо цілими hPa (1000, 975, 950 …)
+                            # default - hPa (1000, 975, 950 …)
                             lv_int = int(round(float(lv)))
                             label = f"{var}_{lv_int}"
                             var_file_map[label] = nc_path
                         except Exception:
-                            # якщо рівень нечисловий — пропускаємо конкретне значення
+                            # skip if non-numeric
                             continue
 
             finally:
@@ -587,14 +798,35 @@ class movebank_annotation_engine(param.Parameterized):
 
         # Variable options
         if not var_file_map:
-            self.env_data_multiselect.options = []
+            self.env_continuous_selector.options = []
+            self.env_categorical_selector.options = []
+            self.env_continuous_selector.value = []
+            self.env_categorical_selector.value = []
             self.status_text = "No 3D variables (e.g. time/lat/lon) found in the file."
             self.alert.object = self.status_text
             return
 
+        # Store map label -> nc_path
         self.env_variable_sources = var_file_map
-        self.env_data_multiselect.options = list(var_file_map.keys())
-        self.status_text = f"Loaded {len(var_file_map)} variable(s) from 1 file."
+
+        # labels : continuous vs categorical
+        all_labels = list(var_file_map.keys())
+        # both selectors get ALL variables in options
+        self.env_continuous_selector.options = all_labels
+        self.env_categorical_selector.options = all_labels
+        # reset selections
+        self.env_continuous_selector.value = []
+        self.env_categorical_selector.value = []
+        self.status_text = f"Loaded {len(all_labels)} variable(s). Now split them into Continuous vs Categorical/QC."
+        self.alert.object = self.status_text
+        self._sync_nc_column_heights()
+
+
+        self.status_text = f"Loaded {len(var_file_map)} variable(s)."
+        self.alert.object = self.status_text
+        self._sync_nc_column_heights()
+        ####
+
         self.alert.object = self.status_text
         self._sync_nc_column_heights()
 
@@ -698,18 +930,38 @@ class movebank_annotation_engine(param.Parameterized):
         self.alert.object = self.status_text
         self._sync_nc_column_heights()
 
+    def _get_selected_env_vars(self):
+        cont = list(getattr(self.env_continuous_selector, "value", []) or [])
+        cat  = list(getattr(self.env_categorical_selector, "value", []) or [])
+        seen = set()
+        out = []
+        for v in cont + cat:
+            if v not in seen:
+                seen.add(v)
+                out.append(v)
+        return out
+
 
     @try_catch("Error during annotation")
     def run_annotation(self, *events):
         self.status_text = "Running annotation..."
         self.alert.object = self.status_text
         try:
-            selected_vars = self.env_data_multiselect.value
+            continuous_vars = list(getattr(self.env_continuous_selector, "value", []) or [])
+            categorical_vars = list(getattr(self.env_categorical_selector, "value", []) or [])
+            # Preserve variable order without duplicates 
+            seen = set()
+            selected_vars = []
+            for v in continuous_vars + categorical_vars:
+                if v not in seen:
+                    seen.add(v)
+                    selected_vars.append(v)
+
             selected_ids = self.id_multiselect.value
             env_var_map = getattr(self, "env_variable_sources", {})
             movebank_path = self.movement_data_selector.value
             boundary_path = getattr(self, "boundary_path", None)
-            interpolation_method = self.interpolation_method.value
+            interpolation_method = self._normalize_interp_key(self.interpolation_method.value)
             smoothing_points = int(self.control_smoothing.value)
 
             if not selected_vars:
@@ -745,10 +997,21 @@ class movebank_annotation_engine(param.Parameterized):
 
                 self.status_text = "Annotation started."
                 # pass bbox (or None, if the user did choose shp)
+                coord_spec = {
+                    "time": self.nc_time_var.value,
+                    "lat":  self.nc_lat_var.value,
+                    "lon":  self.nc_lon_var.value,
+                }
+                if not (self.nc_time_var.value and self.nc_lat_var.value and self.nc_lon_var.value):
+                    self.env_info.object = "Please select Time, Latitude and Longitude variables from the NetCDF file."
+                    return
+
                 start_annotation_process(
                     env_var_map, selected_vars, movebank_path, selected_ids,
                     boundary_path, interpolation_method, bbox=bbox, smoothing_k=smoothing_points,
-                    out_csv_path=self.output_path.value
+                    out_csv_path=self.output_path.value, coord_spec=coord_spec,
+                    continuous_vars=continuous_vars,
+                    categorical_vars=categorical_vars
                 )
                 self.status_text = "Annotation finished."
 
@@ -767,7 +1030,7 @@ class movebank_annotation_engine(param.Parameterized):
 
         Workflow:
         1) Validate that the user selected any *.tif in the target folder.
-        2) Ensure a Movebank CSV is already selected (used to decide output dir).
+        2) Use the TIF folder as the output directory for the generated temporary NetCDF.
         3) Convert the set of TIFs in that folder → one NetCDF via
         `convert_tif_to_nc_before_annotation` (each parsed variable = separate DataArray).
         4) Open the produced NetCDF with `safe_open_nc_with_time_decoding` and:
@@ -783,11 +1046,11 @@ class movebank_annotation_engine(param.Parameterized):
         so we avoid re-reading all `data_vars` again.
         - `self.tif_nc_path` is stored for fallbacks (e.g., bbox from nc if no boundary).
         """
-        # --- 0) Initial UI/status ----------------------------------------------------
+        #  0) Initial UI/status 
         self.status_text = "Loading TIF environmental data..."
         self.alert.object = self.status_text
 
-        # --- 1) Validate a sample TIF and collect folder -----------------------------
+        #  1) Validate a sample TIF and collect folder 
         tif_sample_path = Path(getattr(self.tif_env_data_selector, "value", "") or "")
         if (not tif_sample_path.is_file()) or (tif_sample_path.suffix.lower() != ".tif"):
             self.status_text = f"Selected path is not a .tif file: {tif_sample_path}"
@@ -801,16 +1064,12 @@ class movebank_annotation_engine(param.Parameterized):
             self.alert.object = self.status_text
             return
 
-        # --- 2) Ensure Movebank CSV is loaded (for placing the output NetCDF nearby) -
-        movebank_path = getattr(self.tif_movement_data_selector, "value", None)
-        if not movebank_path or not Path(str(movebank_path)).is_file():
-            self.status_text = "Please load Movebank data before environmental data."
-            self.alert.object = self.status_text
-            return
+        # 2) Write the temporary NetCDF next to the source TIF files.
+        # Movebank data is not required at this stage.
+        # The temporary NetCDF is always saved next to the input TIF files.
+        output_dir = str(folder_path)
 
-        output_dir = str(Path(str(movebank_path)).parent)
-
-        # --- 3) Convert TIF stack → NetCDF ------------------------------------------
+        #  3) Convert TIF to NetCDF
         try:
             nc_path = convert_tif_to_nc_before_annotation(tif_files, output_dir)
         except Exception as e:
@@ -821,7 +1080,7 @@ class movebank_annotation_engine(param.Parameterized):
         # Cache for later (bbox fallback, re-open, etc.)
         self.tif_nc_path = nc_path
 
-        # --- 4) Inspect NetCDF and keep ONLY 3D variables with a time dimension ------
+        #  4) Inspect NetCDF and keep ONLY 3D variables with a time dimension 
         var_file_map: dict[str, str] = {}
         time_text = "Time range: -"
         spatial_text = "Spatial range: -"
@@ -873,7 +1132,7 @@ class movebank_annotation_engine(param.Parameterized):
             except Exception:
                 pass
 
-        # --- 5) Update UI: info panel, multiselect, status ---------------------------
+        #  5) Update UI: info panel, multiselect, status 
         # Info panel (use common helper to insert/replace rows)
         self._update_info_lines(self.tif_env_info, {
             "File:": Path(nc_path).name,
@@ -884,24 +1143,47 @@ class movebank_annotation_engine(param.Parameterized):
         if not var_file_map:
             # No valid 3D variables (time/lat/lon) found
             self.tif_env_var_map = {}
+
             self.tif_env_data_multiselect.options = []
             self.tif_env_data_multiselect.value = []
+
+            self.tif_continuous_vars.options = []
+            self.tif_continuous_vars.value = []
+
+            self.tif_categorical_vars.options = []
+            self.tif_categorical_vars.value = []
+
             self.status_text = "No 3D (time/lat/lon) variables found in the generated NetCDF."
             self.alert.object = self.status_text
             return
 
-        # Store already filtered variables for later use in run_annotation_tif()
+        # Save valid TIF variables for annotation.
         self.tif_env_var_map = var_file_map
-
-        # Options for the multiselect and a default value
         self.tif_env_data_multiselect.options = var_names
-        if not self.tif_env_data_multiselect.value:
-            self.tif_env_data_multiselect.value = var_names[:1]
+        self.tif_env_data_multiselect.value = []
+
+        # Populate TIF variable type selectors.
+        # This is an initial guess only; the user can manually change it.
+        continuous_guess, categorical_guess = self._guess_tif_variable_types(var_names)
+
+        self.tif_continuous_vars.options = var_names
+        self.tif_categorical_vars.options = var_names
+
+        self.tif_continuous_vars.value = continuous_guess
+        self.tif_categorical_vars.value = categorical_guess
+
+        # Update info panel using the actual selected split
+        selected_for_info = continuous_guess + [
+            v for v in categorical_guess
+            if v not in continuous_guess
+        ]
+        self.update_env_info_text_tif(selected_for_info)
 
         # Final status
         self.status_text = (
             f"Converted {len(tif_files)} TIF files to NetCDF. "
-            f"Variables (3D/time): {', '.join(var_names)}"
+            f"Variables (3D/time): {', '.join(var_names)}. "
+            "Please check Continuous vs Categorical/QC selection."
         )
         self.alert.object = self.status_text
 
@@ -911,37 +1193,82 @@ class movebank_annotation_engine(param.Parameterized):
         """
         Run annotation workflow for environmental data sourced from AppEEARS GeoTIFFs.
 
-        Steps:
-        1) Validate user selections (Movebank CSV, a sample TIF in the target folder, optional boundary).
-        2) Gather all *.tif files from the selected folder.
-        3) Convert the TIF stack to a single NetCDF via `convert_tif_to_nc_before_annotation`
-            (this function produces a Dataset with one DataArray per parsed variable).
-        4) Read actual variable names from the produced NetCDF and construct `env_var_map`
-            as {var_name: nc_path}.
-        5) Determine which variables to annotate (from the multiselect; default to the first one).
-        6) Call `start_annotation_process(...)` with the resolved parameters.
+        Current TIF workflow:
+        1) Validate user selections:
+        - Movebank CSV is required.
+        - A sample .tif file is required to identify the target TIF folder.
+        - Boundary file is optional; if it is not provided, the NetCDF extent is used.
 
-        Notes:
-        - This function assumes that `convert_tif_to_nc_before_annotation`, `safe_open_nc_with_time_decoding`,
-            and `start_annotation_process` are already imported.
-        - It also assumes UI widgets exist on the instance:
-            * self.tif_movement_data_selector (file path to Movebank CSV)
-            * self.tif_env_data_selector (a sample TIF inside the desired folder)
-            * self.tif_env_data_multiselect (variable picker)
-            * self.id_multiselect or self.tif_id_multiselect (optional animal IDs)
-            * self.tif_bound_data_selector or self.bound_data_selector (optional boundary file)
-            * self.tif_interpolation_method or self.interpolation_method (method name)
-            * self.tif_output_path or self.output_path (optional output CSV path)
-        - Status messages are written to `self.status_text` and mirrored in `self.alert.object`.
+        2) Gather all *.tif files from the selected TIF folder.
+
+        3) Convert the TIF stack to a temporary NetCDF via
+        `convert_tif_to_nc_before_annotation(...)`.
+
+        Important:
+        - The temporary NetCDF is written to the same folder as the input TIF files.
+        - The conversion keeps raw raster values.
+        - No scale factor, add_offset, or automatic 0.0001 heuristic is applied during
+            TIF -> NetCDF conversion.
+
+        4) Build `env_var_map` for variables that are valid for annotation:
+        - variables must have a time dimension;
+        - variables must be at least 3D, typically variable(time, lat, lon).
+
+        5) Determine variables to annotate from the explicit type selectors:
+        - `self.tif_continuous_vars`
+        - `self.tif_categorical_vars`
+
+        The same variable must not be selected in both lists.
+
+        6) Run annotation through `start_annotation_process(...)`.
+
+        Continuous variables:
+        - use the selected spatial interpolation method;
+        - use linear temporal interpolation;
+        - may optionally receive post-sampling value correction:
+            corrected_value = sampled_value * scale_factor + add_offset.
+
+        Categorical/QC variables:
+        - are sampled using nearest spatial grid cell and nearest available timestep;
+        - are not IDW-averaged;
+        - are not linearly interpolated in time;
+        - are not scaled or offset;
+        - remain raw category/flag/QC codes.
+
+        7) Save the annotated output CSV and per-individual CSV files through the backend.
+
+        Required UI widgets:
+        - `self.tif_movement_data_selector`:
+            Movebank CSV path.
+        - `self.tif_env_data_selector`:
+            one sample .tif file inside the target TIF folder.
+        - `self.tif_continuous_vars`:
+            continuous environmental variables selected for annotation.
+        - `self.tif_categorical_vars`:
+            categorical/QC variables selected for annotation.
+        - `self.tif_id_multiselect`:
+            selected individual IDs.
+        - `self.tif_bound_data_selector`:
+            optional boundary file.
+        - `self.tif_interpolation_method`:
+            spatial interpolation method for continuous variables.
+        - `self.tif_control_smoothing`:
+            number of nearest grid points for IDW.
+        - `self.tif_apply_scale`, `self.tif_scale_factor`, `self.tif_add_offset`:
+            optional post-sampling correction for continuous variables only.
+        - `self.tif_output_path`:
+            output CSV path.
+
+        Status messages are written to `self.status_text` and mirrored in `self.alert.object`.
         """
         self.status_text = "Starting annotation (TIF)…"
         self.alert.object = self.status_text
 
-        # --- 0) Validate inputs ---
+        # 0) Validate inputs
         # Movebank CSV (required)
         movebank_path = getattr(self.tif_movement_data_selector, "value", None)
         if not movebank_path or not Path(str(movebank_path)).is_file():
-            self.status_text = "Please load Movebank data before environmental data."
+            self.status_text = "Please load Movebank data before running TIF annotation."
             self.alert.object = self.status_text
             return
 
@@ -959,8 +1286,9 @@ class movebank_annotation_engine(param.Parameterized):
         id_widget = getattr(self, "tif_id_multiselect", None)# or getattr(self, "id_multiselect", None)
         selected_ids = list(getattr(id_widget, "value", [])) if id_widget else []
         if not selected_ids:
-            # Not critical—downstream may annotate all IDs or handle empty list.
-            print("[WARN] No IDs selected; proceeding without explicit ID filtering.")
+            self.status_text = "Please select at least one individual ID before running TIF annotation."
+            self.alert.object = self.status_text
+            return
 
         # Optional boundary
         bound_widget = getattr(self, "tif_bound_data_selector", None)# or getattr(self, "bound_data_selector", None)
@@ -971,13 +1299,14 @@ class movebank_annotation_engine(param.Parameterized):
 
         # Interpolation and time-fit options (prefer TIF-tab widgets; fallback to NC-tab)
         interp_widget = getattr(self, "tif_interpolation_method", None)
-        interp_method = getattr(interp_widget, "value", "Nearest neighbor (time-linear)")
-
+        #??? interp_method = getattr(interp_widget, "value", "Nearest neighbor (time-linear)")
+        ui_method = getattr(interp_widget, "value", "Nearest neighbor (time-linear)")
+        interp_method = self._normalize_interp_key(ui_method)
         # Output CSV path (optional)
         out_widget = getattr(self, "tif_output_path", None)
         output_csv_path = getattr(out_widget, "value", None)
 
-        # --- 1) Collect TIFs from the selected folder -----------------------------
+        #  1) Collect TIFs from the selected folder 
         folder_path = Path(tif_sample).parent
         tif_paths = sorted(p for p in folder_path.glob("*.tif") if p.is_file())
         if not tif_paths:
@@ -985,13 +1314,13 @@ class movebank_annotation_engine(param.Parameterized):
             self.alert.object = self.status_text
             return
 
-        # --- 2) Convert TIF → NetCDF (multi-variable) -----------------------------
-        output_dir = str(Path(movebank_path).parent)
+        # 2) Convert TIF → NetCDF (multi-variable, raw values only)
+        #  Scale/offset is not applied here; optional correction is applied after sampling.
+        output_dir = str(folder_path)
         nc_path = convert_tif_to_nc_before_annotation([str(p) for p in tif_paths], output_dir)
-        self.tif_nc_path = nc_path  # cache for later use
+        self.tif_nc_path = nc_path
 
-        # --- 3) Read variables from NetCDF and build env_var_map ------------------
-        # Prefer already-filtered map from load_env_data_tif (only 3D with 'time')
+        # 3) Read valid variables from NetCDF and build env_var_map
         if getattr(self, "tif_env_var_map", None):
             env_var_map = dict(self.tif_env_var_map)
             var_names = list(env_var_map.keys())
@@ -1018,17 +1347,41 @@ class movebank_annotation_engine(param.Parameterized):
             self.alert.object = self.status_text
             return
 
-        # --- 4) Which variables to annotate? --------------------------------------
-        ms_widget = getattr(self, "tif_env_data_multiselect", None)
-        selected_vars = list(getattr(ms_widget, "value", [])) if ms_widget else []
-        if not selected_vars:
-            selected_vars = var_names[:1]  # default to the first variable
-            if ms_widget:
-                ms_widget.value = selected_vars  # sync UI state
+        #  4) Which variables to annotate? 
+        continuous_vars = list(getattr(self.tif_continuous_vars, "value", []) or [])
+        categorical_vars = list(getattr(self.tif_categorical_vars, "value", []) or [])
 
-        # --- 5) Kick off annotation ------------------------------------------------
+        overlap = set(continuous_vars) & set(categorical_vars)
+        if overlap:
+            self.status_text = (
+                "The same variable cannot be selected as both Continuous and Categorical/QC: "
+                + ", ".join(sorted(overlap))
+            )
+            self.alert.object = self.status_text
+            return
+
+        selected_vars = continuous_vars + [
+            v for v in categorical_vars
+            if v not in continuous_vars
+        ]
+
+        if not selected_vars:
+            self.status_text = "Please select at least one Continuous or Categorical/QC variable."
+            self.alert.object = self.status_text
+            return
+
+        # 5) Kick off annotation
+        scale_msg = (
+            f"scale={self.tif_scale_factor.value}, offset={self.tif_add_offset.value}"
+            if self.tif_apply_scale.value
+            else "off"
+        )
+
         self.status_text = (
             f"Annotating variables: {', '.join(selected_vars)} | "
+            f"Continuous: {', '.join(continuous_vars) if continuous_vars else '-'} | "
+            f"Categorical/QC: {', '.join(categorical_vars) if categorical_vars else '-'} | "
+            f"Scale/offset: {scale_msg} | "
             f"IDs: {len(selected_ids) if selected_ids else 'all/unspecified'} | "
             f"Interpolation: {interp_method}"
         )
@@ -1060,9 +1413,17 @@ class movebank_annotation_engine(param.Parameterized):
                 selected_ids=selected_ids,
                 boundary_path=str(boundary_path) if boundary_path else None,
                 interpolation_method=interp_method,
-                bbox=bbox,                                              
-                smoothing_k=int(self.tif_control_smoothing.value),      
-                out_csv_path=output_csv_path
+                bbox=bbox,
+                smoothing_k=int(self.tif_control_smoothing.value),
+                out_csv_path=output_csv_path,
+                continuous_vars=continuous_vars,
+                categorical_vars=categorical_vars,
+                # TIF value correction is applied after sampling,
+                # and only to continuous variables.
+                apply_value_correction=bool(self.tif_apply_scale.value),
+                value_scale_factor=float(self.tif_scale_factor.value),
+                value_add_offset=float(self.tif_add_offset.value),
+                value_correction_vars=continuous_vars,
             )
             self.status_text = "Annotation finished successfully (TIF)."
             self.alert.object = self.status_text
@@ -1176,7 +1537,7 @@ class movebank_annotation_engine(param.Parameterized):
             self.alert.object = self.status_text
             return
 
-        # 2) Determine the ID: if the user did not choose, we take all
+        # 2) Determine the ID: if the user did not choose, take all
         if self.df is None:
             try:
                 df_tmp = pd.read_csv(csv_path)
@@ -1200,12 +1561,10 @@ class movebank_annotation_engine(param.Parameterized):
         start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S.%f")
         end_time_str   = end_time.strftime("%Y-%m-%d %H:%M:%S.%f")
 
-        # 4) Which columns to interpolate: taken from your validating function
+        # 4) Which columns to interpolate
         columns = validate_and_process_csv(csv_path)
 
         # 5) Call simplified interpolation
-        # if you replaced check_missing_values_only -> it now interpolates,
-        # otherwise import interpolate_missing_values_only and call it here.
         out_template = self.out_csv_name.value
         created = interpolate_missing_values_only(
             start_time_str, end_time_str, csv_path, selected_ids, columns, out_template
@@ -1283,6 +1642,71 @@ class movebank_annotation_engine(param.Parameterized):
         self.tif_env_info.object = "<br>".join(updated)
 
 
+    def _guess_tif_variable_types(self, variables):
+        """
+        Return initial (continuous, categorical) split for TIF-derived variables.
+        This is only a first guess. The user can manually change the selection.
+        """
+        categorical_keywords = [
+            "qc",
+            "quality",
+            "flag",
+            "mask",
+            "class",
+            "category",
+            "categorical",
+            "landcover",
+            "land_cover",
+            "classification",
+            "type",
+        ]
+
+        categorical = [
+            v for v in variables
+            if any(key in str(v).lower() for key in categorical_keywords)
+        ]
+
+        continuous = [
+            v for v in variables
+            if v not in categorical
+        ]
+
+        return continuous, categorical
+
+    def _sync_tif_variable_type_selection(self, event=None):
+        """
+        Ensure that the same TIF-derived variable cannot be selected
+        as both continuous and categorical/QC.
+        """
+        if getattr(self, "_syncing_tif_var_types", False):
+            return
+
+        self._syncing_tif_var_types = True
+        try:
+            continuous = set(self.tif_continuous_vars.value or [])
+            categorical = set(self.tif_categorical_vars.value or [])
+
+            overlap = continuous & categorical
+            if not overlap:
+                return
+
+            # If the user changed Continuous, remove overlap from Categorical/QC.
+            if event is not None and event.obj is self.tif_continuous_vars:
+                self.tif_categorical_vars.value = [
+                    v for v in (self.tif_categorical_vars.value or [])
+                    if v not in overlap
+                ]
+
+            # If the user changed Categorical/QC, remove overlap from Continuous.
+            elif event is not None and event.obj is self.tif_categorical_vars:
+                self.tif_continuous_vars.value = [
+                    v for v in (self.tif_continuous_vars.value or [])
+                    if v not in overlap
+                ]
+
+        finally:
+            self._syncing_tif_var_types = False
+
     def update_movement_info_text_tif(self, section, new_values):
         current = self.tif_movement_info.object or ""
         if not current:
@@ -1344,8 +1768,8 @@ class movebank_annotation_engine(param.Parameterized):
 
 
     def _update_smoothing_options(self, event):
-        """Updates options for control_smoothing depending on interpolation method (.nc)."""
-        if event.new.startswith("Nearest neighbor"):
+        key = self._normalize_interp_key(event.new)
+        if key == "nearest":
             self.control_smoothing.options = ["1"]
             self.control_smoothing.value = "1"
         else:
@@ -1353,10 +1777,17 @@ class movebank_annotation_engine(param.Parameterized):
             if self.control_smoothing.value == "1":
                 self.control_smoothing.value = "4"
 
+    def _update_tif_scale_widgets(self, event=None):
+        """
+        Enable scale factor / offset inputs only when post-sampling value correction is enabled.
+        """
+        enabled = bool(self.tif_apply_scale.value)
+        self.tif_scale_factor.disabled = not enabled
+        self.tif_add_offset.disabled = not enabled
 
     def _update_smoothing_options_tif(self, event):
-        """Updates options for control_smoothing depending on interpolation method(.tif)."""
-        if event.new.startswith("Nearest neighbor"):
+        key = self._normalize_interp_key(event.new)
+        if key == "nearest":
             self.tif_control_smoothing.options = ["1"]
             self.tif_control_smoothing.value = "1"
         else:

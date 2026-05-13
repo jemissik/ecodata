@@ -1,6 +1,8 @@
 import xarray as xr
 import geopandas as gpd
 from pathlib import Path
+import gc
+import time
 import pandas as pd
 import re
 from shapely.geometry import Point
@@ -148,7 +150,12 @@ def load_taxa_and_ids_from_csv(file_path):
 
 def start_annotation_process(env_var_map, selected_env_vars, movebank_path, selected_ids,
                              boundary_path, interpolation_method, bbox=None, smoothing_k: int = 2,
-                             out_csv_path=None):
+                             out_csv_path=None, coord_spec=None,
+                             continuous_vars=None, categorical_vars=None,
+                             apply_value_correction: bool = False,
+                             value_scale_factor: float = 1.0,
+                             value_add_offset: float = 0.0,
+                             value_correction_vars=None):
     """
     env_var_map: dict[str, str] — variable → file path
     selected_env_vars: list[str] — selected variables
@@ -181,12 +188,51 @@ def start_annotation_process(env_var_map, selected_env_vars, movebank_path, sele
     # === Step 2: Loading and interpolation of environmental data ===
     result = load_selected_environmental_data(df_filtered, env_var_map,
                                                selected_env_vars, movebank_path,
-                                               interpolation_method, smoothing_k=smoothing_k)
+                                               interpolation_method, smoothing_k=smoothing_k,
+                                               coord_spec=coord_spec,
+                                               continuous_vars=continuous_vars, 
+                                               categorical_vars=categorical_vars)
     if result is None:
         print("[ERROR] Environmental data was not loaded.")
         return
 
-    df_annotated, nc_start, nc_end = result
+    df_annotated, ann_nc_start, ann_nc_end = result
+    # Optional post-sampling value correction 
+    # Apply only to continuous variables after sampling/interpolation.
+    # This is methodologically safe for linear scale/offset:
+    # physical_value = raw_value * scale_factor + add_offset.
+    # Categorical/QC variables must remain as raw category/flag codes.
+    if apply_value_correction:
+        if value_correction_vars is None:
+            correction_vars = list(continuous_vars or [])
+        else:
+            correction_vars = list(value_correction_vars or [])
+
+        try:
+            scale = float(value_scale_factor)
+            offset = float(value_add_offset)
+        except Exception as e:
+            raise ValueError(f"Invalid scale factor / offset: {e}")
+
+        for v in correction_vars:
+            if v not in df_annotated.columns:
+                print(f"[WARNING] Scale/offset skipped for '{v}': column not found.")
+                continue
+
+            # Convert only the annotated continuous column.
+            # Non-numeric values become NaN, which is acceptable for continuous variables.
+            df_annotated[v] = pd.to_numeric(df_annotated[v], errors="coerce") * scale + offset
+
+        print(
+            "[INFO] Applied post-sampling scale/offset to continuous variables: "
+            f"{correction_vars}; scale={scale}, offset={offset}"
+        )
+    # Keep the real union NC range computed before annotation,
+    # unless an annotator explicitly returns a valid range in the future.
+    if not pd.isna(ann_nc_start):
+        nc_start = ann_nc_start
+    if not pd.isna(ann_nc_end):
+        nc_end = ann_nc_end
 
 #### diagnostic
     var = selected_env_vars[0] if selected_env_vars else None
@@ -236,8 +282,13 @@ def filter_points_within_boundary(movebank_path, selected_ids, boundary_path=Non
     print("[DEBUG] Filtering is started")
     df = pd.read_csv(movebank_path)
     df.columns = [re.sub(r"[-:.\s]+", "_", col.lower()) for col in df.columns]
-    if "location_long" in df.columns and "location_lon" not in df.columns:
-        df["location_lon"] = df["location_long"]
+    # --- unify longitude column to location_lon ---
+    if "location_lon" in df.columns and "location_long" in df.columns:
+        # both exist -> keep location_lon (canonical), drop location_long
+        df = df.drop(columns=["location_long"])
+    elif "location_lon" not in df.columns and "location_long" in df.columns:
+        # only location_long -> rename to canonical location_lon
+        df = df.rename(columns={"location_long": "location_lon"})
     if "timestamp" not in df.columns and "eobs_start_timestamp" in df.columns:
         df["timestamp"] = df["eobs_start_timestamp"]
 
@@ -342,12 +393,22 @@ def interpolate_missing_coordinates(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def load_selected_environmental_data(df, env_var_map, selected_vars,
-                                      movebank_path, interpolation_method="Nearest neighbour", smoothing_k: int = 2):
+                                      movebank_path, interpolation_method="Nearest neighbour", smoothing_k: int = 2,
+                                      coord_spec=None,
+                                      continuous_vars=None, categorical_vars=None):
     """
     Wrapper that calls the appropriate annotation function depending on the interpolation method.
-    Supports:
-      - "Nearest neighbour (time-linear)"
-      - "IDW (time-linear)"
+
+    Current behaviour:
+    - Continuous + Nearest neighbour:
+        nearest spatial grid node + linear temporal interpolation
+    - Continuous + IDW:
+        k nearest spatial grid nodes + linear temporal interpolation per node + IDW
+    - Categorical/QC + Nearest neighbour:
+        nearest spatial grid node + nearest timestep
+    - Categorical/QC + IDW selected:
+        categorical/QC variables are not IDW-averaged;
+        they use nearest spatial grid node + nearest timestep
     """
     label = (interpolation_method or "").strip().lower()
     label = label.replace("neighbor", "neighbour") # Normalise US/UK spelling
@@ -355,19 +416,126 @@ def load_selected_environmental_data(df, env_var_map, selected_vars,
     is_nearest = label.startswith("nearest")
     is_idw = ("idw" in label) or ("inverse distance" in label)
 
-    if is_nearest:
-        return annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothing_k=smoothing_k)
-    elif is_idw:
-        return annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k=smoothing_k)
-    else:
-        raise ValueError(f"Unknown interpolation method: {interpolation_method}")
-    
+    # Normalize interpolation method
+    method = (interpolation_method or "").lower()
+    is_nearest = ("nearest" in method)
+    is_idw = ("idw" in method)
 
-def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothing_k: int = 4):
+    # If split lists are not provided, treat everything as "selected_vars"
+    cont = list(continuous_vars or [])
+    cat  = list(categorical_vars or [])
+
+    if not cont and not cat:
+        # everything in selected_vars, method applies to all
+        if is_nearest:
+            return annotate_env_nearest(
+                df, env_var_map, selected_vars, movebank_path,
+                smoothing_k=smoothing_k, coord_spec=coord_spec
+            )
+        if is_idw:
+            return annotate_env_IDW(
+                df, env_var_map, selected_vars, movebank_path,
+                smoothing_k=smoothing_k, coord_spec=coord_spec
+            )
+        raise ValueError(f"Unknown interpolation method: {interpolation_method}")
+
+    # If split lists are provided:
+    # 1) Nearest selected:
+    #    continuous -> nearest grid node + linear time interpolation
+    #    categorical/QC -> nearest grid node + nearest timestep
+    if is_nearest:
+        out_df = df
+        nc_start = pd.NaT
+        nc_end = pd.NaT
+
+        # Continuous: nearest grid node + linear time interpolation
+        if cont:
+            out_df, nc_start, nc_end = annotate_env_nearest(
+                out_df, env_var_map, cont, movebank_path,
+                smoothing_k=smoothing_k,
+                coord_spec=coord_spec,
+                temporal_method="linear"
+            )
+
+        # Categorical/QC: nearest grid node + nearest timestep
+        if cat:
+            out_df, nc_start2, nc_end2 = annotate_env_nearest(
+                out_df, env_var_map, cat, movebank_path,
+                smoothing_k=smoothing_k,
+                coord_spec=coord_spec,
+                temporal_method="nearest"
+            )
+
+            if pd.isna(nc_start) and not pd.isna(nc_start2):
+                nc_start = nc_start2
+            if pd.isna(nc_end) and not pd.isna(nc_end2):
+                nc_end = nc_end2
+
+        return out_df, nc_start, nc_end
+
+    # 2) IDW selected -> cont=IDW, cat=NN
+    if is_idw:
+        out_df = df
+        nc_start = pd.NaT
+        nc_end = pd.NaT
+
+        # continuous via IDW
+        if cont:
+            out_df, nc_start, nc_end = annotate_env_IDW(
+                out_df, env_var_map, cont, movebank_path,
+                smoothing_k=smoothing_k,
+                coord_spec=coord_spec,
+                temporal_method="linear"
+            )
+
+        # categorical via Nearest neighbour in space + nearest timestep in time
+        if cat:
+            out_df, nc_start2, nc_end2 = annotate_env_nearest(
+                out_df, env_var_map, cat, movebank_path,
+                smoothing_k=smoothing_k,
+                coord_spec=coord_spec,
+                temporal_method="nearest"
+            )
+            # keep nc_start/nc_end stable (both annotators return NaT)
+            if pd.isna(nc_start) and not pd.isna(nc_start2):
+                nc_start = nc_start2
+            if pd.isna(nc_end) and not pd.isna(nc_end2):
+                nc_end = nc_end2
+
+        return out_df, nc_start, nc_end
+
+    raise ValueError(f"Unknown interpolation method: {interpolation_method}")
+
+
+    
+def standardize_time_lat_lon(ds, coord_spec):
+    mapping = {}
+    if coord_spec:
+        for std in ("time", "lat", "lon"):
+            chosen = coord_spec.get(std)
+            if chosen and chosen in ds.variables and chosen != std:
+                mapping[chosen] = std
+
+    if mapping:
+        ds = ds.rename(mapping)
+
+    for req in ("time", "lat", "lon"):
+        if req not in ds.variables:
+            raise ValueError(
+                f"Missing required '{req}' variable after user selection. "
+                f"Selected: {coord_spec}. Available: {list(ds.variables.keys())}"
+            )
+    return ds
+
+
+def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothing_k: int = 4,
+                         coord_spec=None, temporal_method: str = "linear"):
     """
     Annotate movement points with environmental values using:
-      - Spatial: nearest grid node
-      - Temporal: vectorised linear interpolation in time (per grid cell)
+     - Spatial: nearest grid node
+     - Temporal:
+      * "linear"  -> vectorised linear interpolation in time, for continuous variables
+      * "nearest" -> nearest available timestep, for categorical/QC variables
 
     This version supports "expanded" variable labels that include a pressure/vertical level,
     e.g. "v_1000", "v_975", ... For such labels, the base variable ("v") is taken from the
@@ -413,18 +581,25 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
     out["timestamp"] = pd.to_datetime(out["timestamp"], dayfirst=True, errors="coerce")
     out = out.dropna(subset=["timestamp", "location_lat", "location_lon"])
 
+    temporal_method = (temporal_method or "linear").strip().lower()
+    if temporal_method not in ("linear", "nearest"):
+        temporal_method = "linear"
+
     # Placeholders for nearest grid coords (one set; overwritten by last variable)
     nc_latitudes = np.full(len(out), np.nan, dtype="float64")
     nc_longitudes = np.full(len(out), np.nan, dtype="float64")
 
-    # Target times for np.interp (int64 ns)
+    # Target times as int64 ns, used for either np.interp or nearest-time lookup.
     tgt_times = out["timestamp"].to_numpy("datetime64[ns]").astype("int64")
 
     # --- main loop over requested labels -------------------------------------
     for label in selected_vars:
         file_path = env_var_map.get(label)
-        out[label] = np.nan  # ensure column exists even on failures
-
+        if temporal_method == "nearest":
+            # Categorical/QC-safe column: preserve integer codes or labels if present.
+            out[label] = pd.Series([pd.NA] * len(out), index=out.index, dtype="object")
+        else:
+            out[label] = np.nan  # continuous numeric column
         if not file_path or not Path(file_path).is_file():
             print(f"[WARNING] File for {label} not found: {file_path}")
             continue
@@ -434,6 +609,7 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
 
         try:
             ds = safe_open_nc_with_time_decoding(file_path)
+            ds = standardize_time_lat_lon(ds, coord_spec)
             if base_var not in ds:
                 print(f"[WARNING] Base variable '{base_var}' not found in {file_path}")
                 ds.close()
@@ -491,7 +667,8 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
             cell_code = (lat_idx.astype(np.int64) * len(glon)) + lon_idx.astype(np.int64)
             unique_cells, inverse = np.unique(cell_code, return_inverse=True)
 
-            # Cache of per-cell series: (ii, jj) -> 1D float64 array over time
+            # Cache of per-cell series: (ii, jj) -> 1D array over time.
+            #  For continuous variables this is float64; for categorical/QC variables the original dtype is preserved.
             series_cache: dict[tuple[int, int], np.ndarray] = {}
             col_idx = out.columns.get_loc(label)
 
@@ -504,24 +681,77 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
 
                 key = (ii, jj)
                 if key not in series_cache:
-                    # Read the cell time series once; cast to float64 for np.interp
-                    series_cache[key] = da.isel({lat_dim: ii, lon_dim: jj}).values.astype("float64")
+                    raw_series = da.isel({lat_dim: ii, lon_dim: jj}).values
+
+                    if temporal_method == "nearest":
+                        # Keep original dtype for categorical/QC variables.
+                        # This avoids converting category codes to float and also supports non-numeric labels.
+                        series_cache[key] = raw_series
+                    else:
+                        # Continuous variables: cast to float64 for np.interp.
+                        series_cache[key] = raw_series.astype("float64")
+
                 y = series_cache[key]
 
-                # Valid-only mask for temporal interpolation
-                m = np.isfinite(y)
-                if m.sum() < 2:
-                    out.iloc[pos, col_idx] = np.nan
-                    continue
+                if temporal_method == "nearest":
+                    # Categorical/QC-safe temporal sampling:
+                    # take the value from the nearest available timestep, no interpolation.
+                    m = pd.notna(y)
+                    if m.sum() < 1:
+                        out.iloc[pos, col_idx] = np.nan
+                        continue
 
-                x = gtime[m]   # source times (int64)
-                yy = y[m]      # source values
+                    x = gtime[m]   # source times, int64 ns
+                    yy = y[m]      # source values, may be integer/category codes
 
-                vals = np.interp(xi, x, yy)
-                # Outside native time range → NaN (np.interp would extend)
-                vals[(xi < x.min()) | (xi > x.max())] = np.nan
+                    # Ensure time is sorted
+                    order = np.argsort(x)
+                    x = x[order]
+                    yy = yy[order]
 
-                out.iloc[pos, col_idx] = vals
+                    idx = np.searchsorted(x, xi)
+                    right = np.clip(idx, 0, len(x) - 1)
+                    left = np.clip(idx - 1, 0, len(x) - 1)
+
+                    use_left = (
+                        (idx > 0)
+                        & (
+                            (idx == len(x))
+                            | (np.abs(xi - x[left]) <= np.abs(x[right] - xi))
+                        )
+                    )
+
+                    nearest_idx = np.where(use_left, left, right)
+                    vals = yy[nearest_idx]
+
+                    # Keep existing "no extrapolation" behaviour:
+                    # points outside the native NC time range remain NaN.
+                    vals = vals.astype("object")
+                    vals[(xi < x.min()) | (xi > x.max())] = np.nan
+
+                    out.iloc[pos, col_idx] = vals
+
+                else:
+                    # Continuous variables: existing linear temporal interpolation.
+                    y_float = y.astype("float64")
+                    m = np.isfinite(y_float)
+                    if m.sum() < 2:
+                        out.iloc[pos, col_idx] = np.nan
+                        continue
+
+                    x = gtime[m]
+                    yy = y_float[m]
+
+                    order = np.argsort(x)
+                    x = x[order]
+                    yy = yy[order]
+
+                    vals = np.interp(xi, x, yy)
+
+                    # Outside native time range → NaN
+                    vals[(xi < x.min()) | (xi > x.max())] = np.nan
+
+                    out.iloc[pos, col_idx] = vals
 
             ds.close()
 
@@ -538,11 +768,19 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
     return out, pd.NaT, pd.NaT
 
 
-def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k: int = 2):
+def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k: int = 2,
+                     coord_spec=None, temporal_method: str = "linear"):
     """
     Annotate movement points with environmental values using:
-      - Spatial: Inverse Distance Weighting (IDW) over k nearest grid nodes
-      - Temporal: 1D linear interpolation in time (per grid node), vectorised via np.interp
+    - Spatial: Inverse Distance Weighting (IDW) over k nearest grid nodes
+    - Temporal:
+        * "linear"  -> 1D linear interpolation in time per grid node
+        * "nearest" -> nearest available timestep per grid node
+
+    Important:
+    IDW is suitable for continuous numeric variables. Even with temporal_method="nearest",
+    spatial IDW still averages values across neighbouring grid nodes, so it is not
+    recommended for true categorical/QC variables.
 
     This version understands expanded variable labels that include a pressure/vertical level,
     e.g. "v_1000", "v_975". It will:
@@ -575,6 +813,10 @@ def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k:
     out["timestamp"] = pd.to_datetime(out["timestamp"], dayfirst=True, errors="coerce")
     out = out.dropna(subset=["timestamp", "location_lat", "location_lon"])
 
+    temporal_method = (temporal_method or "linear").strip().lower()
+    if temporal_method not in ("linear", "nearest"):
+        temporal_method = "linear"
+
     # Keep nc_lat/nc_lon semantics consistent with prior implementation (copy of point coords)
     out["nc_lat"] = out["location_lat"].values
     out["nc_lon"] = out["location_lon"].values
@@ -587,7 +829,12 @@ def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k:
     # --- main loop over labels -----------------------------------------------------
     for label in selected_vars:
         file_path = env_var_map.get(label)
-        out[label] = np.nan  # ensure the column exists even if we skip/err
+        if temporal_method == "nearest":
+            # Nearest-time mode: preserve raw values before spatial handling.
+            # Note: spatial IDW is still numeric and is not recommended for true categorical/QC variables.
+            out[label] = pd.Series([pd.NA] * len(out), index=out.index, dtype="object")
+        else:
+            out[label] = np.nan  # continuous numeric column
 
         if not file_path or not Path(file_path).is_file():
             print(f"[WARNING] File for {label} not found: {file_path}")
@@ -598,6 +845,7 @@ def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k:
 
         try:
             ds = safe_open_nc_with_time_decoding(file_path)
+            ds = standardize_time_lat_lon(ds, coord_spec)
             if base_var not in ds:
                 print(f"[WARNING] Base variable '{base_var}' not in {file_path}")
                 ds.close()
@@ -642,7 +890,8 @@ def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k:
             gtime_int = pd.to_datetime(ds["time"].values).to_numpy("datetime64[ns]").astype("int64")
 
             # Cache per-grid-node time series (to avoid repeated reads for neighbors)
-            # key: (ii, jj) -> (x_int64_valid, y_float64_valid)
+            # key: (ii, jj) -> (x_int64_valid, y_valid)
+            # For linear mode y_valid is float64; for nearest-time mode original dtype is preserved.
             series_cache: dict[tuple[int, int], tuple[np.ndarray, np.ndarray]] = {}
             col_idx = out.columns.get_loc(label)
 
@@ -663,26 +912,77 @@ def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k:
                 for j, (ii, jj) in enumerate(nn_idx):
                     key = (ii, jj)
                     if key not in series_cache:
-                        # Read cell time series once; keep only valid points for interp
-                        y = da.isel({lat_dim: ii, lon_dim: jj}).values.astype("float64")
-                        m = np.isfinite(y)
-                        if m.sum() >= 2:
-                            x = gtime_int[m]
-                            yy = y[m]
+                        raw_y = da.isel({lat_dim: ii, lon_dim: jj}).values
+
+                        if temporal_method == "nearest":
+                            # Keep original values for nearest-time lookup.
+                            m = pd.notna(raw_y)
+                            if m.sum() >= 1:
+                                x = gtime_int[m]
+                                yy = raw_y[m]
+
+                                order = np.argsort(x)
+                                x = x[order]
+                                yy = yy[order]
+                            else:
+                                x = np.empty(0, dtype="int64")
+                                yy = np.empty(0, dtype=raw_y.dtype)
+
                         else:
-                            x = np.empty(0, dtype="int64")
-                            yy = np.empty(0, dtype="float64")
+                            # Linear interpolation requires numeric float values.
+                            y = raw_y.astype("float64")
+                            m = np.isfinite(y)
+                            if m.sum() >= 2:
+                                x = gtime_int[m]
+                                yy = y[m]
+
+                                order = np.argsort(x)
+                                x = x[order]
+                                yy = yy[order]
+                            else:
+                                x = np.empty(0, dtype="int64")
+                                yy = np.empty(0, dtype="float64")
+
                         series_cache[key] = (x, yy)
 
                     x, yy = series_cache[key]
-                    if x.size < 2:
-                        vals[j] = np.nan
+                    if temporal_method == "nearest":
+                        if x.size < 1:
+                            vals[j] = np.nan
+                        else:
+                            idx = np.searchsorted(x, t_i)
+
+                            right = np.clip(idx, 0, len(x) - 1)
+                            left = np.clip(idx - 1, 0, len(x) - 1)
+
+                            use_left = (
+                                (idx > 0)
+                                and (
+                                    (idx == len(x))
+                                    or (abs(t_i - x[left]) <= abs(x[right] - t_i))
+                                )
+                            )
+
+                            nearest_idx = left if use_left else right
+                            v = yy[nearest_idx]
+
+                            # Keep no-extrapolation behaviour.
+                            if (t_i < x.min()) or (t_i > x.max()):
+                                v = np.nan
+
+                            vals[j] = v
+
                     else:
-                        v = np.interp(t_i, x, yy)
-                        # clamp to NaN if extrapolated
-                        if (t_i < x.min()) or (t_i > x.max()):
-                            v = np.nan
-                        vals[j] = v
+                        if x.size < 2:
+                            vals[j] = np.nan
+                        else:
+                            v = np.interp(t_i, x, yy)
+
+                            # Keep no-extrapolation behaviour.
+                            if (t_i < x.min()) or (t_i > x.max()):
+                                v = np.nan
+
+                            vals[j] = v
 
                     # Planar Euclidean distance in degrees (consistent with prior code)
                     dists[j] = np.hypot(glat[ii] - xlat, glon[jj] - xlon)
@@ -699,6 +999,34 @@ def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k:
     out["geometry"] = [Point(lon, lat) for lon, lat in zip(out["nc_lon"], out["nc_lat"])]
     return out, pd.NaT, pd.NaT
 
+def _safe_remove_existing_file(path, retries: int = 5, delay: float = 0.5):
+    """
+    Remove an existing file before overwriting it.
+
+    This is mainly needed on Windows, where NetCDF files can remain locked
+    for a short time after being opened by xarray/netCDF4/h5netcdf.
+    """
+    path = Path(path)
+
+    if not path.exists():
+        return
+
+    last_error = None
+
+    for _ in range(retries):
+        try:
+            gc.collect()
+            path.unlink()
+            return
+        except PermissionError as e:
+            last_error = e
+            time.sleep(delay)
+
+    raise PermissionError(
+        f"Could not remove existing file because it is still locked: {path}. "
+        f"Close any open dataset/viewer using this file and try again. "
+        f"Original error: {last_error}"
+    )
 
 def convert_tif_to_nc_before_annotation(tif_paths, output_dir):
     """
@@ -735,19 +1063,15 @@ def convert_tif_to_nc_before_annotation(tif_paths, output_dir):
                 if nodata is not None:
                     arr = np.where(arr == nodata, np.nan, arr)
 
-                # Read scale_factor from tags (if present); otherwise use a 0.0001 heuristic for int16 NDVI/EVI
-                scale = None
-                try:
-                    tags = src.tags()
-                    for k in ("scale_factor", "SCALE", "Scale", "scale"):
-                        if k in tags:
-                            scale = float(tags[k]); break
-                except Exception:
-                    pass
-                if scale is None and (np.nanmin(arr) >= -10000) and (np.nanmax(arr) <= 10000):
-                    scale = 0.0001
-                if scale is not None:
-                    arr = arr * scale
+                # IMPORTANT:
+                # Do not apply scale_factor / add_offset during TIF -> NetCDF conversion.
+                # The NetCDF stores raw raster values.
+                #
+                # Optional scale/offset correction is applied later after sampling,
+                # and only to user-selected continuous variables.
+                #
+                # This avoids corrupting categorical/QC layers such as masks, flags,
+                # land-cover classes, or quality codes.
 
                 planes.append(arr)
 
@@ -773,7 +1097,16 @@ def convert_tif_to_nc_before_annotation(tif_paths, output_dir):
     base = Path(tif_paths[0]).name.split("_")[0]
     safe_base = re.sub(r"[^\w\-]", "_", base)
     out = Path(output_dir) / f"{safe_base}_nc_output.nc"
-    ds.to_netcdf(out)
+    _safe_remove_existing_file(out)
+
+    try:
+        ds.to_netcdf(out)
+    finally:
+        try:
+            ds.close()
+        except Exception:
+            pass
+
     return str(out)
 
 
