@@ -71,6 +71,14 @@ class movebank_annotation_engine(param.Parameterized):
     nc_time_var = pn.widgets.Select(name="Time variable", options=[], value=None)
     nc_lat_var  = pn.widgets.Select(name="Latitude variable", options=[], value=None)
     nc_lon_var  = pn.widgets.Select(name="Longitude variable", options=[], value=None)
+    env_spatial_mode = pn.widgets.RadioButtonGroup(
+        name="Env spatial coordinate mode",
+        options=["Geographic (lat/lon)", "Projected (x/y)"],
+        value="Geographic (lat/lon)",
+        button_type="default",
+    )
+    env_x_select = pn.widgets.Select(name="X coordinate", options=[], value=None)
+    env_y_select = pn.widgets.Select(name="Y coordinate", options=[], value=None)
     env_continuous_selector = pn.widgets.MultiSelect(
     name="Continuous (use Ctrl or ⌘ for multiple selection)",
     options=[], value=[], height=180
@@ -101,7 +109,11 @@ class movebank_annotation_engine(param.Parameterized):
     )
     interpolation_method = pn.widgets.Select(
         name="Interpolation method (spatial)",
-        options=["Nearest neighbor (time-linear)", "Inverse Distance Weighting (time-linear)"],
+        options=[
+            "Nearest neighbor (time-linear)",
+            "Inverse Distance Weighting (time-linear)",
+            "Bilinear (projected x/y, time-linear)",
+        ],
         value="Inverse Distance Weighting (time-linear)"
     )
     make_annotation_button = pn.widgets.Button(name="Make annotated file", button_type="primary")
@@ -194,6 +206,7 @@ class movebank_annotation_engine(param.Parameterized):
                 "env_info", "movement_info" ,"output_path",
                 "make_annotation_button",
                  "nc_time_var", "nc_lat_var","nc_lon_var",
+                 "env_spatial_mode", "env_x_select", "env_y_select",
                 # === TIF Annotation tab ===
                 "tif_env_data_selector",
                 "tif_movement_data_selector",
@@ -220,7 +233,12 @@ class movebank_annotation_engine(param.Parameterized):
             self.env_continuous_selector,
             self.env_categorical_selector,
             self.env_info,
-            self.nc_time_var, self.nc_lat_var, self.nc_lon_var,
+            self.env_spatial_mode,
+            self.nc_time_var,
+            self.nc_lat_var,
+            self.nc_lon_var,
+            self.env_x_select,
+            self.env_y_select,
             self.interpolation_method,
             self.control_smoothing,
             self.output_path,
@@ -260,7 +278,7 @@ class movebank_annotation_engine(param.Parameterized):
         )
 
         # TIF
-        TIF_H = 1500  
+        TIF_H = 1800  
         self._tif_col1 = self._section(
             "1. Environmental data (.tif) - select one (of)",
             pn.Column(self.tif_env_data_selector, sizing_mode="stretch_width"),
@@ -360,6 +378,8 @@ class movebank_annotation_engine(param.Parameterized):
         self.taxon_multiselect.param.watch(lambda e: self.update_movement_info_text("Taxons", e.new), "value")
         self.id_multiselect.param.watch(lambda e: self.update_movement_info_text("IDs", e.new), "value")
         self.interpolation_method.param.watch(self._update_smoothing_options, 'value')
+        self.env_spatial_mode.param.watch(self._apply_env_spatial_mode, "value")
+        self._apply_env_spatial_mode()
         ######TIF on click
         self.tif_load_env_button.on_click(self.load_env_data_tif)
         self.tif_load_bound_button.on_click(self.load_boundary_data_tif)
@@ -626,13 +646,24 @@ class movebank_annotation_engine(param.Parameterized):
             return "nearest"
         if s.startswith("inverse") or "idw" in s:
             return "idw"
-        return ui_value  # fallback
+        if "bilinear" in s:
+            return "bilinear"
+        return ui_value
 
     def _apply_env_selector_labels(self):
         """Make selector purposes obvious in UI."""
         self.env_continuous_selector.name = "Continuous (use Ctrl or ⌘ for multiple)"
         self.env_categorical_selector.name = "Categorical/QC (use Ctrl or ⌘ for multiple)"
 
+    def _apply_env_spatial_mode(self, event=None):
+        """Enable/disable coordinate selectors depending on selected spatial mode."""
+        is_projected = self.env_spatial_mode.value == "Projected (x/y)"
+
+        self.nc_lat_var.disabled = is_projected
+        self.nc_lon_var.disabled = is_projected
+
+        self.env_x_select.disabled = not is_projected
+        self.env_y_select.disabled = not is_projected
 
     @try_catch("Error loading environmental data")
     def load_env_data(self, *events):
@@ -665,125 +696,88 @@ class movebank_annotation_engine(param.Parameterized):
         self._update_info_lines(self.env_info, {"File:": Path(nc_path).name})
         self._auto_height(self.env_info)
 
-        ####################
         var_file_map: dict[str, str] = {}
         time_text = "-"
         spatial_text = "-"
 
-        # Coordinate name candidates
-        time_candidates = ["time", "Time", "datetime", "date", "valid_time"]
-        lat_candidates  = ["lat", "latitude", "Latitude", "y"]
-        lon_candidates  = ["lon", "longitude", "Longitude", "x"]
-
-        try:
-            ds = safe_open_nc_with_time_decoding(nc_path)
-
-            all_vars = sorted(list(ds.variables.keys()))
-
-            # Populate dropdowns
-            self.nc_time_var.options = all_vars
-            self.nc_lat_var.options  = all_vars
-            self.nc_lon_var.options  = all_vars
-
-            def pick_first(candidates):
-                for c in candidates:
-                    if c in all_vars:
-                        return c
-                return None
-
-            # Preselect defaults (only if user hasn't selected yet)
-            if not self.nc_time_var.value:
-                self.nc_time_var.value = pick_first(time_candidates)
-            if not self.nc_lat_var.value:
-                self.nc_lat_var.value = pick_first(lat_candidates)
-            if not self.nc_lon_var.value:
-                self.nc_lon_var.value = pick_first(lon_candidates)
-
-            # -------- TIME INFO --------
-            time_name = self.nc_time_var.value
-            if time_name and time_name in ds:
-                tvals = pd.to_datetime(ds[time_name].values)
-                time_text = f"{tvals.min().date()} — {tvals.max().date()}"
-
-            # ------ SPATIAL INFO -------
-            lat_name = self.nc_lat_var.value
-            lon_name = self.nc_lon_var.value
-            if lat_name in ds and lon_name in ds:
-                lat_min = float(ds[lat_name].min())
-                lat_max = float(ds[lat_name].max())
-                lon_min = float(ds[lon_name].min())
-                lon_max = float(ds[lon_name].max())
-                spatial_text = f"lat[{lat_min:.3f}..{lat_max:.3f}], lon[{lon_min:.3f}..{lon_max:.3f}]"
-
-        finally:
-            ds.close()
-        
+        time_candidates = ["time", "Time", "datetime", "date", "valid_time",
+                           "forecast_time", "verification_time"]
+        lat_candidates  = ["lat", "latitude", "Latitude"]
+        lon_candidates  = ["lon", "longitude", "Longitude", "long"]
+        x_candidates    = ["x", "X", "projection_x_coordinate", "easting", "eastings"]
+        y_candidates    = ["y", "Y", "projection_y_coordinate", "northing", "northings"]
 
         def _pick(cands):
-            for c in cands:
-                if c in all_vars:
-                    return c
-            return None
-
-        # defalts
-        self.nc_time_var.value = _pick(["time","Time","datetime","date","valid_time","forecast_time","verification_time"])
-        self.nc_lat_var.value  = _pick(["lat","latitude","y"])
-        self.nc_lon_var.value  = _pick(["lon","longitude","x","long"])
+            return next((c for c in cands if c in all_vars), None)
 
         try:
             ds = safe_open_nc_with_time_decoding(nc_path)
             try:
-                # ---- TIME ----
-                time_name = next((c for c in time_candidates if c in ds.coords or c in ds.variables), None)
-                if time_name is not None:
-                    tmin = pd.to_datetime(ds[time_name].values.min())
-                    tmax = pd.to_datetime(ds[time_name].values.max())
-                    time_text = f"{tmin.strftime('%Y-%m-%d')} — {tmax.strftime('%Y-%m-%d')}"
+                all_vars = sorted(ds.variables.keys())
 
-                # ---- SPATIAL ----
-                lat_name = next((c for c in lat_candidates if c in ds.coords or c in ds.variables), None)
-                lon_name = next((c for c in lon_candidates if c in ds.coords or c in ds.variables), None)
-                if lat_name and lon_name:
+                # Populate all dropdowns
+                self.nc_time_var.options  = all_vars
+                self.nc_lat_var.options   = all_vars
+                self.nc_lon_var.options   = all_vars
+                self.env_x_select.options = all_vars
+                self.env_y_select.options = all_vars
+
+                # Autoselect defaults (always overwrite — second open removed)
+                self.nc_time_var.value   = _pick(time_candidates)
+                self.nc_lat_var.value    = _pick(lat_candidates)
+                self.nc_lon_var.value    = _pick(lon_candidates)
+                self.env_x_select.value  = _pick(x_candidates)
+                self.env_y_select.value  = _pick(y_candidates)
+
+                # ---- TIME INFO ----
+                time_name = self.nc_time_var.value
+                if time_name and time_name in ds:
+                    tvals = pd.to_datetime(ds[time_name].values)
+                    time_text = f"{tvals.min().date()} — {tvals.max().date()}"
+
+                # ---- SPATIAL INFO (geographic fallback) ----
+                lat_name = self.nc_lat_var.value
+                lon_name = self.nc_lon_var.value
+                if lat_name and lat_name in ds and lon_name and lon_name in ds:
                     lat_min = float(ds[lat_name].min())
                     lat_max = float(ds[lat_name].max())
                     lon_min = float(ds[lon_name].min())
                     lon_max = float(ds[lon_name].max())
-                    spatial_text = f"lat[{lat_min:.3f}..{lat_max:.3f}], lon[{lon_min:.3f}..{lon_max:.3f}]"
+                    spatial_text = (
+                        f"lat[{lat_min:.3f}..{lat_max:.3f}], "
+                        f"lon[{lon_min:.3f}..{lon_max:.3f}]"
+                    )
 
-                # List of variables with support for vertical levels 
-                LEVEL_DIM_CANDIDATES = ("isobaricInhPa", "isobaric_in_hPa", "level", "lev", "plev", "pressure", "pressure_level")
-
+                # ---- VARIABLE LIST with vertical level expansion ----
+                LEVEL_DIM_CANDIDATES_LOCAL = (
+                    "isobaricInhPa", "isobaric_in_hPa", "level",
+                    "lev", "plev", "pressure", "pressure_level"
+                )
                 for var in ds.data_vars:
                     da = ds[var]
                     if da.ndim < 3:
                         continue
-
                     dims = list(da.dims)
-
-                    level_dim = next((d for d in LEVEL_DIM_CANDIDATES if d in dims), None)
-
+                    level_dim = next(
+                        (d for d in LEVEL_DIM_CANDIDATES_LOCAL if d in dims), None
+                    )
                     if level_dim is None:
                         var_file_map[var] = nc_path
-                        continue
-
-                    # options for each level: var_1000, var_975, ...
-                    try:
-                        level_vals = ds[level_dim].values
-                    except Exception:
-                        level_vals = []
-
-                    for lv in level_vals:
+                    else:
                         try:
-                            # default - hPa (1000, 975, 950 …)
-                            lv_int = int(round(float(lv)))
-                            label = f"{var}_{lv_int}"
-                            var_file_map[label] = nc_path
+                            level_vals = ds[level_dim].values
                         except Exception:
-                            # skip if non-numeric
-                            continue
+                            level_vals = []
+                        for lv in level_vals:
+                            try:
+                                lv_int = int(round(float(lv)))
+                                var_file_map[f"{var}_{lv_int}"] = nc_path
+                            except Exception:
+                                continue
 
             finally:
                 ds.close()
+
         except Exception as e:
             self.status_text = f"Failed to open dataset: {e}"
             self.alert.object = self.status_text
@@ -791,42 +785,32 @@ class movebank_annotation_engine(param.Parameterized):
 
         # Update Time/Spatial information block
         self._update_info_lines(self.env_info, {
-            "Time range:": time_text,
-            "Spatial range:": spatial_text
+            "Time range:":    time_text,
+            "Spatial range:": spatial_text,
         })
         self._auto_height(self.env_info)
 
-        # Variable options
         if not var_file_map:
             self.env_continuous_selector.options = []
             self.env_categorical_selector.options = []
-            self.env_continuous_selector.value = []
-            self.env_categorical_selector.value = []
+            self.env_continuous_selector.value   = []
+            self.env_categorical_selector.value  = []
             self.status_text = "No 3D variables (e.g. time/lat/lon) found in the file."
             self.alert.object = self.status_text
             return
 
-        # Store map label -> nc_path
         self.env_variable_sources = var_file_map
-
-        # labels : continuous vs categorical
         all_labels = list(var_file_map.keys())
-        # both selectors get ALL variables in options
+
         self.env_continuous_selector.options = all_labels
         self.env_categorical_selector.options = all_labels
-        # reset selections
-        self.env_continuous_selector.value = []
-        self.env_categorical_selector.value = []
-        self.status_text = f"Loaded {len(all_labels)} variable(s). Now split them into Continuous vs Categorical/QC."
-        self.alert.object = self.status_text
-        self._sync_nc_column_heights()
+        self.env_continuous_selector.value   = []
+        self.env_categorical_selector.value  = []
 
-
-        self.status_text = f"Loaded {len(var_file_map)} variable(s)."
-        self.alert.object = self.status_text
-        self._sync_nc_column_heights()
-        ####
-
+        self.status_text = (
+            f"Loaded {len(all_labels)} variable(s). "
+            "Now split them into Continuous vs Categorical/QC."
+        )
         self.alert.object = self.status_text
         self._sync_nc_column_heights()
 
@@ -962,6 +946,22 @@ class movebank_annotation_engine(param.Parameterized):
             movebank_path = self.movement_data_selector.value
             boundary_path = getattr(self, "boundary_path", None)
             interpolation_method = self._normalize_interp_key(self.interpolation_method.value)
+            spatial_mode = self.env_spatial_mode.value
+
+            if spatial_mode == "Projected (x/y)" and interpolation_method != "bilinear":
+                self.status_text = (
+                    "Projected (x/y) mode currently supports only "
+                    "Bilinear (projected x/y, time-linear) interpolation."
+                )
+                self.alert.object = self.status_text
+                return
+
+            if spatial_mode == "Geographic (lat/lon)" and interpolation_method == "bilinear":
+                self.status_text = (
+                    "Bilinear projected interpolation requires Projected (x/y) mode."
+                )
+                self.alert.object = self.status_text
+                return
             smoothing_points = int(self.control_smoothing.value)
 
             if not selected_vars:
@@ -973,7 +973,6 @@ class movebank_annotation_engine(param.Parameterized):
             else:
                 bbox = None
                 if not boundary_path:
-                    # building boundaries with .nc
                     first_var = selected_vars[0]
                     nc_path = env_var_map.get(first_var)
                     if not nc_path:
@@ -981,37 +980,90 @@ class movebank_annotation_engine(param.Parameterized):
                         self.alert.object = self.status_text
                         return
 
-                    try:
-                        bounds = get_nc_bounds(nc_path)  # {"S":..., "N":..., "W":..., "E":...}
-                        bbox = bounds
-                        # Updating the border information panel
+                    if self.env_spatial_mode.value == "Geographic (lat/lon)":
+                        try:
+                            bounds = get_nc_bounds(nc_path, env_coord_names={
+                                "env_time": self.nc_time_var.value,
+                                "env_lat": self.nc_lat_var.value,
+                                "env_lon": self.nc_lon_var.value,
+                                "env_x": None,
+                                "env_y": None,
+                            })
+                            bbox = bounds
+                            self.boundary_info_str.object = (
+                                "Boundary file: not selected (auto from .nc) <br>"
+                                f"Spatial range: lat[{bounds['S']:.3f}..{bounds['N']:.3f}], "
+                                f"lon[{bounds['W']:.3f}..{bounds['E']:.3f}]"
+                            )
+                        except Exception as e:
+                            self.status_text = f"Failed to derive boundary from .nc: {e}"
+                            self.alert.object = self.status_text
+                            return
+                    else:
+                        bbox = None
                         self.boundary_info_str.object = (
-                            "Boundary file: not selected (auto from .nc) <br>"
-                            f"Spatial range: lat[{bounds['S']:.3f}..{bounds['N']:.3f}], "
-                            f"lon[{bounds['W']:.3f}..{bounds['E']:.3f}]"
+                            "Boundary file: not selected <br>"
+                            "Spatial range: using projected grid extent (x/y); bbox cropping disabled."
                         )
-                    except Exception as e:
-                        self.status_text = f"Failed to derive boundary from .nc: {e}"
+
+                self.status_text = "Annotation started."
+
+                if self.env_spatial_mode.value == "Projected (x/y)":
+                    coord_spec = None  # bilinear не використовує lat/lon coord_spec
+                    env_coord_names = {
+                        "env_time": self.nc_time_var.value,
+                        "env_lat": None,
+                        "env_lon": None,
+                        "env_x": self.env_x_select.value,
+                        "env_y": self.env_y_select.value,
+                    }
+
+                    if not (self.nc_time_var.value and self.env_x_select.value and self.env_y_select.value):
+                        self.status_text = "Please select Time, X and Y variables from the NetCDF file."
                         self.alert.object = self.status_text
                         return
 
-                self.status_text = "Annotation started."
-                # pass bbox (or None, if the user did choose shp)
-                coord_spec = {
-                    "time": self.nc_time_var.value,
-                    "lat":  self.nc_lat_var.value,
-                    "lon":  self.nc_lon_var.value,
-                }
-                if not (self.nc_time_var.value and self.nc_lat_var.value and self.nc_lon_var.value):
-                    self.env_info.object = "Please select Time, Latitude and Longitude variables from the NetCDF file."
-                    return
+                    if interpolation_method == "bilinear" and categorical_vars:
+                        self.status_text = (
+                        "Bilinear projected interpolation is only valid for continuous variables. "
+                        "Please remove categorical/QC variables or use Nearest/IDW mode."
+                        )
+                        self.alert.object = self.status_text
+                        return
+
+                else:
+                    coord_spec = {
+                        "time": self.nc_time_var.value,
+                        "lat":  self.nc_lat_var.value,
+                        "lon":  self.nc_lon_var.value,
+                    }
+                    env_coord_names = {
+                        "env_time": self.nc_time_var.value,
+                        "env_lat": self.nc_lat_var.value,
+                        "env_lon": self.nc_lon_var.value,
+                        "env_x": None,
+                        "env_y": None,
+                    }
+
+                    if not (self.nc_time_var.value and self.nc_lat_var.value and self.nc_lon_var.value):
+                        self.status_text = "Please select Time, Latitude and Longitude variables from the NetCDF file."
+                        self.alert.object = self.status_text
+                        return
 
                 start_annotation_process(
-                    env_var_map, selected_vars, movebank_path, selected_ids,
-                    boundary_path, interpolation_method, bbox=bbox, smoothing_k=smoothing_points,
-                    out_csv_path=self.output_path.value, coord_spec=coord_spec,
+                    env_var_map,
+                    selected_vars,
+                    movebank_path,
+                    selected_ids,
+                    boundary_path,
+                    interpolation_method,
+                    bbox=bbox,
+                    smoothing_k=smoothing_points,
+                    out_csv_path=self.output_path.value,
+                    coord_spec=coord_spec,
+                    env_coord_names=env_coord_names,
                     continuous_vars=continuous_vars,
-                    categorical_vars=categorical_vars
+                    categorical_vars=categorical_vars,
                 )
                 self.status_text = "Annotation finished."
 
@@ -1769,10 +1821,13 @@ class movebank_annotation_engine(param.Parameterized):
 
     def _update_smoothing_options(self, event):
         key = self._normalize_interp_key(event.new)
-        if key == "nearest":
+
+        if key in ("nearest", "bilinear"):
             self.control_smoothing.options = ["1"]
             self.control_smoothing.value = "1"
+            self.control_smoothing.disabled = (key == "bilinear")
         else:
+            self.control_smoothing.disabled = False
             self.control_smoothing.options = ["2", "4", "6", "8"]
             if self.control_smoothing.value == "1":
                 self.control_smoothing.value = "4"

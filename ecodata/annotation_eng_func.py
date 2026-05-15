@@ -9,11 +9,12 @@ from shapely.geometry import Point
 import numpy as np
 from datetime import datetime
 import rasterio
+from pyproj import CRS, Transformer
 
 LEVEL_DIM_CANDIDATES = ("isobaricInhPa","isobaric_in_hPa","level","lev","plev","pressure","pressure_level")
 
 
-def safe_open_nc_with_time_decoding(path):
+def safe_open_nc_with_time_decoding(path, time_name: str | None = None):
     """
     Opens a NetCDF file with support for non-standard calendars:
     julian, gregorian, 360_day, noleap, etc.
@@ -24,7 +25,9 @@ def safe_open_nc_with_time_decoding(path):
     try:
         ds = xr.open_dataset(path, decode_times=False, chunks="auto")
 
-        time_name = _detect_time_name(ds)
+        if time_name is None:
+            time_name = _detect_time_name(ds)
+
         if time_name is None:
             raise ValueError("No time-like coordinate/variable found (e.g., 'time', 'valid_time').")
 
@@ -62,7 +65,11 @@ def safe_open_nc_with_time_decoding(path):
        raise RuntimeError(f"[ERROR] Failed to decode time using cftime for {path}: {e}")
     
 
-def get_nc_timerange_for_selected(env_var_map: dict, selected_env_vars: list[str]):
+def get_nc_timerange_for_selected(
+    env_var_map: dict,
+    selected_env_vars: list[str],
+    time_name: str | None = None,
+):
     """
     Return union [nc_start, nc_end] across all selected variables.
     If time is missing for all → (None, None).
@@ -72,7 +79,7 @@ def get_nc_timerange_for_selected(env_var_map: dict, selected_env_vars: list[str
         nc_path = env_var_map.get(v)
         if not nc_path:
             continue
-        ds = safe_open_nc_with_time_decoding(nc_path)
+        ds = safe_open_nc_with_time_decoding(nc_path, time_name=time_name)
         try:
             if ("time" in ds.coords) or ("time" in ds.variables):
                 tmin = pd.to_datetime(ds["time"].values.min())
@@ -84,18 +91,23 @@ def get_nc_timerange_for_selected(env_var_map: dict, selected_env_vars: list[str
     return nc_start, nc_end
 
 
-def get_nc_bounds(nc_path: str):
+def get_nc_bounds(nc_path: str, env_coord_names: dict | None = None):
     """
     Returns a dictionary of boundaries from .nc in CRS WGS84: {"S": ..., "N": ..., "W": ..., "E": ...}
     """
-    ds = safe_open_nc_with_time_decoding(nc_path)
+    env_coord_names = env_coord_names or {}
+    ds = safe_open_nc_with_time_decoding(nc_path, time_name=env_coord_names.get("env_time"))
     # candidate coordinate names
     try:
-        lat_candidates = ("lat", "latitude", "y")
-        lon_candidates = ("lon", "longitude", "x","long")
+        lat_name = env_coord_names.get("env_lat")
+        lon_name = env_coord_names.get("env_lon")
 
-        lat_name = next((c for c in lat_candidates if c in ds.coords or c in ds.variables), None)
-        lon_name = next((c for c in lon_candidates if c in ds.coords or c in ds.variables), None)
+        if not lat_name or not lon_name:
+            lat_candidates = ("lat", "latitude", "Latitude")
+            lon_candidates = ("lon", "longitude", "Longitude", "long")
+            lat_name = next((c for c in lat_candidates if c in ds.coords or c in ds.variables), None)
+            lon_name = next((c for c in lon_candidates if c in ds.coords or c in ds.variables), None)
+
         if lat_name is None or lon_name is None:
             raise ValueError("Could not detect lat/lon coordinate names in NetCDF")
 
@@ -163,6 +175,7 @@ def load_taxa_and_ids_from_csv(file_path):
 def start_annotation_process(env_var_map, selected_env_vars, movebank_path, selected_ids,
                              boundary_path, interpolation_method, bbox=None, smoothing_k: int = 2,
                              out_csv_path=None, coord_spec=None,
+                             env_coord_names: dict | None = None,
                              continuous_vars=None, categorical_vars=None,
                              apply_value_correction: bool = False,
                              value_scale_factor: float = 1.0,
@@ -182,6 +195,18 @@ def start_annotation_process(env_var_map, selected_env_vars, movebank_path, sele
     print("Movebank file:", movebank_path)
     print("Boundary file:", boundary_path)
     print("Interpolation method:", interpolation_method)
+    env_coord_names = env_coord_names or {}
+
+    # bridge from the current coord_spec logic to the #191 commit's env_coord_names naming.
+ 
+    if not env_coord_names and coord_spec:
+        env_coord_names = {
+            "env_time": coord_spec.get("time"),
+            "env_lat": coord_spec.get("lat"),
+            "env_lon": coord_spec.get("lon"),
+            "env_x": None,
+            "env_y": None,
+        }
 
      # === Step 1: Spatial filtering ===
     df_filtered, trimmed_path = filter_points_within_boundary(
@@ -194,7 +219,11 @@ def start_annotation_process(env_var_map, selected_env_vars, movebank_path, sele
         return
     
     # ===*** Time prefiltering (union across selected variables) ===
-    nc_start, nc_end = get_nc_timerange_for_selected(env_var_map, selected_env_vars)
+    nc_start, nc_end = get_nc_timerange_for_selected(
+        env_var_map,
+        selected_env_vars,
+        time_name=env_coord_names.get("env_time"),
+    )
     df_filtered = filter_points_within_timerange(df_filtered, nc_start, nc_end)
     if df_filtered.empty:
         print("[WARNING] No points within the NC time window after prefiltering.")
@@ -203,12 +232,18 @@ def start_annotation_process(env_var_map, selected_env_vars, movebank_path, sele
     # ===*** 
 
     # === Step 2: Loading and interpolation of environmental data ===
-    result = load_selected_environmental_data(df_filtered, env_var_map,
-                                               selected_env_vars, movebank_path,
-                                               interpolation_method, smoothing_k=smoothing_k,
-                                               coord_spec=coord_spec,
-                                               continuous_vars=continuous_vars, 
-                                               categorical_vars=categorical_vars)
+    result = load_selected_environmental_data(
+        df_filtered,
+        env_var_map,
+        selected_env_vars,
+        movebank_path,
+        interpolation_method,
+        smoothing_k=smoothing_k,
+        coord_spec=coord_spec,
+        env_coord_names=env_coord_names,
+        continuous_vars=continuous_vars,
+        categorical_vars=categorical_vars,
+    )
     if result is None:
         print("[ERROR] Environmental data was not loaded.")
         remove_temporary_trimmed_file(trimmed_path)
@@ -274,7 +309,7 @@ def start_annotation_process(env_var_map, selected_env_vars, movebank_path, sele
         out_path = Path(out_csv_path)
     else:
         out_path = Path(movebank_path).parent / "annotated_env.csv"
-    df_time_filtered = df_time_filtered.drop(columns=["geometry", "nc_lat", "nc_lon"], errors="ignore")
+    df_time_filtered = df_time_filtered.drop(columns=["geometry", "nc_lat", "nc_lon", "x", "y"], errors="ignore")
     df_time_filtered.to_csv(out_path, index=False, encoding="utf-8-sig", date_format="%Y-%m-%d %H:%M:%S")
     print(f"[INFO] Final filtered annotation saved to {out_path}")
 
@@ -411,9 +446,12 @@ def interpolate_missing_coordinates(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def load_selected_environmental_data(df, env_var_map, selected_vars,
-                                      movebank_path, interpolation_method="Nearest neighbour", smoothing_k: int = 2,
+                                      movebank_path, interpolation_method="Nearest neighbour",
+                                      smoothing_k: int = 2,
                                       coord_spec=None,
-                                      continuous_vars=None, categorical_vars=None):
+                                      env_coord_names: dict | None = None,
+                                      continuous_vars=None,
+                                      categorical_vars=None):
     """
     Wrapper that calls the appropriate annotation function depending on the interpolation method.
 
@@ -427,6 +465,10 @@ def load_selected_environmental_data(df, env_var_map, selected_vars,
     - Categorical/QC + IDW selected:
         categorical/QC variables are not IDW-averaged;
         they use nearest spatial grid node + nearest timestep
+    - Continuous + Bilinear projected x/y:
+        bilinear interpolation on a projected 1D x/y grid + linear temporal interpolation
+    - Categorical/QC + Bilinear projected x/y:
+        not allowed, because bilinear interpolation is not valid for class/flag codes
     """
     label = (interpolation_method or "").strip().lower()
     label = label.replace("neighbor", "neighbour") # Normalise US/UK spelling
@@ -438,6 +480,7 @@ def load_selected_environmental_data(df, env_var_map, selected_vars,
     method = (interpolation_method or "").lower()
     is_nearest = ("nearest" in method)
     is_idw = ("idw" in method)
+    is_bilinear = "bilinear" in method
 
     # If split lists are not provided, treat everything as "selected_vars"
     cont = list(continuous_vars or [])
@@ -450,11 +493,22 @@ def load_selected_environmental_data(df, env_var_map, selected_vars,
                 df, env_var_map, selected_vars, movebank_path,
                 smoothing_k=smoothing_k, coord_spec=coord_spec
             )
+
         if is_idw:
             return annotate_env_IDW(
                 df, env_var_map, selected_vars, movebank_path,
                 smoothing_k=smoothing_k, coord_spec=coord_spec
             )
+
+        if is_bilinear:
+            return annotate_env_bilinear_projected(
+                df,
+                env_var_map,
+                selected_vars,
+                movebank_path,
+                env_coord_names=env_coord_names,
+            )
+
         raise ValueError(f"Unknown interpolation method: {interpolation_method}")
 
     # If split lists are provided:
@@ -521,7 +575,30 @@ def load_selected_environmental_data(df, env_var_map, selected_vars,
                 nc_end = nc_end2
 
         return out_df, nc_start, nc_end
+    
+    # 3) Bilinear projected selected:
+    #    continuous -> bilinear projected x/y + linear time
+    #    categorical/QC -> not allowed
+    if is_bilinear:
+        if cat:
+            raise ValueError(
+                "Bilinear projected interpolation is only valid for continuous variables. "
+                "Please remove categorical/QC variables or use Nearest/IDW mode."
+            )
 
+        bilinear_vars = cont if cont else list(selected_vars or [])
+
+        if not bilinear_vars:
+            raise ValueError("No continuous variables selected for bilinear projected interpolation.")
+
+        return annotate_env_bilinear_projected(
+            df,
+            env_var_map,
+            bilinear_vars,
+            movebank_path,
+            env_coord_names=env_coord_names,
+        )
+    
     raise ValueError(f"Unknown interpolation method: {interpolation_method}")
 
 
@@ -1016,6 +1093,284 @@ def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k:
     # Geometry for QA/exports
     out["geometry"] = [Point(lon, lat) for lon, lat in zip(out["nc_lon"], out["nc_lat"])]
     return out, pd.NaT, pd.NaT
+
+def annotate_env_bilinear_projected(
+    df,
+    env_var_map,
+    selected_vars,
+    movebank_path,
+    env_coord_names: dict | None = None,
+):
+    """
+    Annotate movement points with environmental values using:
+      - Spatial: bilinear interpolation on a 1D projected grid (x/y)
+      - Temporal: linear interpolation in time (xarray interp)
+
+    Tracks input:
+      - requires lon/lat columns: location_lon, location_lat
+      - projects lon/lat -> x/y into the env dataset's native CRS using CF metadata
+
+    Env input:
+      - dataset has 1D x and y coordinate vectors (projected grid)
+      - dataset provides CF projection metadata so `read_crs_from_cf()` can infer CRS
+
+    Returns: (out_df, pd.NaT, pd.NaT) for signature compatibility.
+    """
+    out = df.copy()
+    out["timestamp"] = pd.to_datetime(out["timestamp"], dayfirst=True, errors="coerce")
+
+    # Require lon/lat (your code already normalizes movement columns sometimes)
+    required = ["timestamp", "location_lat", "location_lon"]
+    out = out.dropna(subset=required)
+
+    env_coord_names = env_coord_names or {}
+    time_name = env_coord_names.get("env_time")  # optional
+    x_name    = env_coord_names.get("env_x")
+    y_name    = env_coord_names.get("env_y")
+
+    if not x_name or not y_name:
+        raise ValueError(
+            "Bilinear (projected) requires env_coord_names['env_x'] and ['env_y'] "
+            "(Projected (x/y) mode)."
+        )
+    if env_coord_names.get("env_lat") or env_coord_names.get("env_lon"):
+        raise ValueError("Bilinear (projected) requires Projected (x/y) spatial mode, not Geographic (lat/lon).")
+
+    # Target time values (vectorized)
+    tgt_t = out["timestamp"].to_numpy("datetime64[ns]")
+
+    # Track lon/lat arrays
+    lon = pd.to_numeric(out["location_lon"], errors="coerce").to_numpy(dtype="float64")
+    lat = pd.to_numeric(out["location_lat"], errors="coerce").to_numpy(dtype="float64")
+
+    # Drop any rows with bad numeric lon/lat
+    good = np.isfinite(lon) & np.isfinite(lat) & out["timestamp"].notna().to_numpy()
+    if not good.all():
+        out = out.loc[good].copy()
+        tgt_t = tgt_t[good]
+        lon = lon[good]
+        lat = lat[good]
+
+    # QA columns
+    out["x"] = np.nan
+    out["y"] = np.nan
+
+    # Cache CRS/transformer per file path (since you may have multiple labels/files)
+    crs_cache: dict[str, "CRS"] = {}
+
+    for label in selected_vars:
+        file_path = env_var_map.get(label)
+        out[label] = np.nan
+
+        if not file_path or not Path(file_path).is_file():
+            print(f"[WARNING] File for {label} not found: {file_path}")
+            continue
+
+        base_var, target_level = _split_var_and_level(label)
+
+        try:
+            ds = safe_open_nc_with_time_decoding(file_path, time_name=time_name)
+
+            if base_var not in ds:
+                print(f"[WARNING] Base variable '{base_var}' not found in {file_path}")
+                ds.close()
+                continue
+
+            da = ds[base_var]
+            dims = list(da.dims)
+
+            # Must be able to interpolate along x/y dims
+            x_dim = x_name if x_name in dims else None
+            y_dim = y_name if y_name in dims else None
+            if x_dim is None or y_dim is None:
+                ds.close()
+                raise ValueError(
+                    f"Bilinear requires x/y to be dims of {base_var!r}.\n"
+                    f"  Requested x dim: {x_name!r} (is_dim={x_name in dims})\n"
+                    f"  Requested y dim: {y_name!r} (is_dim={y_name in dims})\n"
+                    f"  Available dims: {dims}"
+                )
+
+            # Sort for interpolation stability
+            ds = _ensure_sorted(ds, y_dim, x_dim)
+            da = ds[base_var]
+            dims = list(da.dims)
+
+            if "time" not in dims:
+                ds.close()
+                raise ValueError(f"No 'time' dim after decoding for '{base_var}'. dims={dims}")
+
+            # Validate 1D x/y coordinate vectors
+            gx = np.asarray(ds[x_dim].values)
+            gy = np.asarray(ds[y_dim].values)
+            if gx.ndim != 1 or gy.ndim != 1:
+                ds.close()
+                raise ValueError(
+                    f"Bilinear method requires 1D coordinate vectors for '{y_dim}' and '{x_dim}'. "
+                    f"Got shapes: {y_dim}={gy.shape}, {x_dim}={gx.shape}."
+                )
+
+            # Handle extra dims (pressure level, ensemble, expver, etc.)
+            extra_dims = [d for d in dims if d not in ("time", y_dim, x_dim)]
+            if extra_dims:
+                sel = {}
+                for d in extra_dims:
+                    if d in LEVEL_DIM_CANDIDATES:
+                        sel[d] = _pick_level_index(ds, d, target_level)
+                    else:
+                        sel[d] = 0
+                da = da.isel(**sel).squeeze()  # -> (time, y, x)
+
+            # --- CRS inference + projection lon/lat -> x/y -------------------------
+            if file_path not in crs_cache:
+                # Prefer variable-specific grid_mapping lookup by passing base_var
+                crs_cache[file_path] = read_crs_from_cf(ds, var_name=base_var)
+
+            target_crs = crs_cache[file_path]
+            x_pts, y_pts = project_tracks_lonlat_to_xy(lon, lat, target_crs=target_crs)
+
+            # Store for QA
+            out["x"] = x_pts
+            out["y"] = y_pts
+
+            # --- vectorized xarray interpolation -----------------------------------
+            pts = xr.Dataset(
+                coords={"points": np.arange(len(out))},
+                data_vars={
+                    "time": ("points", tgt_t),
+                    x_dim: ("points", x_pts),
+                    y_dim: ("points", y_pts),
+                },
+            )
+
+            sampled = da.interp({x_dim: pts[x_dim], y_dim: pts[y_dim], "time": pts["time"]})
+            out[label] = sampled.to_numpy()
+
+            ds.close()
+
+        except Exception as e:
+            print(f"[ERROR] {label}: {e}")
+            continue
+
+    # If you want: geometry in projected CRS (x,y). Comment out if not needed.
+    out["geometry"] = [Point(x, y) for x, y in zip(out["x"], out["y"])]
+
+    return out, pd.NaT, pd.NaT
+
+def read_crs_from_cf(ds: xr.Dataset, var_name: str | None = None) -> CRS:
+    """
+    Infer the projected coordinate reference system (CRS) of a gridded
+    environmental dataset using CF-convention metadata.
+
+    The function attempts, in order:
+    1) to read a CF-compliant ``grid_mapping`` attribute from a data variable,
+    2) to construct a CRS from global dataset attributes (e.g. WKT or PROJ),
+    3) to read CRS information from a standalone ``crs`` variable.
+
+    This is intended for datasets on projected grids (e.g. NARR, ERA5-Land,
+    regional climate models) where track data in WGS84 lon/lat must be
+    transformed to native x/y coordinates before spatial interpolation.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Environmental dataset containing projected horizontal coordinates
+        and CF-compliant projection metadata.
+    var_name : str or None, optional
+        Name of a data variable whose ``grid_mapping`` attribute should be
+        inspected first. If None, variable-specific metadata are skipped.
+
+    Returns
+    -------
+    pyproj.CRS
+        Coordinate reference system describing the dataset's native
+        horizontal projection.
+
+    Raises
+    ------
+    ValueError
+        If no usable CRS information can be inferred from the dataset.
+    """
+
+    # 1) If a data variable is given, try its grid_mapping attribute
+    grid_mapping_name = None
+    if var_name is not None and var_name in ds:
+        grid_mapping_name = ds[var_name].attrs.get("grid_mapping")
+
+    # 2) If we have a grid mapping variable, parse it as CF
+    if grid_mapping_name and grid_mapping_name in ds.variables:
+        gm = ds[grid_mapping_name]
+        # xarray keeps attrs as dict; pyproj can build CRS from CF dict
+        try:
+            return CRS.from_cf(gm.attrs)
+        except Exception:
+            pass
+
+    # 3) Common alternate places: global attrs
+    # Try "crs_wkt", "spatial_ref" (GDAL), "proj4", "proj"
+    for key in ("crs_wkt", "spatial_ref", "proj_wkt", "wkt"):
+        wkt = ds.attrs.get(key)
+        if isinstance(wkt, str) and wkt.strip():
+            return CRS.from_wkt(wkt)
+
+    for key in ("proj4", "proj4text", "proj", "projection"):
+        proj = ds.attrs.get(key)
+        if isinstance(proj, str) and proj.strip():
+            return CRS.from_string(proj)
+
+    # 4) Sometimes there is a standalone "crs" variable with WKT in attrs
+    if "crs" in ds.variables:
+        crs_var = ds["crs"]
+        for key in ("crs_wkt", "spatial_ref"):
+            wkt = crs_var.attrs.get(key)
+            if isinstance(wkt, str) and wkt.strip():
+                return CRS.from_wkt(wkt)
+        # Or CF attrs
+        try:
+            return CRS.from_cf(crs_var.attrs)
+        except Exception:
+            pass
+
+    raise ValueError("Could not infer CRS from dataset (no usable CF grid_mapping / WKT / proj string found).")
+
+
+def project_tracks_lonlat_to_xy(
+    lon: np.ndarray,
+    lat: np.ndarray,
+    target_crs: CRS,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Project track locations from geographic coordinates (longitude, latitude)
+    to the native x/y coordinate system of a projected environmental grid.
+
+    This function is used to transform animal tracking locations
+    (WGS84 lon/lat) into the coordinate system of gridded datasets such as
+    NARR before spatial interpolation using xarray.
+
+    Parameters
+    ----------
+    lon : array-like
+        Longitudes of track locations in degrees east (EPSG:4326).
+    lat : array-like
+        Latitudes of track locations in degrees north (EPSG:4326).
+    target_crs : pyproj.CRS
+        Target projected CRS describing the environmental dataset grid.
+
+    Returns
+    -------
+    x : numpy.ndarray
+        Projected x-coordinates of track locations in the target CRS.
+    y : numpy.ndarray
+        Projected y-coordinates of track locations in the target CRS.
+    """
+
+    lon = np.asarray(lon, dtype=float)
+    lat = np.asarray(lat, dtype=float)
+
+    transformer = Transformer.from_crs("EPSG:4326", target_crs, always_xy=True)
+    x, y = transformer.transform(lon, lat)
+    return np.asarray(x, dtype=float), np.asarray(y, dtype=float)
+
 
 def _safe_remove_existing_file(path, retries: int = 5, delay: float = 0.5):
     """

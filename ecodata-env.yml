@@ -28,3 +28,4 @@ dependencies:
 - distributed
 - geographiclib
 - h5netcdf
+- pyproj
