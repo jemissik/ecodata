@@ -458,6 +458,6 @@ def set_time_encoding_modis(ds):
     ds : xarray.Dataset
         Dataset for which the encodings will be modified. This function will modify the encoding format in place.
     """
-    modis_encoding = {'units': 'days since 2000-01-01', 'calendar': 'julian'}
+    modis_encoding = {'units': 'days since 2000-01-01', 'calendar': 'julian', "dtype": "float64"}
     for key in modis_encoding:
         ds.time.encoding[key] = modis_encoding[key]
