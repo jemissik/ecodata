@@ -14,5 +14,9 @@ tracks_explorer
 gridded_data_explorer
 subsetter
 movie_maker
+annotation_engine
+presence_data_preparation
+nc_builder
+multidimensional_annotation
 
 ```

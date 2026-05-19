@@ -75,7 +75,7 @@ def parse_timestamp(s: str) -> datetime:
 
     # --- Try explicit known formats (old + new) ---
     fmts = [
-        # legacy ISO-like (kept first for backward compatibility)
+        #  ISO-like (kept first for compatibility)
         "%Y-%m-%d %H:%M:%S.%f",
         "%Y-%m-%d %H:%M:%S",
         "%Y-%m-%d %H:%M",
@@ -556,7 +556,7 @@ def process_csv_interp_or_averaging(start_time_str, end_time_str, interval_minut
         "eobs_start_timestamp", "eobs_temperature",
         "ground_speed", "height_above_ellipsoid"
     ]
-    if result_paths:  # перевірка, що є створені файли
+    if result_paths:  
         last_file = result_paths[-1]
         try:
             df_check = normalize_column_names(pd.read_csv(last_file, low_memory=False))
@@ -917,7 +917,7 @@ def resolve_lon_lat_keys(fieldnames):
     lon_key = next((norm_map[_norm(c)] for c in lon_syn if _norm(c) in norm_map), None)
     lat_key = next((norm_map[_norm(c)] for c in lat_syn if _norm(c) in norm_map), None)
 
-    # soft fallback to legacy dash-style names if present
+    #  fallback : dash-style names if present
     if lon_key is None and "location-long" in fieldnames:
         lon_key = "location-long"
     if lat_key is None and "location-lat" in fieldnames:

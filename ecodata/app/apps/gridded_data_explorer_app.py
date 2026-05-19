@@ -163,8 +163,10 @@ class GriddedDataExplorer(param.Parameterized):
     )
 
     # Progress bar and percent for saving
-    progress_indicator = param.ClassSelector(pn.indicators.Progress)
-    progress_percent = param.ClassSelector(pn.widgets.StaticText)
+    #progress_indicator = param.ClassSelector(pn.indicators.Progress)
+    progress_indicator = param.ClassSelector(class_=pn.indicators.Progress)
+    #progress_percent = param.ClassSelector(pn.widgets.StaticText)
+    progress_percent = param.ClassSelector(class_=pn.widgets.StaticText)
 
     # Save statistics
     stats_fname = param_widget(

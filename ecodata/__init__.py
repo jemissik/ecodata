@@ -60,3 +60,14 @@ from ecodata.annotation_eng_func import(
     get_nc_bounds,
     safe_open_nc_with_time_decoding
 )
+from ecodata.multidim_annotation_func import(
+    sample_era5_at_height,
+)
+
+from ecodata.presence_functions import (
+    VettingOptions,
+    AggregationOptions,
+    aggregate_ebird_to_files,
+    export_tracks_from_aggregated_counts,
+    read_species_from_agg_counts,
+)
