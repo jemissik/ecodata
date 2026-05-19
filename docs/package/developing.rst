@@ -8,6 +8,7 @@ Installation options
         mamba env create -n eco-dev --file ecodata-env.yml
         mamba activate eco-dev
         mamba env update -n eco-dev -f ecodata-dev-env.yml
+        python -m pip install --no-deps -e .
 
 * To do a full install (not editable):
 

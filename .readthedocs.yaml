@@ -10,6 +10,7 @@ build:
   jobs:
     post_install:
       - conda env update --name ${READTHEDOCS_VERSION} --file ecodata-dev-env.yml
+      - python -m pip install --no-deps -e .
       - conda list
 
 conda:

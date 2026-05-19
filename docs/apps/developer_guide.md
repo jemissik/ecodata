@@ -31,6 +31,7 @@ If you have an existing conda installation, it's strongly recommended to make su
 
     ```
     conda env update --name eco-dev --file ecodata-dev-env.yml
+    python -m pip install --no-deps -e .
     ```
 
 ### Launching the apps
