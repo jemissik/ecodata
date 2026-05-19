@@ -3,6 +3,7 @@ from pathlib import Path
 import panel as pn
 import param
 import pandas as pd
+import xarray as xr
 from panel.io.loading import start_loading_spinner, stop_loading_spinner
 from ecodata.app.models import FileSelector
 from ecodata.panel_utils import param_widget, register_view, try_catch, rename_param_widgets
@@ -11,7 +12,14 @@ from datetime import datetime
 import re
 from ecodata import validate_and_process_csv, load_vector_extent_info, load_taxa_and_ids_from_csv 
 from ecodata.movebank_functions import merge_csv_files_from_folder, generate_individual_csvs_for_local_ids, interpolate_missing_values_only, delete_files 
-from ecodata.annotation_eng_func import start_annotation_process,convert_tif_to_nc_before_annotation, get_nc_bounds, safe_open_nc_with_time_decoding
+from ecodata.annotation_eng_func import (
+    start_annotation_process,
+    convert_tif_to_nc_before_annotation,
+    get_nc_bounds,
+    open_nc_metadata,
+    detect_env_coord_names,
+    safe_open_nc_with_time_decoding,
+)
 
 logger = logging.getLogger(__file__)
 
@@ -700,20 +708,11 @@ class movebank_annotation_engine(param.Parameterized):
         time_text = "-"
         spatial_text = "-"
 
-        time_candidates = ["time", "Time", "datetime", "date", "valid_time",
-                           "forecast_time", "verification_time"]
-        lat_candidates  = ["lat", "latitude", "Latitude"]
-        lon_candidates  = ["lon", "longitude", "Longitude", "long"]
-        x_candidates    = ["x", "X", "projection_x_coordinate", "easting", "eastings"]
-        y_candidates    = ["y", "Y", "projection_y_coordinate", "northing", "northings"]
-
-        def _pick(cands):
-            return next((c for c in cands if c in all_vars), None)
-
         try:
-            ds = safe_open_nc_with_time_decoding(nc_path)
+            ds = open_nc_metadata(nc_path)
             try:
-                all_vars = sorted(ds.variables.keys())
+                all_vars = sorted(set(ds.coords.keys()) | set(ds.variables.keys()))
+                coord_guess = detect_env_coord_names(ds)
 
                 # Populate all dropdowns
                 self.nc_time_var.options  = all_vars
@@ -722,20 +721,52 @@ class movebank_annotation_engine(param.Parameterized):
                 self.env_x_select.options = all_vars
                 self.env_y_select.options = all_vars
 
-                # Autoselect defaults (always overwrite — second open removed)
-                self.nc_time_var.value   = _pick(time_candidates)
-                self.nc_lat_var.value    = _pick(lat_candidates)
-                self.nc_lon_var.value    = _pick(lon_candidates)
-                self.env_x_select.value  = _pick(x_candidates)
-                self.env_y_select.value  = _pick(y_candidates)
+                # Autoselect defaults while preserving valid existing choices.
+                self.nc_time_var.value = (
+                    coord_guess.get("env_time")
+                    if coord_guess.get("env_time") in all_vars
+                    else (self.nc_time_var.value if self.nc_time_var.value in all_vars else None)
+                )
+                self.nc_lat_var.value = (
+                    coord_guess.get("env_lat")
+                    if coord_guess.get("env_lat") in all_vars
+                    else (self.nc_lat_var.value if self.nc_lat_var.value in all_vars else None)
+                )
+                self.nc_lon_var.value = (
+                    coord_guess.get("env_lon")
+                    if coord_guess.get("env_lon") in all_vars
+                    else (self.nc_lon_var.value if self.nc_lon_var.value in all_vars else None)
+                )
+                self.env_x_select.value = (
+                    coord_guess.get("env_x")
+                    if coord_guess.get("env_x") in all_vars
+                    else (self.env_x_select.value if self.env_x_select.value in all_vars else None)
+                )
+                self.env_y_select.value = (
+                    coord_guess.get("env_y")
+                    if coord_guess.get("env_y") in all_vars
+                    else (self.env_y_select.value if self.env_y_select.value in all_vars else None)
+                )
+
+                has_latlon = bool(self.nc_lat_var.value and self.nc_lon_var.value)
+                has_xy = bool(self.env_x_select.value and self.env_y_select.value)
+                if has_latlon and not has_xy:
+                    self.env_spatial_mode.value = "Geographic (lat/lon)"
+                elif has_xy and not has_latlon:
+                    self.env_spatial_mode.value = "Projected (x/y)"
 
                 # ---- TIME INFO ----
                 time_name = self.nc_time_var.value
-                if time_name and time_name in ds:
-                    tvals = pd.to_datetime(ds[time_name].values)
-                    time_text = f"{tvals.min().date()} — {tvals.max().date()}"
+                if time_name and (time_name in ds.coords or time_name in ds.variables):
+                    try:
+                        decoded_times = xr.decode_cf(ds[[time_name]], decode_times=True)[time_name]
+                        tmin = pd.to_datetime(decoded_times.min().values)
+                        tmax = pd.to_datetime(decoded_times.max().values)
+                        time_text = f"{tmin.date()} — {tmax.date()}"
+                    except Exception:
+                        time_text = "-"
 
-                # ---- SPATIAL INFO (geographic fallback) ----
+                # ---- SPATIAL INFO ----
                 lat_name = self.nc_lat_var.value
                 lon_name = self.nc_lon_var.value
                 if lat_name and lat_name in ds and lon_name and lon_name in ds:
@@ -747,6 +778,18 @@ class movebank_annotation_engine(param.Parameterized):
                         f"lat[{lat_min:.3f}..{lat_max:.3f}], "
                         f"lon[{lon_min:.3f}..{lon_max:.3f}]"
                     )
+                else:
+                    x_name = self.env_x_select.value
+                    y_name = self.env_y_select.value
+                    if x_name and x_name in ds and y_name and y_name in ds:
+                        x_min = float(ds[x_name].min())
+                        x_max = float(ds[x_name].max())
+                        y_min = float(ds[y_name].min())
+                        y_max = float(ds[y_name].max())
+                        spatial_text = (
+                            f"{y_name}[{y_min:.3f}..{y_max:.3f}], "
+                            f"{x_name}[{x_min:.3f}..{x_max:.3f}]"
+                        )
 
                 # ---- VARIABLE LIST with vertical level expansion ----
                 LEVEL_DIM_CANDIDATES_LOCAL = (

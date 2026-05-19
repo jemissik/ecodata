@@ -14,6 +14,44 @@ from pyproj import CRS, Transformer
 LEVEL_DIM_CANDIDATES = ("isobaricInhPa","isobaric_in_hPa","level","lev","plev","pressure","pressure_level")
 
 
+def open_nc_metadata(path: str) -> xr.Dataset:
+    """
+    Open a NetCDF dataset for metadata inspection only.
+
+    This avoids time decoding so the UI can list variables and coordinate
+    candidates even when the time coordinate needs to be selected manually.
+    """
+    return xr.open_dataset(path, decode_times=False, chunks="auto")
+
+
+def detect_env_coord_names(ds: xr.Dataset) -> dict:
+    """
+    Detect likely coordinate names for an environmental dataset.
+
+    Returns keys: env_time, env_x, env_y, env_lat, env_lon.
+    Values may be None when not detected.
+    """
+    env_time = _detect_time_name(ds)
+
+    x_candidates = ("x", "X", "projection_x_coordinate", "easting", "eastings")
+    y_candidates = ("y", "Y", "projection_y_coordinate", "northing", "northings")
+    lat_candidates = ("lat", "latitude", "Latitude")
+    lon_candidates = ("lon", "longitude", "Longitude", "long")
+
+    env_x = next((c for c in x_candidates if c in ds.coords and c in ds.dims), None)
+    env_y = next((c for c in y_candidates if c in ds.coords and c in ds.dims), None)
+    env_lat = next((c for c in lat_candidates if c in ds.coords or c in ds.variables), None)
+    env_lon = next((c for c in lon_candidates if c in ds.coords or c in ds.variables), None)
+
+    return {
+        "env_time": env_time,
+        "env_x": env_x,
+        "env_y": env_y,
+        "env_lat": env_lat,
+        "env_lon": env_lon,
+    }
+
+
 def safe_open_nc_with_time_decoding(path, time_name: str | None = None):
     """
     Opens a NetCDF file with support for non-standard calendars:
@@ -491,13 +529,17 @@ def load_selected_environmental_data(df, env_var_map, selected_vars,
         if is_nearest:
             return annotate_env_nearest(
                 df, env_var_map, selected_vars, movebank_path,
-                smoothing_k=smoothing_k, coord_spec=coord_spec
+                smoothing_k=smoothing_k,
+                coord_spec=coord_spec,
+                env_coord_names=env_coord_names,
             )
 
         if is_idw:
             return annotate_env_IDW(
                 df, env_var_map, selected_vars, movebank_path,
-                smoothing_k=smoothing_k, coord_spec=coord_spec
+                smoothing_k=smoothing_k,
+                coord_spec=coord_spec,
+                env_coord_names=env_coord_names,
             )
 
         if is_bilinear:
@@ -526,6 +568,7 @@ def load_selected_environmental_data(df, env_var_map, selected_vars,
                 out_df, env_var_map, cont, movebank_path,
                 smoothing_k=smoothing_k,
                 coord_spec=coord_spec,
+                env_coord_names=env_coord_names,
                 temporal_method="linear"
             )
 
@@ -535,6 +578,7 @@ def load_selected_environmental_data(df, env_var_map, selected_vars,
                 out_df, env_var_map, cat, movebank_path,
                 smoothing_k=smoothing_k,
                 coord_spec=coord_spec,
+                env_coord_names=env_coord_names,
                 temporal_method="nearest"
             )
 
@@ -557,6 +601,7 @@ def load_selected_environmental_data(df, env_var_map, selected_vars,
                 out_df, env_var_map, cont, movebank_path,
                 smoothing_k=smoothing_k,
                 coord_spec=coord_spec,
+                env_coord_names=env_coord_names,
                 temporal_method="linear"
             )
 
@@ -566,6 +611,7 @@ def load_selected_environmental_data(df, env_var_map, selected_vars,
                 out_df, env_var_map, cat, movebank_path,
                 smoothing_k=smoothing_k,
                 coord_spec=coord_spec,
+                env_coord_names=env_coord_names,
                 temporal_method="nearest"
             )
             # keep nc_start/nc_end stable (both annotators return NaT)
@@ -624,7 +670,8 @@ def standardize_time_lat_lon(ds, coord_spec):
 
 
 def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothing_k: int = 4,
-                         coord_spec=None, temporal_method: str = "linear"):
+                         coord_spec=None, env_coord_names: dict | None = None,
+                         temporal_method: str = "linear"):
     """
     Annotate movement points with environmental values using:
      - Spatial: nearest grid node
@@ -679,6 +726,7 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
     temporal_method = (temporal_method or "linear").strip().lower()
     if temporal_method not in ("linear", "nearest"):
         temporal_method = "linear"
+    env_coord_names = env_coord_names or {}
 
     # Placeholders for nearest grid coords (one set; overwritten by last variable)
     nc_latitudes = np.full(len(out), np.nan, dtype="float64")
@@ -703,7 +751,10 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
         base_var, target_level = _split_var_and_level(label)
 
         try:
-            ds = safe_open_nc_with_time_decoding(file_path)
+            ds = safe_open_nc_with_time_decoding(
+                file_path,
+                time_name=env_coord_names.get("env_time"),
+            )
             ds = standardize_time_lat_lon(ds, coord_spec)
             if base_var not in ds:
                 print(f"[WARNING] Base variable '{base_var}' not found in {file_path}")
@@ -864,7 +915,8 @@ def annotate_env_nearest(df, env_var_map, selected_vars, movebank_path, smoothin
 
 
 def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k: int = 2,
-                     coord_spec=None, temporal_method: str = "linear"):
+                     coord_spec=None, env_coord_names: dict | None = None,
+                     temporal_method: str = "linear"):
     """
     Annotate movement points with environmental values using:
     - Spatial: Inverse Distance Weighting (IDW) over k nearest grid nodes
@@ -911,6 +963,7 @@ def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k:
     temporal_method = (temporal_method or "linear").strip().lower()
     if temporal_method not in ("linear", "nearest"):
         temporal_method = "linear"
+    env_coord_names = env_coord_names or {}
 
     # Keep nc_lat/nc_lon semantics consistent with prior implementation (copy of point coords)
     out["nc_lat"] = out["location_lat"].values
@@ -939,7 +992,10 @@ def annotate_env_IDW(df, env_var_map, selected_vars, movebank_path, smoothing_k:
         base_var, target_level = _split_var_and_level(label)
 
         try:
-            ds = safe_open_nc_with_time_decoding(file_path)
+            ds = safe_open_nc_with_time_decoding(
+                file_path,
+                time_name=env_coord_names.get("env_time"),
+            )
             ds = standardize_time_lat_lon(ds, coord_spec)
             if base_var not in ds:
                 print(f"[WARNING] Base variable '{base_var}' not in {file_path}")
