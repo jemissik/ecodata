@@ -67,6 +67,12 @@ jobs:
                     rm -rf "$prefix"
 
                     bash "$installer" -b -f -p "$prefix"
+
+                    smoke_dir="$RUNNER_TEMP/ecodata-prerelease-smoke"
+                    rm -rf "$smoke_dir"
+                    mkdir -p "$smoke_dir"
+                    cd "$smoke_dir"
+
                     "$prefix/bin/python" -c "import ecodata; from ecodata.app.apps import applications; print('Installed ecodata:', getattr(ecodata, '__version__', 'unknown'), ecodata.__file__); print('Registered apps:', ', '.join(sorted(applications))); assert applications"
 
             - name: upload artifacts
@@ -131,6 +137,13 @@ jobs:
                     if ($process.ExitCode -ne 0) {
                         throw "Installer failed with exit code $($process.ExitCode)"
                     }
+
+                    $smokeDir = Join-Path $env:RUNNER_TEMP "ecodata-prerelease-smoke"
+                    if (Test-Path $smokeDir) {
+                        Remove-Item -Recurse -Force $smokeDir
+                    }
+                    New-Item -ItemType Directory -Path $smokeDir | Out-Null
+                    Set-Location $smokeDir
 
                     & "$prefix\python.exe" -c "import ecodata; from ecodata.app.apps import applications; print('Installed ecodata:', getattr(ecodata, '__version__', 'unknown'), ecodata.__file__); print('Registered apps:', ', '.join(sorted(applications))); assert applications"
 
