@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch of Release'
+        description: 'Git ref to install into the prerelease environment (branch, tag, or commit SHA)'
         default: 'develop'
         required: true
 
@@ -52,6 +52,23 @@ jobs:
               run: |
                     cd scripts
                     bash build_dev.sh ${{ inputs.branch }}
+
+            - name: Test installer
+              shell: bash -l {0}
+              run: |
+                    installer="$(find scripts -maxdepth 1 -type f -name 'ecodata*.sh' | head -n 1)"
+                    if [ -z "$installer" ]; then
+                      echo "No shell installer found in scripts/"
+                      find scripts -maxdepth 1 -type f -name 'ecodata*' -print
+                      exit 1
+                    fi
+
+                    prefix="$RUNNER_TEMP/ecodata-prerelease-install"
+                    rm -rf "$prefix"
+
+                    bash "$installer" -b -f -p "$prefix"
+                    "$prefix/bin/python" -c "import ecodata; from ecodata.app.apps import applications; print('Installed ecodata:', getattr(ecodata, '__version__', 'unknown'), ecodata.__file__); print('Registered apps:', ', '.join(sorted(applications))); assert applications"
+
             - name: upload artifacts
               uses: actions/upload-artifact@v4
               with:
@@ -88,6 +105,35 @@ jobs:
               run: |
                     cd scripts
                     .\build_dev.ps1 ${{ inputs.branch }}
+
+            - name: Test installer
+              shell: pwsh
+              run: |
+                    $installer = Get-ChildItem -Path scripts -Filter "ecodata*.exe" | Select-Object -First 1
+                    if (-not $installer) {
+                        Write-Host "No Windows installer found in scripts/"
+                        Get-ChildItem -Path scripts -Filter "ecodata*"
+                        exit 1
+                    }
+
+                    $prefix = Join-Path $env:RUNNER_TEMP "ecodata-prerelease-install"
+                    if (Test-Path $prefix) {
+                        Remove-Item -Recurse -Force $prefix
+                    }
+
+                    $process = Start-Process `
+                        -FilePath $installer.FullName `
+                        -ArgumentList "/S", "/InstallationType=JustMe", "/NoShortcuts=1", "/D=$prefix" `
+                        -NoNewWindow `
+                        -Wait `
+                        -PassThru
+
+                    if ($process.ExitCode -ne 0) {
+                        throw "Installer failed with exit code $($process.ExitCode)"
+                    }
+
+                    & "$prefix\python.exe" -c "import ecodata; from ecodata.app.apps import applications; print('Installed ecodata:', getattr(ecodata, '__version__', 'unknown'), ecodata.__file__); print('Registered apps:', ', '.join(sorted(applications))); assert applications"
+
             - name: upload artifacts
               uses: actions/upload-artifact@v4
               with:
