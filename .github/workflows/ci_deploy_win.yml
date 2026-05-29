@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup Miniconda
-      - uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@v3
         with:
             auto-update-conda: true
             activate-environment: eco-dev
@@ -38,5 +38,5 @@ jobs:
           cd ~
           pwd
           ls
-          pip install git+https://github.com/jemissik/ecodata.git@${{ github.sha }}
-          python -c 'import ecodata; print(ecodata.available()); import ecodata.app.apps.tracks_explorer_app'
+          conda run -n eco-dev python -m pip install --no-deps git+https://github.com/jemissik/ecodata.git@${{ github.sha }}
+          conda run -n eco-dev python -c 'import ecodata; print(ecodata.available()); import ecodata.app.apps.tracks_explorer_app'

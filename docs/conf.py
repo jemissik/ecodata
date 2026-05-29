@@ -167,11 +167,11 @@ Download installers for the latest release ({rel['tag']}):
 | OS             | Architecture          | Download |
 |----------------|-----------------------|----------|
 | Windows        | x86_64                | {_mk_link(rel['assets'].get('win_x86_64'))} |
-| macOS latest       | arm64 (Apple Silicon) | {_mk_link(rel['assets'].get('mac_arm64'))} |
-| `(*)` macOS 13 | x86_64                | {_mk_link(rel['assets'].get('mac_x86_64'))} |
+| macOS          | arm64 (Apple Silicon) | {_mk_link(rel['assets'].get('mac_arm64'))} |
+| macOS          | x86_64 (Intel)        | {_mk_link(rel['assets'].get('mac_x86_64'))} |
 | Linux          | x86_64                | {_mk_link(rel['assets'].get('linux_x86_64'))} |
 
-`(*)` Use this installer for all Macs that are **not** an Apple Silicon (M-series) Mac running macOS 15 (i.e., use for all x86 (Intel chip) Macs, or any Mac running macOS 13).
+Use the Apple Silicon installer for M-series Macs and the Intel installer for x86_64 Macs.
 
 """
 

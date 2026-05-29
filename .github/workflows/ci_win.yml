@@ -27,15 +27,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup Miniconda
-      - uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@v3
         with:
             auto-update-conda: true
             activate-environment: eco-dev
             environment-file: ecodata-env.yml
 
       -   name: Update base environment
+          shell: pwsh
           run: conda env update -n eco-dev -f ecodata-dev-env.yml
 
+      - name: Install ecodata editable
+        shell: pwsh
+        run: conda run -n eco-dev python -m pip install --no-deps -e .
+
       - name: Run tests
-        shell: sh -l {0}
-        run: pytest -s
+        shell: pwsh
+        run: conda run -n eco-dev pytest -s

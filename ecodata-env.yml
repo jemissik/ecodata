@@ -25,3 +25,7 @@ dependencies:
 - ffmpeg
 - fiona
 - gdown<4.6  # gdown 4.6.something has a problem with our gdrive files
+- distributed
+- geographiclib
+- h5netcdf
+- pyproj

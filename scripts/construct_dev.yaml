@@ -29,8 +29,14 @@ post_install_desc: Install ecodata development version
 
 specs:
   - python >=3.11
+  - pip
+  - git
   - conda >=23.10
   - conda-libmamba-solver
   - ecodata-menu={{ menu_version }}
+  - distributed
+  - geographiclib
+  - h5netcdf
+  - pyproj
 menu_packages:
   - ecodata-menu
