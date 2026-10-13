@@ -1,28 +1,23 @@
 channels:
 - conda-forge
-- defaults
 dependencies:
 - ipykernel
 - ipython
-- bokeh::jupyter_bokeh  # Enables interactive widgets in vscode
+- jupyter_bokeh  # Enables interactive widgets in vscode
 - jupytext
-- conda-forge::jupyterlab
+- jupyterlab
 - pytest
 - pip
-- geographiclib
 - pip:
-  - black
+  - black==22.6.0
   - isort
   - invoke
   - flake8
   - flakeheaven>=3.0.0
-  - black==22.6.0
   - myst-nb
   - sphinx>=7
   - pydata-sphinx-theme
-  - pytest
   - sphinx-multiproject
   - click
   - build
-#   - panel-jstree  # panel needs to updated to >1 first
 name: eco-dev
