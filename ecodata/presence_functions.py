@@ -9,7 +9,6 @@ presence data preparation backend functions.
 """
 
 from __future__ import annotations
-
 import datetime as dt
 import gzip
 import io
@@ -19,7 +18,6 @@ import tempfile
 import zipfile
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence
-
 import numpy as np
 import pandas as pd
 
@@ -51,18 +49,13 @@ class VettingOptions:
     require_reviewed: bool = False
     require_approved: bool = False
     require_all_species_reported: bool = False
-
     allowed_protocols: Optional[List[str]] = None
     exclude_incidental_historical: bool = True
-
     duration_min_minutes: int = 0
     duration_max_minutes: int = 600
-
     distance_min_km: float = 0.0
     distance_max_km: float = 50.0
-
     require_valid_coords: bool = True
-
     clip_counts_above: int = 0
 
 
@@ -70,13 +63,10 @@ class VettingOptions:
 class AggregationOptions:
     """
     Time aggregation options.
-
     Aggregation is performed in bins of N days starting from start_date.
-
     Spatial aggregation:
     - grid_step_deg == 0: keep original observation coordinates
     - grid_step_deg > 0: assign observations to regular lon/lat grid nodes
-
     Notes:
     - treat_x_as_one: if True, OBSERVATION COUNT == 'X' is treated as 1.
       If False, 'X' is treated as missing and then filled to 1.0 for presence-like behavior.
@@ -100,7 +90,6 @@ def _truthy(series: pd.Series) -> pd.Series:
 def _read_bytes_table(file_bytes: bytes) -> pd.DataFrame:
     """
     Read EBD/Sampling tables from bytes.
-
     Supports:
     - TSV (tab-separated) plain
     - gzip-compressed TSV
@@ -147,10 +136,10 @@ def _read_bytes_table(file_bytes: bytes) -> pd.DataFrame:
     df = df.loc[:, ~df.columns.astype(str).str.startswith("Unnamed:")]
     return df
 
+
 def _read_path_table(path: str) -> pd.DataFrame:
     """
     Read EBD/Sampling tables from a local filesystem path.
-
     Supports:
     - plain TSV/CSV
     - .gz
@@ -210,6 +199,7 @@ def _read_table_input(table_input: Any) -> pd.DataFrame:
     if isinstance(table_input, (str, os.PathLike)):
         return _read_path_table(os.fspath(table_input))
     return _read_bytes_table(table_input)
+
 
 def _ensure_cols(df: pd.DataFrame, cols: Sequence[str], label: str) -> None:
     missing = [c for c in cols if c not in df.columns]
@@ -290,6 +280,7 @@ def _load_polygon(polygon_source: Any, filename_hint: str) -> "gpd.GeoDataFrame"
 
     return poly
 
+
 def _load_bbox_polygon(bbox: Sequence[float]) -> "gpd.GeoDataFrame":
     """
     Build polygon GeoDataFrame from bbox:
@@ -340,7 +331,6 @@ def _resolve_spatial_filter(
     if has_polygon:
         return _load_polygon(polygon_bytes, polygon_filename_hint or "")
     return _load_bbox_polygon(bbox)
-
 
 
 def _parse_obs_datetime(df: pd.DataFrame) -> pd.Series:
@@ -412,7 +402,6 @@ def _apply_vetting(m: pd.DataFrame, vet: VettingOptions) -> pd.DataFrame:
             allowed_u = {a.upper() for a in allowed_norm}
             out = out[out["PROTOCOL CODE"].astype(str).str.strip().str.upper().isin(allowed_u)]
 
-
     # Exclude incidental/historical (optional)
     if vet.exclude_incidental_historical and "PROTOCOL TYPE" in out.columns:
         bad = {"Incidental", "Historical"}
@@ -436,6 +425,7 @@ def _apply_vetting(m: pd.DataFrame, vet: VettingOptions) -> pd.DataFrame:
     out = out[out["__dt"].notna()]
     return out
 
+
 def _write_manifest(path: str, payload: Dict[str, Any]) -> None:
     """
     Write JSON manifest to disk.
@@ -444,12 +434,8 @@ def _write_manifest(path: str, payload: Dict[str, Any]) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
-def _assign_n_day_bins(
-    datetimes: pd.Series,
-    start_date: dt.date,
-    end_date: dt.date,
-    step_days: int,
-) -> pd.DataFrame:
+
+def _assign_n_day_bins(datetimes: pd.Series, start_date: dt.date, end_date: dt.date, step_days: int) -> pd.DataFrame:
     """
     Assign each datetime to an N-day bin starting from start_date.
 
@@ -465,28 +451,19 @@ def _assign_n_day_bins(
     ts = pd.to_datetime(datetimes, errors="coerce")
     start_ts = pd.Timestamp(start_date)
     end_ts = pd.Timestamp(end_date)
-
     day_offsets = (ts.dt.normalize() - start_ts).dt.days
     bin_index = (day_offsets // step_days).astype("Int64")
-
     bin_start = start_ts + pd.to_timedelta(bin_index * step_days, unit="D")
     bin_end = bin_start + pd.to_timedelta(step_days - 1, unit="D")
     bin_end = bin_end.where(bin_end <= end_ts, end_ts)
 
     return pd.DataFrame(
-        {
-            "time_bin_start": bin_start.dt.strftime("%Y-%m-%d"),
-            "time_bin_end": bin_end.dt.strftime("%Y-%m-%d"),
-        },
+        {"time_bin_start": bin_start.dt.strftime("%Y-%m-%d"), "time_bin_end": bin_end.dt.strftime("%Y-%m-%d")},
         index=datetimes.index,
     )
 
-def _assign_grid_nodes(
-    df: pd.DataFrame,
-    grid_step_deg: float,
-    origin_west: float,
-    origin_south: float,
-) -> pd.DataFrame:
+
+def _assign_grid_nodes(df: pd.DataFrame, grid_step_deg: float, origin_west: float, origin_south: float) -> pd.DataFrame:
     """
     Assign observations to regular lon/lat grid nodes.
 
@@ -509,14 +486,13 @@ def _assign_grid_nodes(
 
     lon_offset = (out["longitude"] - origin_west) / grid_step_deg
     lat_offset = (out["latitude"] - origin_south) / grid_step_deg
-
     out["grid_lon"] = origin_west + np.round(lon_offset) * grid_step_deg
     out["grid_lat"] = origin_south + np.round(lat_offset) * grid_step_deg
-
     out["grid_lon"] = out["grid_lon"].astype(float)
     out["grid_lat"] = out["grid_lat"].astype(float)
 
     return out
+
 
 def _safe_divide(num: pd.Series, den: pd.Series) -> pd.Series:
     """
@@ -525,6 +501,7 @@ def _safe_divide(num: pd.Series, den: pd.Series) -> pd.Series:
     n = pd.to_numeric(num, errors="coerce")
     d = pd.to_numeric(den, errors="coerce")
     return n / d.where(d > 0)
+
 
 def aggregate_ebird_to_files(
     *,
@@ -583,37 +560,19 @@ def aggregate_ebird_to_files(
     _ensure_cols(samp, ["SAMPLING EVENT IDENTIFIER"], "Sampling events")
 
     key = "SAMPLING EVENT IDENTIFIER"
-    merged = obs.merge(
-        samp.drop_duplicates(subset=[key]),
-        on=key,
-        how="left",
-        suffixes=("", "_samp"),
-    )
-
+    merged = obs.merge(samp.drop_duplicates(subset=[key]), on=key, how="left", suffixes=("", "_samp"))
     merged["__dt"] = _parse_obs_datetime(merged)
     merged["latitude"] = pd.to_numeric(merged["LATITUDE"], errors="coerce")
     merged["longitude"] = pd.to_numeric(merged["LONGITUDE"], errors="coerce")
-
     m = _apply_vetting(merged, vet)
-
-    poly = _resolve_spatial_filter(
-        polygon_bytes=polygon_bytes,
-        polygon_filename_hint=polygon_filename_hint,
-        bbox=bbox,
-    )
+    poly = _resolve_spatial_filter(polygon_bytes=polygon_bytes, polygon_filename_hint=polygon_filename_hint, bbox=bbox)
     poly_union = poly.dissolve().geometry.iloc[0]
-
     minx, miny, maxx, maxy = poly.total_bounds
     if bbox is not None:
         origin_west, origin_south = float(bbox[0]), float(bbox[1])
     else:
         origin_west, origin_south = float(minx), float(miny)
-
-    gdf = gpd.GeoDataFrame(
-        m,
-        geometry=[Point(xy) for xy in zip(m["longitude"], m["latitude"])],
-        crs="EPSG:4326",
-    )
+    gdf = gpd.GeoDataFrame(m, geometry=[Point(xy) for xy in zip(m["longitude"], m["latitude"])], crs="EPSG:4326")
     gdf = gdf[gdf.intersects(poly_union)].drop(columns=["geometry"])
     m = pd.DataFrame(gdf)
 
@@ -635,25 +594,15 @@ def aggregate_ebird_to_files(
     m["species"] = m["SCIENTIFIC NAME"].fillna(m["COMMON NAME"]).astype(str)
 
     # Time binning: fixed-size bins in N days, anchored at agg.start_date
-    bins = _assign_n_day_bins(
-        m["__dt"],
-        start_date=agg.start_date,
-        end_date=agg.end_date,
-        step_days=agg.step_days,
-    )
+    bins = _assign_n_day_bins(m["__dt"], start_date=agg.start_date, end_date=agg.end_date, step_days=agg.step_days)
     m["time_bin_start"] = bins["time_bin_start"]
     m["time_bin_end"] = bins["time_bin_end"]
 
-        # Spatial aggregation:
+    # Spatial aggregation:
     # - grid_step_deg == 0: keep original observation coordinates
     # - grid_step_deg > 0: assign to regular grid nodes and aggregate by node
     if agg.grid_step_deg > 0:
-        m = _assign_grid_nodes(
-            m,
-            grid_step_deg=agg.grid_step_deg,
-            origin_west=origin_west,
-            origin_south=origin_south,
-        )
+        m = _assign_grid_nodes(m, grid_step_deg=agg.grid_step_deg, origin_west=origin_west, origin_south=origin_south)
         loc_lat_col = "grid_lat"
         loc_lon_col = "grid_lon"
     else:
@@ -694,21 +643,15 @@ def aggregate_ebird_to_files(
         "__n_observers",
     ]
     checklist_frame = m[checklist_cols].drop_duplicates(subset=[key])
-
     checklist_frame["__duration_hours_complete_only"] = checklist_frame["__duration_hours"].where(
-        checklist_frame["__complete_checklist"],
-        np.nan,
+        checklist_frame["__complete_checklist"], np.nan
     )
-
     checklist_frame["__party_hours"] = checklist_frame["__duration_hours"] * checklist_frame["__n_observers"]
     checklist_frame["__party_hours_complete_only"] = checklist_frame["__party_hours"].where(
-        checklist_frame["__complete_checklist"],
-        np.nan,
+        checklist_frame["__complete_checklist"], np.nan
     )
-
     denom = (
-        checklist_frame
-        .groupby(spatial_time_keys, dropna=False)
+        checklist_frame.groupby(spatial_time_keys, dropna=False)
         .agg(
             n_checklists_all=(key, pd.Series.nunique),
             n_complete_checklists=("__complete_checklist", "sum"),
@@ -718,113 +661,66 @@ def aggregate_ebird_to_files(
         .reset_index()
     )
 
-    # ------------------------------------------------------------------
+    # 
     # 2) Species table from detections
-    # ------------------------------------------------------------------
+    # 
     grp = m.groupby(species_keys, dropna=False)
 
-    counts = grp.agg(
-        total_count=("__count", "sum"),
-        n_checklists=(key, pd.Series.nunique),
-    ).reset_index()
+    counts = grp.agg(total_count=("__count", "sum"), n_checklists=(key, pd.Series.nunique)).reset_index()
 
-    pres = grp.agg(
-        presence=("__count", lambda x: 1),
-        n_checklists=(key, pd.Series.nunique),
-    ).reset_index()
+    pres = grp.agg(presence=("__count", lambda x: 1), n_checklists=(key, pd.Series.nunique)).reset_index()
 
-    # ------------------------------------------------------------------
+    # 
     # 3) Species table from detections on complete checklists only
-    # ------------------------------------------------------------------
+    # 
     detected_complete = m[m["__complete_checklist"]].copy()
-
     if len(detected_complete) > 0:
         grp_complete = detected_complete.groupby(species_keys, dropna=False)
-        det_complete = grp_complete.agg(
-            n_detected_complete_checklists=(key, pd.Series.nunique),
-        ).reset_index()
+        det_complete = grp_complete.agg(n_detected_complete_checklists=(key, pd.Series.nunique)).reset_index()
     else:
         det_complete = pd.DataFrame(columns=species_keys + ["n_detected_complete_checklists"])
 
-    # ------------------------------------------------------------------
+    # 
     # 4) Join denominator + derived metrics
-    # ------------------------------------------------------------------
+    # 
     counts = counts.merge(denom, on=spatial_time_keys, how="left")
     counts = counts.merge(det_complete, on=species_keys, how="left")
     counts["n_detected_complete_checklists"] = counts["n_detected_complete_checklists"].fillna(0)
-
-    counts["reporting_rate"] = _safe_divide(
-        counts["n_detected_complete_checklists"],
-        counts["n_complete_checklists"],
-    )
-    counts["count_per_complete_checklist"] = _safe_divide(
-        counts["total_count"],
-        counts["n_complete_checklists"],
-    )
-    counts["count_per_hour"] = _safe_divide(
-        counts["total_count"],
-        counts["sum_duration_hours_complete"],
-    )
-    counts["count_per_party_hour_complete"] = _safe_divide(
-        counts["total_count"],
-        counts["sum_party_hours_complete"],
-    )
-    counts["mean_count_when_detected"] = _safe_divide(
-        counts["total_count"],
-        counts["n_checklists"],
-    )
-
+    counts["reporting_rate"] = _safe_divide(counts["n_detected_complete_checklists"], counts["n_complete_checklists"])
+    counts["count_per_complete_checklist"] = _safe_divide(counts["total_count"], counts["n_complete_checklists"])
+    counts["count_per_hour"] = _safe_divide(counts["total_count"], counts["sum_duration_hours_complete"])
+    counts["count_per_party_hour_complete"] = _safe_divide(counts["total_count"], counts["sum_party_hours_complete"])
+    counts["mean_count_when_detected"] = _safe_divide(counts["total_count"], counts["n_checklists"])
     counts["region_id"] = region_id
     counts = counts.rename(columns={loc_lat_col: "location-lat", loc_lon_col: "location-long"})
-
     pres = pres.merge(denom, on=spatial_time_keys, how="left")
     pres = pres.merge(det_complete, on=species_keys, how="left")
     pres["n_detected_complete_checklists"] = pres["n_detected_complete_checklists"].fillna(0)
-
-    pres["reporting_rate"] = _safe_divide(
-        pres["n_detected_complete_checklists"],
-        pres["n_complete_checklists"],
-    )
+    pres["reporting_rate"] = _safe_divide(pres["n_detected_complete_checklists"], pres["n_complete_checklists"])
     pres["count_per_complete_checklist"] = np.nan
     pres["count_per_hour"] = np.nan
     pres["count_per_party_hour_complete"] = np.nan
     pres["mean_count_when_detected"] = np.nan
-
     pres["region_id"] = region_id
     pres = pres.rename(columns={loc_lat_col: "location-lat", loc_lon_col: "location-long"})
-
     os.makedirs(os.path.dirname(os.path.abspath(out_counts_csv)), exist_ok=True)
     counts.to_csv(out_counts_csv, index=False, encoding="utf-8")
-
     os.makedirs(os.path.dirname(os.path.abspath(out_presence_csv)), exist_ok=True)
     pres.to_csv(out_presence_csv, index=False, encoding="utf-8")
 
     if manifest_json:
         if bbox is not None:
             west, south, east, north = [float(v) for v in bbox]
-            spatial_filter = {
-                "type": "bbox",
-                "west": west,
-                "south": south,
-                "east": east,
-                "north": north,
-            }
+            spatial_filter = {"type": "bbox", "west": west, "south": south, "east": east, "north": north}
         else:
-            spatial_filter = {
-                "type": "polygon",
-                "filename_hint": polygon_filename_hint or "",
-            }
+            spatial_filter = {"type": "polygon", "filename_hint": polygon_filename_hint or ""}
 
         payload: Dict[str, Any] = {
             "created_at": dt.datetime.now().isoformat(),
             "region_id": region_id,
             "source_mode": "EBD + Sampling Event",
             "spatial_filter": spatial_filter,
-            "time": {
-                "start": str(agg.start_date),
-                "end": str(agg.end_date),
-                "step_days": int(agg.step_days),
-            },
+            "time": {"start": str(agg.start_date), "end": str(agg.end_date), "step_days": int(agg.step_days)},
             "grid": {
                 "grid_step_deg": float(agg.grid_step_deg),
                 "origin_west": float(origin_west),
@@ -840,10 +736,7 @@ def aggregate_ebird_to_files(
                 "mean_count_when_detected",
             ],
             "vetting": vet.__dict__,
-            "outputs": {
-                "agg_counts_csv": out_counts_csv,
-                "agg_presence_csv": out_presence_csv,
-            },
+            "outputs": {"agg_counts_csv": out_counts_csv, "agg_presence_csv": out_presence_csv},
         }
         _write_manifest(manifest_json, payload)
 
@@ -905,30 +798,29 @@ def export_tracks_from_aggregated_counts(
         df["individual-local-identifier"] = df["species"].astype(str)
 
     out = pd.DataFrame(
-    {
-        "timestamp": df["timestamp"],
-        "location-long": df["location-long"],
-        "location-lat": df["location-lat"],
-        "individual-local-identifier": df["individual-local-identifier"],
-        "species": df["species"],
-        "count": df.get("total_count", 1),
-        "bin_id": df["bin_id"],
-        "region_id": region_id,
-
-        "total_count": df.get("total_count"),
-        "n_checklists": df.get("n_checklists"),
-        "n_checklists_all": df.get("n_checklists_all"),
-        "n_complete_checklists": df.get("n_complete_checklists"),
-        "n_detected_complete_checklists": df.get("n_detected_complete_checklists"),
-        "sum_duration_hours_complete": df.get("sum_duration_hours_complete"),
-        "sum_party_hours_complete": df.get("sum_party_hours_complete"),
-        "reporting_rate": df.get("reporting_rate"),
-        "count_per_complete_checklist": df.get("count_per_complete_checklist"),
-        "count_per_hour": df.get("count_per_hour"),
-        "count_per_party_hour_complete": df.get("count_per_party_hour_complete"),
-        "mean_count_when_detected": df.get("mean_count_when_detected"),
-    }
-)
+        {
+            "timestamp": df["timestamp"],
+            "location-long": df["location-long"],
+            "location-lat": df["location-lat"],
+            "individual-local-identifier": df["individual-local-identifier"],
+            "species": df["species"],
+            "count": df.get("total_count", 1),
+            "bin_id": df["bin_id"],
+            "region_id": region_id,
+            "total_count": df.get("total_count"),
+            "n_checklists": df.get("n_checklists"),
+            "n_checklists_all": df.get("n_checklists_all"),
+            "n_complete_checklists": df.get("n_complete_checklists"),
+            "n_detected_complete_checklists": df.get("n_detected_complete_checklists"),
+            "sum_duration_hours_complete": df.get("sum_duration_hours_complete"),
+            "sum_party_hours_complete": df.get("sum_party_hours_complete"),
+            "reporting_rate": df.get("reporting_rate"),
+            "count_per_complete_checklist": df.get("count_per_complete_checklist"),
+            "count_per_hour": df.get("count_per_hour"),
+            "count_per_party_hour_complete": df.get("count_per_party_hour_complete"),
+            "mean_count_when_detected": df.get("mean_count_when_detected"),
+        }
+    )
 
     os.makedirs(os.path.dirname(os.path.abspath(tracks_csv)), exist_ok=True)
     out.to_csv(tracks_csv, index=False, encoding="utf-8")

@@ -3,12 +3,10 @@ Multidimensional Annotation UI
 """
 
 from __future__ import annotations
-
 import logging
 import re
 from pathlib import Path
 from typing import List, Optional, Tuple
-
 import panel as pn
 import pandas as pd
 
@@ -45,39 +43,51 @@ logger = logging.getLogger(__name__)
 
 class Multidimensional_Annotation_App:
     def __init__(self):
-        self.name = "Multidimensional Annotation Engine App (DEMO)"
+        self.name = "Multidimensional Annotation Engine App (ERA5 only)"
         self._movement_columns: List[str] = []
         self._movement_df: Optional[pd.DataFrame] = None
         self.boundary_path: Optional[str] = None
 
-        def make_file_selector(name: str, file_pattern: str = "*") -> FileSelector:
+        def make_file_selector(name: str, file_pattern: str = "*", expanded: bool = True) -> FileSelector:
             return FileSelector(
                 name=name,
                 directory=str(Path.home()),
                 file_pattern=file_pattern,
                 only_files=True,
                 constrain_path=False,
-                expanded=True,
+                expanded=expanded,
                 size=10,
                 sizing_mode="stretch_width",
             )
 
         self.movement_csv = make_file_selector("Movement CSV", "*.csv")
-        self.load_movement_button = pn.widgets.Button(name="Load movement data", button_type="primary", sizing_mode="stretch_width")
-
+        self.load_movement_button = pn.widgets.Button(
+            name="Load movement data", button_type="primary", sizing_mode="stretch_width"
+        )
         self.taxon_multiselect = pn.widgets.MultiSelect(
-            name="Select Taxon (use Ctrl or ⌘ for multiple)", options=[], value=[], height=140, sizing_mode="stretch_width"
+            name="Select Taxon (use Ctrl or ⌘ for multiple)",
+            options=[],
+            value=[],
+            height=140,
+            sizing_mode="stretch_width",
         )
         self.id_multiselect = pn.widgets.MultiSelect(
             name="Select ID (use Ctrl or ⌘ for multiple)", options=[], value=[], height=140, sizing_mode="stretch_width"
         )
-
         self.id_column = pn.widgets.Select(name="ID column", options=[], value=None, sizing_mode="stretch_width")
-        self.time_column = pn.widgets.Select(name="Timestamp column", options=[], value=None, sizing_mode="stretch_width")
+        self.time_column = pn.widgets.Select(
+            name="Timestamp column", options=[], value=None, sizing_mode="stretch_width"
+        )
         self.lat_column = pn.widgets.Select(name="Latitude column", options=[], value=None, sizing_mode="stretch_width")
-        self.lon_column = pn.widgets.Select(name="Longitude column", options=[], value=None, sizing_mode="stretch_width")
-        self.height_column = pn.widgets.Select(name="Height / altitude column", options=[], value=None, sizing_mode="stretch_width")
-        self.height_units = pn.widgets.Select(name="Height units", options=["m"], value="m", sizing_mode="stretch_width")
+        self.lon_column = pn.widgets.Select(
+            name="Longitude column", options=[], value=None, sizing_mode="stretch_width"
+        )
+        self.height_column = pn.widgets.Select(
+            name="Height / altitude column", options=[], value=None, sizing_mode="stretch_width"
+        )
+        self.height_units = pn.widgets.Select(
+            name="Height units", options=["m"], value="m", sizing_mode="stretch_width"
+        )
         self.height_reference = pn.widgets.Select(
             name="Height reference",
             options=[
@@ -89,7 +99,8 @@ class Multidimensional_Annotation_App:
             sizing_mode="stretch_width",
         )
         self.geoid_mode = pn.widgets.Select(
-            name="Geoid correction", options=["geographiclib", "constant", "none"], value="geographiclib", sizing_mode="stretch_width"
+            name="Geoid correction", options=["geographiclib", "constant", "none"],
+            value="geographiclib", sizing_mode="stretch_width",
         )
         self.constant_geoid_undulation_m = pn.widgets.FloatInput(
             name="Constant geoid undulation N, m", value=0.0, step=1.0, sizing_mode="stretch_width"
@@ -100,51 +111,91 @@ class Multidimensional_Annotation_App:
         )
 
         self.geopotential_file = make_file_selector("Geopotential file", "*.nc")
-        self.scan_geopotential_button = pn.widgets.Button(name="Scan geopotential file", button_type="primary", sizing_mode="stretch_width")
-        self.geopotential_variable = pn.widgets.Select(name="Geopotential variable", options=[], value=None, sizing_mode="stretch_width")
+        self.scan_geopotential_button = pn.widgets.Button(
+            name="Scan geopotential file", button_type="primary", sizing_mode="stretch_width"
+        )
+        self.geopotential_variable = pn.widgets.Select(
+            name="Geopotential variable", options=[], value=None, sizing_mode="stretch_width"
+        )
         self.nc_time_var = pn.widgets.Select(name="Time variable", options=[], value=None, sizing_mode="stretch_width")
-        self.nc_lat_var = pn.widgets.Select(name="Latitude variable", options=[], value=None, sizing_mode="stretch_width")
-        self.nc_lon_var = pn.widgets.Select(name="Longitude variable", options=[], value=None, sizing_mode="stretch_width")
-        self.nc_level_var = pn.widgets.Select(name="Vertical / level variable", options=[], value=None, sizing_mode="stretch_width")
+        self.nc_lat_var = pn.widgets.Select(
+            name="Latitude variable", options=[], value=None, sizing_mode="stretch_width"
+        )
+        self.nc_lon_var = pn.widgets.Select(
+            name="Longitude variable", options=[], value=None, sizing_mode="stretch_width"
+        )
+        self.nc_level_var = pn.widgets.Select(
+            name="Vertical / level variable", options=[], value=None, sizing_mode="stretch_width"
+        )
         self.geopotential_units = pn.widgets.Select(
-            name="Geopotential units", options=["m2 s-2", "geopotential metres"], value="m2 s-2", sizing_mode="stretch_width"
+            name="Geopotential units",
+            options=["m2 s-2", "geopotential metres"],
+            value="m2 s-2",
+            sizing_mode="stretch_width",
         )
         self.convert_geopotential_to_height = pn.widgets.Checkbox(
             name="Convert geopotential to height using z / 9.80665", value=True, sizing_mode="stretch_width"
         )
-        self.gravity_constant = pn.widgets.FloatInput(name="Gravity constant", value=9.80665, step=0.00001, disabled=True)
+        self.gravity_constant = pn.widgets.FloatInput(
+            name="Gravity constant", value=9.80665, step=0.00001, disabled=True
+        )
 
         self.multilevel_var_file = make_file_selector("Annotated var (multilevel) file", "*.nc")
-        self.scan_multilevel_button = pn.widgets.Button(name="Scan multilevel file", button_type="primary", sizing_mode="stretch_width")
-        self.multilevel_variable = pn.widgets.Select(name="Annotated var (multilevel, first selected)", options=[], value=None, sizing_mode="stretch_width")
+        self.scan_multilevel_button = pn.widgets.Button(
+            name="Scan multilevel file", button_type="primary", sizing_mode="stretch_width"
+        )
+        self.multilevel_variable = pn.widgets.Select(
+            name="Annotated var (multilevel, first selected)", options=[], value=None, sizing_mode="stretch_width"
+        )
         self.multilevel_continuous_vars = pn.widgets.MultiSelect(
-            name="Continuous multilevel variables (use Ctrl or ⌘ for multiple)", options=[], value=[], height=180, sizing_mode="stretch_width"
+            name="Continuous multilevel variables (use Ctrl or ⌘ for multiple)",
+            options=[],
+            value=[],
+            height=180,
+            sizing_mode="stretch_width",
         )
         self.multilevel_categorical_vars = pn.widgets.MultiSelect(
-            name="Categorical/QC multilevel variables (use Ctrl or ⌘ for multiple)", options=[], value=[], height=180, sizing_mode="stretch_width"
+            name="Categorical/QC multilevel variables (use Ctrl or ⌘ for multiple)",
+            options=[],
+            value=[],
+            height=180,
+            sizing_mode="stretch_width",
         )
-
         self.surface_var_file = make_file_selector("Annotated var (surface) file", "*.nc")
-        self.scan_surface_button = pn.widgets.Button(name="Scan surface file", button_type="default", sizing_mode="stretch_width")
-        self.surface_variable = pn.widgets.Select(name="Annotated var (surface, first selected)", options=[], value=None, sizing_mode="stretch_width")
+        self.scan_surface_button = pn.widgets.Button(
+            name="Scan surface file", button_type="default", sizing_mode="stretch_width"
+        )
+        self.surface_variable = pn.widgets.Select(
+            name="Annotated var (surface, first selected)", options=[], value=None, sizing_mode="stretch_width"
+        )
         self.surface_continuous_vars = pn.widgets.MultiSelect(
-            name="Continuous surface variables (use Ctrl or ⌘ for multiple)", options=[], value=[], height=140, sizing_mode="stretch_width"
+            name="Continuous surface variables (use Ctrl or ⌘ for multiple)",
+            options=[],
+            value=[],
+            height=140,
+            sizing_mode="stretch_width",
         )
         self.surface_categorical_vars = pn.widgets.MultiSelect(
-            name="Categorical/QC surface variables (use Ctrl or ⌘ for multiple)", options=[], value=[], height=140, sizing_mode="stretch_width"
+            name="Categorical/QC surface variables (use Ctrl or ⌘ for multiple)",
+            options=[],
+            value=[],
+            height=140,
+            sizing_mode="stretch_width",
         )
         self.env_info = pn.pane.HTML(
             "File: not selected <br>Multilevel parameters: - <br>Surface parameters: - <br>Time range: - <br>Spatial range: - <br>Vertical levels: - <br>",
             sizing_mode="stretch_width",
         )
-
         self.boundary_file = make_file_selector("Boundary data (.shp/.geojson)", "*")
-        self.load_boundary_button = pn.widgets.Button(name="Load boundary data", button_type="primary", sizing_mode="stretch_width")
-        self.reset_boundary_button = pn.widgets.Button(name="(!) Reset boundary", button_type="primary", sizing_mode="stretch_width")
+        self.load_boundary_button = pn.widgets.Button(
+            name="Load boundary data", button_type="primary", sizing_mode="stretch_width"
+        )
+        self.reset_boundary_button = pn.widgets.Button(
+            name="(!) Reset boundary", button_type="primary", sizing_mode="stretch_width"
+        )
         self.boundary_info = pn.pane.HTML(
             "Boundary file: not selected <br>Spatial range: = environmental data boundary", sizing_mode="stretch_width"
         )
-
         self.spatial_interpolation_method = pn.widgets.Select(
             name="Spatial interpolation method",
             options=["Nearest neighbor", "Inverse Distance Weighting"],
@@ -152,7 +203,10 @@ class Multidimensional_Annotation_App:
             sizing_mode="stretch_width",
         )
         self.control_smoothing = pn.widgets.Select(
-            name="Number of nearest grid points", options=["1", "2", "4", "6", "8"], value="1", sizing_mode="stretch_width"
+            name="Number of nearest grid points",
+            options=["1", "2", "4", "6", "8"],
+            value="1",
+            sizing_mode="stretch_width",
         )
         self.vertical_matching_method = pn.widgets.Select(
             name="Vertical matching method",
@@ -167,28 +221,82 @@ class Multidimensional_Annotation_App:
             name="Surface anchor height above ground, m", value=2.0, step=0.5, sizing_mode="stretch_width"
         )
 
-        self.u_file = make_file_selector("U wind component file", "*.nc")
+        self.u_file = make_file_selector("U wind component file", "*.nc", expanded=False)
         self.u_variable = pn.widgets.Select(name="U variable", options=[], value=None, sizing_mode="stretch_width")
-        self.v_file = make_file_selector("V wind component file", "*.nc")
+        self.v_file = make_file_selector("V wind component file", "*.nc", expanded=False)
         self.v_variable = pn.widgets.Select(name="V variable", options=[], value=None, sizing_mode="stretch_width")
-        self.w_file = make_file_selector("W vertical velocity file", "*.nc")
+        self.w_file = make_file_selector("W vertical velocity file", "*.nc", expanded=False)
         self.w_variable = pn.widgets.Select(name="W variable", options=[], value=None, sizing_mode="stretch_width")
-        self.temperature_file = make_file_selector("Temperature file", "*.nc")
-        self.temperature_variable = pn.widgets.Select(name="Temperature variable", options=[], value=None, sizing_mode="stretch_width")
-        self.scan_optional_components_button = pn.widgets.Button(
-            name="Scan optional component files", button_type="default", sizing_mode="stretch_width"
+        self.temperature_file = make_file_selector("Temperature file", "*.nc", expanded=False)
+        self.temperature_variable = pn.widgets.Select(
+            name="Temperature variable", options=[], value=None, sizing_mode="stretch_width"
         )
 
+        self.surface_heat_flux_file = make_file_selector("Surface sensible heat flux file", "*.nc", expanded=False)
+        self.surface_heat_flux_variable = pn.widgets.Select(
+            name="Surface sensible heat flux variable", options=[], value=None, sizing_mode="stretch_width"
+        )
+        self.surface_heat_flux_mode = pn.widgets.Select(
+            name="Surface heat flux input convention",
+            options=[
+                "Upward-positive instantaneous flux (W m-2)",
+                "Downward-positive instantaneous flux (W m-2)",
+                "Downward-positive accumulated energy (J m-2)",
+                "Upward-positive accumulated energy (J m-2)",
+            ],
+            value="Upward-positive instantaneous flux (W m-2)",
+            sizing_mode="stretch_width",
+        )
+        self.surface_heat_flux_accumulation_seconds = pn.widgets.FloatInput(
+            name="Heat-flux accumulation period, seconds",
+            value=3600.0,
+            step=3600.0,
+            start=1.0,
+            disabled=True,
+            sizing_mode="stretch_width",
+        )
+        self.boundary_layer_height_file = make_file_selector("Boundary layer height file", "*.nc", expanded=False)
+        self.boundary_layer_height_variable = pn.widgets.Select(
+            name="Boundary layer height variable", options=[], value=None, sizing_mode="stretch_width"
+        )
+        self.temperature_2m_file = make_file_selector("2 m temperature file", "*.nc", expanded=False)
+        self.temperature_2m_variable = pn.widgets.Select(
+            name="2 m temperature variable", options=[], value=None, sizing_mode="stretch_width"
+        )
+        self.u10_file = make_file_selector("10 m U wind component file", "*.nc", expanded=False)
+        self.u10_variable = pn.widgets.Select(
+            name="10 m U wind variable", options=[], value=None, sizing_mode="stretch_width"
+        )
+        self.v10_file = make_file_selector("10 m V wind component file", "*.nc", expanded=False)
+        self.v10_variable = pn.widgets.Select(
+            name="10 m V wind variable", options=[], value=None, sizing_mode="stretch_width"
+        )
+
+        self.scan_optional_components_button = pn.widgets.Button(
+            name="Scan all derived-metric input files", button_type="primary", sizing_mode="stretch_width"
+        )
         self.topography_source = pn.widgets.Select(
             name="Topography source",
-            options=["None", "ETOPO1 Ice Surface Global Relief Model", "SRTM 1 Arc-Second DEM", "ASTER ASTGTM3 Global 30-m DEM", "Custom DEM / GeoTIFF"],
+            options=[
+                "None",
+                "ETOPO1 Ice Surface Global Relief Model",
+                "SRTM 1 Arc-Second DEM",
+                "ASTER ASTGTM3 Global 30-m DEM",
+                "Custom DEM / GeoTIFF",
+            ],
             value="None",
             sizing_mode="stretch_width",
         )
         self.dem_file = make_file_selector("DEM file", "*.tif")
-        self.dem_units = pn.widgets.Select(name="DEM vertical units", options=["m"], value="m", disabled=True, sizing_mode="stretch_width")
+        self.dem_units = pn.widgets.Select(
+            name="DEM vertical units", options=["m"], value="m", disabled=True, sizing_mode="stretch_width"
+        )
         self.dem_reference = pn.widgets.Select(
-            name="DEM reference", options=["Assumed orthometric / MSL-like"], value="Assumed orthometric / MSL-like", disabled=True, sizing_mode="stretch_width"
+            name="DEM reference",
+            options=["Assumed orthometric / MSL-like"],
+            value="Assumed orthometric / MSL-like",
+            disabled=True,
+            sizing_mode="stretch_width",
         )
 
         self.derive_wind_support_crosswind = pn.widgets.Checkbox(
@@ -213,25 +321,54 @@ class Multidimensional_Annotation_App:
             disabled=True,
             sizing_mode="stretch_width",
         )
-        self.heading_column = pn.widgets.Select(name="Heading column", options=[], value=None, disabled=True, sizing_mode="stretch_width")
-
-        self.output_csv = pn.widgets.TextInput(
-            name="Output CSV", value=str(Path.home() / "Downloads" / "multidimensional_annotation_output.csv"), sizing_mode="stretch_width"
+        self.heading_column = pn.widgets.Select(
+            name="Heading column", options=[], value=None, disabled=True, sizing_mode="stretch_width"
         )
-        self.save_per_individual = pn.widgets.Checkbox(name="Save per individual", value=True, sizing_mode="stretch_width")
-        self.keep_diagnostics = pn.widgets.Checkbox(name="Keep diagnostic columns", value=True, sizing_mode="stretch_width")
-        self.validate_button = pn.widgets.Button(name="Validate configuration", button_type="primary", sizing_mode="stretch_width")
-        self.run_button = pn.widgets.Button(name="Run multidimensional annotation", button_type="primary", sizing_mode="stretch_width")
+        self.open_derived_metrics_button = pn.widgets.Button(
+            name="Configure derived metrics and inputs...", button_type="primary", sizing_mode="stretch_width"
+        )
+        self.derived_metrics_status = pn.pane.Markdown(
+            ("**Selected metrics:** none  \n" "**Configured component fields:** 0/9"),
+            sizing_mode="stretch_width",
+            styles={"border": "1px solid #ddd", "padding": "8px", "border-radius": "5px"},
+        )
+        self.apply_derived_metrics_button = pn.widgets.Button(
+            name="Apply and close", button_type="primary", sizing_mode="stretch_width"
+        )
+        self.template = None
+        self.derived_metrics_modal_content = self._build_derived_metrics_content()
+        self.output_csv = pn.widgets.TextInput(
+            name="Output CSV",
+            value=str(Path.home() / "Downloads" / "multidimensional_annotation_output.csv"),
+            sizing_mode="stretch_width",
+        )
+        self.save_per_individual = pn.widgets.Checkbox(
+            name="Save per individual", value=True, sizing_mode="stretch_width"
+        )
+        self.keep_diagnostics = pn.widgets.Checkbox(
+            name="Keep diagnostic columns", value=True, sizing_mode="stretch_width"
+        )
+        self.validate_button = pn.widgets.Button(
+            name="Validate configuration", button_type="primary", sizing_mode="stretch_width"
+        )
+        self.run_button = pn.widgets.Button(
+            name="Run multidimensional annotation", button_type="primary", sizing_mode="stretch_width"
+        )
 
-        self.preview = pn.pane.Markdown("### Preview\nNo files scanned yet.", sizing_mode="stretch_width", styles=self._pane_style())
-        self.validation = pn.pane.Markdown("### Validation\nNot validated yet.", sizing_mode="stretch_width", styles=self._pane_style())
+        self.preview = pn.pane.Markdown(
+            "### Preview\nNo files scanned yet.", sizing_mode="stretch_width", styles=self._pane_style()
+        )
+        self.validation = pn.pane.Markdown(
+            "### Validation\nNot validated yet.", sizing_mode="stretch_width", styles=self._pane_style()
+        )
         self.log = pn.pane.Markdown("### Log\nReady.", sizing_mode="stretch_width", styles=self._pane_style())
-
         self.load_movement_button.on_click(self._on_load_movement)
         self.scan_geopotential_button.on_click(self._on_scan_geopotential)
         self.scan_multilevel_button.on_click(self._on_scan_multilevel)
         self.scan_surface_button.on_click(self._on_scan_surface)
         self.scan_optional_components_button.on_click(self._on_scan_optional_components)
+        self.open_derived_metrics_button.on_click(self._open_derived_metrics_panel)
+        self.apply_derived_metrics_button.on_click(self._apply_derived_metrics_panel)
         self.load_boundary_button.on_click(self._on_load_boundary)
         self.reset_boundary_button.on_click(self._on_reset_boundary)
         self.validate_button.on_click(self._on_validate)
@@ -241,12 +378,33 @@ class Multidimensional_Annotation_App:
 
         for widget in (
             self.u_file,
+            self.u_variable,
             self.v_file,
+            self.v_variable,
             self.w_file,
+            self.w_variable,
             self.temperature_file,
+            self.temperature_variable,
+            self.surface_heat_flux_file,
+            self.surface_heat_flux_variable,
+            self.surface_heat_flux_mode,
+            self.surface_heat_flux_accumulation_seconds,
+            self.boundary_layer_height_file,
+            self.boundary_layer_height_variable,
+            self.temperature_2m_file,
+            self.temperature_2m_variable,
+            self.u10_file,
+            self.u10_variable,
+            self.v10_file,
+            self.v10_variable,
             self.dem_file,
             self.topography_source,
             self.track_direction_source,
+            self.derive_wind_speed_direction,
+            self.derive_wind_support_crosswind,
+            self.derive_vertical_motion,
+            self.derive_thermal_uplift,
+            self.derive_orographic_uplift,
         ):
             widget.param.watch(self._update_dynamic_states, "value")
 
@@ -263,6 +421,192 @@ class Multidimensional_Annotation_App:
         if old.strip() == "### Log\nReady.":
             old = "### Log\n"
         self.log.object = old + f"\n- {message}"
+
+    def _build_derived_metrics_content(self):
+        return pn.Column(
+            pn.pane.Markdown(
+                """
+                ## Derived metrics configuration
+                Configure the additional atmospheric fields used for derived metrics.
+                The selected values are retained after the window is closed.
+                """,
+                sizing_mode="stretch_width",
+            ),
+            pn.Card(
+                pn.Column(
+                    pn.pane.Markdown("**File for pressure-level U variable**", sizing_mode="stretch_width"),
+                    self.u_file,
+                    self.u_variable,
+                    pn.pane.Markdown("**File for pressure-level V variable***", sizing_mode="stretch_width"),
+                    self.v_file,
+                    self.v_variable,
+                    sizing_mode="stretch_width",
+                ),
+                title="U and V wind components",
+                collapsible=True,
+                collapsed=False,
+                sizing_mode="stretch_width",
+            ),
+            pn.Card(
+                pn.Column(
+                    self.derive_wind_speed_direction,
+                    self.derive_wind_support_crosswind,
+                    self.track_direction_source,
+                    self.heading_column,
+                    sizing_mode="stretch_width",
+                ),
+                title="Wind-derived metrics",
+                collapsible=True,
+                collapsed=False,
+                sizing_mode="stretch_width",
+            ),
+            pn.Card(
+                pn.Column(
+                    pn.pane.Markdown(
+                        (
+                            "The W field is sampled at movement height. "
+                            "Pressure-level temperature is optional, but "
+                            "it allows a more accurate conversion of omega "
+                            "from Pa/s to m/s."
+                        ),
+                        sizing_mode="stretch_width",
+                    ),
+                    pn.pane.Markdown("**File for pressure-level W variable**", sizing_mode="stretch_width"),
+                    self.w_file,
+                    self.w_variable,
+                    pn.pane.Markdown("**File for pressure-level temperature variable**", sizing_mode="stretch_width"),
+                    self.temperature_file,
+                    self.temperature_variable,
+                    self.derive_vertical_motion,
+                    sizing_mode="stretch_width",
+                ),
+                title="Vertical motion",
+                collapsible=True,
+                collapsed=False,
+                sizing_mode="stretch_width",
+            ),
+            pn.Card(
+                pn.Column(
+                    pn.pane.Markdown(
+                        (
+                            "Thermal uplift requires surface sensible "
+                            "heat flux, boundary-layer height and "
+                            "2 m temperature."
+                        ),
+                        sizing_mode="stretch_width",
+                    ),
+                    pn.pane.Markdown("**File for surface sensible heat flux variable**", sizing_mode="stretch_width"),
+                    self.surface_heat_flux_file,
+                    self.surface_heat_flux_variable,
+                    self.surface_heat_flux_mode,
+                    self.surface_heat_flux_accumulation_seconds,
+                    pn.pane.Markdown("**File for boundary layer height variable**", sizing_mode="stretch_width"),
+                    self.boundary_layer_height_file,
+                    self.boundary_layer_height_variable,
+                    pn.pane.Markdown("**File for 2 m temperature variable**", sizing_mode="stretch_width"),
+                    self.temperature_2m_file,
+                    self.temperature_2m_variable,
+                    self.derive_thermal_uplift,
+                    sizing_mode="stretch_width",
+                ),
+                title="Thermal uplift inputs",
+                collapsible=True,
+                collapsed=False,
+                sizing_mode="stretch_width",
+            ),
+            pn.Card(
+                pn.Column(
+                    pn.pane.Markdown(
+                        (
+                            "Orographic uplift uses 10 m U/V wind "
+                            "components and the DEM selected in the "
+                            "Topography section. Pressure-level U/V "
+                            "fields are not used here."
+                        ),
+                        sizing_mode="stretch_width",
+                    ),
+                    pn.pane.Markdown("**File for 10 m U wind variable**", sizing_mode="stretch_width"),
+                    self.u10_file,
+                    self.u10_variable,
+                    pn.pane.Markdown("**File for 10 m V wind variable**", sizing_mode="stretch_width"),
+                    self.v10_file,
+                    self.v10_variable,
+                    self.derive_orographic_uplift,
+                    sizing_mode="stretch_width",
+                ),
+                title="Orographic uplift inputs",
+                collapsible=True,
+                collapsed=False,
+                sizing_mode="stretch_width",
+            ),
+            self.scan_optional_components_button,
+            self.apply_derived_metrics_button,
+            sizing_mode="stretch_width",
+            width=760,
+            max_height=760,
+            scroll=True,
+            margin=10,
+        )
+
+    def _open_derived_metrics_panel(self, event=None) -> None:
+        self._update_dynamic_states()
+
+        if self.template is None:
+            self._append_log("Cannot open derived metrics window: " "application template is not initialized.")
+            return
+
+        self.template.open_modal()
+        self._append_log("Derived metrics configuration window opened.")
+
+    def _apply_derived_metrics_panel(self, event=None) -> None:
+        self._update_dynamic_states()
+        self._refresh_preview()
+
+        if self.template is not None:
+            self.template.close_modal()
+
+        self._append_log("Derived metrics configuration updated.")
+
+    def _update_derived_metrics_status(self) -> None:
+        metric_states = [
+            ("Wind speed/direction", bool(self.derive_wind_speed_direction.value)),
+            ("Wind support/cross wind", bool(self.derive_wind_support_crosswind.value)),
+            ("Vertical motion", bool(self.derive_vertical_motion.value)),
+            ("Thermal uplift", bool(self.derive_thermal_uplift.value)),
+            ("Orographic uplift", bool(self.derive_orographic_uplift.value)),
+        ]
+
+        selected_metrics = [label for label, enabled in metric_states if enabled]
+        component_states = {
+            "U pressure-level": (self._path_exists(self.u_file.value) and bool(self.u_variable.value)),
+            "V pressure-level": (self._path_exists(self.v_file.value) and bool(self.v_variable.value)),
+            "W pressure-level": (self._path_exists(self.w_file.value) and bool(self.w_variable.value)),
+            "Temperature pressure-level": (
+                self._path_exists(self.temperature_file.value) and bool(self.temperature_variable.value)
+            ),
+            "Surface heat flux": (
+                self._path_exists(self.surface_heat_flux_file.value) and bool(self.surface_heat_flux_variable.value)
+            ),
+            "Boundary-layer height": (
+                self._path_exists(self.boundary_layer_height_file.value)
+                and bool(self.boundary_layer_height_variable.value)
+            ),
+            "2 m temperature": (
+                self._path_exists(self.temperature_2m_file.value) and bool(self.temperature_2m_variable.value)
+            ),
+            "U10": (self._path_exists(self.u10_file.value) and bool(self.u10_variable.value)),
+            "V10": (self._path_exists(self.v10_file.value) and bool(self.v10_variable.value)),
+        }
+
+        configured_components = [label for label, configured in component_states.items() if configured]
+        selected_text = ", ".join(selected_metrics) if selected_metrics else "none"
+        configured_text = ", ".join(configured_components) if configured_components else "none"
+
+        self.derived_metrics_status.object = (
+            f"**Selected metrics:** {selected_text}  \n"
+            f"**Configured component fields:** "
+            f"{len(configured_components)}/9 ({configured_text})"
+        )
 
     @staticmethod
     def _file_value(value):
@@ -341,10 +685,20 @@ class Multidimensional_Annotation_App:
     @staticmethod
     def _nc_info(ds) -> dict:
         names = set(ds.variables) | set(ds.coords)
-        time_name = next((c for c in ("time", "valid_time", "forecast_time", "verification_time", "datetime", "date") if c in names), None)
+        time_name = next(
+            (c for c in ("time", "valid_time", "forecast_time", "verification_time", "datetime", "date") if c in names),
+            None,
+        )
         lat_name = next((c for c in ("lat", "latitude", "y") if c in names), None)
         lon_name = next((c for c in ("lon", "longitude", "long", "x") if c in names), None)
-        level_name = next((c for c in ("level", "lev", "plev", "pressure", "pressure_level", "isobaricInhPa", "isobaric_in_hPa") if c in names), None)
+        level_name = next(
+            (
+                c
+                for c in ("level", "lev", "plev", "pressure", "pressure_level", "isobaricInhPa", "isobaric_in_hPa")
+                if c in names
+            ),
+            None,
+        )
 
         time_text = "-"
         spatial_text = "-"
@@ -439,14 +793,30 @@ class Multidimensional_Annotation_App:
         self._movement_columns = columns
         self._movement_df = full_df
 
-        for widget in (self.id_column, self.time_column, self.lat_column, self.lon_column, self.height_column, self.heading_column):
+        for widget in (
+            self.id_column,
+            self.time_column,
+            self.lat_column,
+            self.lon_column,
+            self.height_column,
+            self.heading_column,
+        ):
             widget.options = columns
 
-        self.id_column.value = self._guess_column(columns, ["individual_local_identifier", "individual-local-identifier", "id"])
-        self.time_column.value = self._guess_column(columns, ["timestamp", "eobs_start_timestamp", "time", "datetime", "date"])
+        self.id_column.value = self._guess_column(
+            columns, ["individual_local_identifier", "individual-local-identifier", "id"]
+        )
+        self.time_column.value = self._guess_column(
+            columns, ["timestamp", "eobs_start_timestamp", "time", "datetime", "date"]
+        )
         self.lat_column.value = self._guess_column(columns, ["location_lat", "location-lat", "lat", "latitude"])
-        self.lon_column.value = self._guess_column(columns, ["location_lon", "location_long", "location-long", "lon", "longitude"])
-        self.height_column.value = self._guess_column(columns, ["height-above-ellipsoid", "height_above_ellipsoid", "height", "altitude", "elevation", "height_above_msl"])
+        self.lon_column.value = self._guess_column(
+            columns, ["location_lon", "location_long", "location-long", "lon", "longitude"]
+        )
+        self.height_column.value = self._guess_column(
+            columns,
+            ["height-above-ellipsoid", "height_above_ellipsoid", "height", "altitude", "elevation", "height_above_msl"],
+        )
         self.heading_column.value = self._guess_column(columns, ["heading", "bearing", "direction"])
 
         self._populate_taxa_ids_and_info(path, full_df)
@@ -456,7 +826,9 @@ class Multidimensional_Annotation_App:
 
     def _populate_taxa_ids_and_info(self, path: Path, df: pd.DataFrame) -> None:
         id_col = self.id_column.value
-        taxon_col = self._guess_column(list(df.columns), ["individual-taxon-canonical-name", "individual_taxon_canonical_name", "taxon", "species"])
+        taxon_col = self._guess_column(
+            list(df.columns), ["individual-taxon-canonical-name", "individual_taxon_canonical_name", "taxon", "species"]
+        )
 
         ids = sorted(df[id_col].dropna().astype(str).unique()) if id_col and id_col in df.columns else []
         taxa = sorted(df[taxon_col].dropna().astype(str).unique()) if taxon_col and taxon_col in df.columns else []
@@ -491,7 +863,9 @@ class Multidimensional_Annotation_App:
         id_col = self.id_column.value
         if not id_col or id_col not in df.columns:
             return
-        taxon_col = self._guess_column(list(df.columns), ["individual-taxon-canonical-name", "individual_taxon_canonical_name", "taxon", "species"])
+        taxon_col = self._guess_column(
+            list(df.columns), ["individual-taxon-canonical-name", "individual_taxon_canonical_name", "taxon", "species"]
+        )
         selected_taxa = list(self.taxon_multiselect.value or [])
         if selected_taxa and taxon_col and taxon_col in df.columns:
             ids = sorted(df.loc[df[taxon_col].astype(str).isin(selected_taxa), id_col].dropna().astype(str).unique())
@@ -561,14 +935,30 @@ class Multidimensional_Annotation_App:
         self._refresh_preview()
 
     def _on_scan_optional_components(self, event=None) -> None:
-        for path_widget, select_widget, label in [
-            (self.u_file, self.u_variable, "U component"),
-            (self.v_file, self.v_variable, "V component"),
-            (self.w_file, self.w_variable, "W component"),
-            (self.temperature_file, self.temperature_variable, "temperature"),
-        ]:
-            if self._path_exists(path_widget.value):
-                self._scan_nc_to_select(path_widget, select_widget, label)
+        scan_items = [
+            (self.u_file, self.u_variable, "pressure-level U component"),
+            (self.v_file, self.v_variable, "pressure-level V component"),
+            (self.w_file, self.w_variable, "pressure-level W component"),
+            (self.temperature_file, self.temperature_variable, "pressure-level temperature"),
+            (self.surface_heat_flux_file, self.surface_heat_flux_variable, "surface sensible heat flux"),
+            (self.boundary_layer_height_file, self.boundary_layer_height_variable, "boundary-layer height"),
+            (self.temperature_2m_file, self.temperature_2m_variable, "2 m temperature"),
+            (self.u10_file, self.u10_variable, "10 m U wind component"),
+            (self.v10_file, self.v10_variable, "10 m V wind component"),
+        ]
+
+        selected_count = 0
+
+        for path_widget, select_widget, label in scan_items:
+            if not self._path_exists(path_widget.value):
+                continue
+
+            selected_count += 1
+            self._scan_nc_to_select(path_widget, select_widget, label)
+
+        if selected_count == 0:
+            self._append_log("No derived-metric input files were selected.")
+
         self._update_dynamic_states()
 
     def _on_load_boundary(self, event=None) -> None:
@@ -609,33 +999,57 @@ class Multidimensional_Annotation_App:
                 self.control_smoothing.value = "4"
 
     def _update_dynamic_states(self, *_events) -> None:
-        has_u = self._path_exists(self.u_file.value)
-        has_v = self._path_exists(self.v_file.value)
-        has_w = self._path_exists(self.w_file.value)
-        has_t = self._path_exists(self.temperature_file.value)
-        has_dem = self.topography_source.value != "None" and self._path_exists(self.dem_file.value)
+        has_u = self._path_exists(self.u_file.value) and bool(self.u_variable.value)
+        has_v = self._path_exists(self.v_file.value) and bool(self.v_variable.value)
+        has_w = self._path_exists(self.w_file.value) and bool(self.w_variable.value)
+        has_pressure_temperature = self._path_exists(self.temperature_file.value) and bool(
+            self.temperature_variable.value
+        )
 
+        has_surface_heat_flux = self._path_exists(self.surface_heat_flux_file.value) and bool(
+            self.surface_heat_flux_variable.value
+        )
+        has_boundary_layer_height = self._path_exists(self.boundary_layer_height_file.value) and bool(
+            self.boundary_layer_height_variable.value
+        )
+        has_temperature_2m = self._path_exists(self.temperature_2m_file.value) and bool(
+            self.temperature_2m_variable.value
+        )
+        has_u10 = self._path_exists(self.u10_file.value) and bool(self.u10_variable.value)
+        has_v10 = self._path_exists(self.v10_file.value) and bool(self.v10_variable.value)
+        has_dem = self.topography_source.value != "None" and self._path_exists(self.dem_file.value)
+        heat_flux_is_accumulated = "accumulated energy" in str(self.surface_heat_flux_mode.value).lower()
+        self.surface_heat_flux_accumulation_seconds.disabled = not heat_flux_is_accumulated
         self.dem_units.disabled = self.topography_source.value == "None"
         self.dem_reference.disabled = self.topography_source.value == "None"
-
         wind_ready = has_u and has_v
+        thermal_ready = has_surface_heat_flux and has_boundary_layer_height and has_temperature_2m
+        orographic_ready = has_u10 and has_v10 and has_dem
         self.derive_wind_speed_direction.disabled = not wind_ready
         self.derive_wind_support_crosswind.disabled = not wind_ready
         self.track_direction_source.disabled = not wind_ready
-        self.heading_column.disabled = not (wind_ready and self.track_direction_source.value == "Use existing heading column")
+        self.heading_column.disabled = not (
+            wind_ready and self.track_direction_source.value == "Use existing heading column"
+        )
+
         self.derive_vertical_motion.disabled = not has_w
-        self.derive_thermal_uplift.disabled = not has_t
-        self.derive_orographic_uplift.disabled = not (wind_ready and has_dem)
+        self.derive_thermal_uplift.disabled = not thermal_ready
+        self.derive_orographic_uplift.disabled = not orographic_ready
 
         if not wind_ready:
             self.derive_wind_speed_direction.value = False
             self.derive_wind_support_crosswind.value = False
+
         if not has_w:
             self.derive_vertical_motion.value = False
-        if not has_t:
+
+        if not thermal_ready:
             self.derive_thermal_uplift.value = False
-        if not (wind_ready and has_dem):
+
+        if not orographic_ready:
             self.derive_orographic_uplift.value = False
+
+        self._update_derived_metrics_status()
 
     def _enforce_split_unique(self, first, second, changed: str, new_values: list):
         a = list(first.value or [])
@@ -653,19 +1067,27 @@ class Multidimensional_Annotation_App:
 
     def _wire_variable_split_guards(self):
         self.multilevel_continuous_vars.param.watch(
-            lambda e: self._enforce_split_unique(self.multilevel_continuous_vars, self.multilevel_categorical_vars, "first", list(e.new or [])),
+            lambda e: self._enforce_split_unique(
+                self.multilevel_continuous_vars, self.multilevel_categorical_vars, "first", list(e.new or [])
+            ),
             "value",
         )
         self.multilevel_categorical_vars.param.watch(
-            lambda e: self._enforce_split_unique(self.multilevel_continuous_vars, self.multilevel_categorical_vars, "second", list(e.new or [])),
+            lambda e: self._enforce_split_unique(
+                self.multilevel_continuous_vars, self.multilevel_categorical_vars, "second", list(e.new or [])
+            ),
             "value",
         )
         self.surface_continuous_vars.param.watch(
-            lambda e: self._enforce_split_unique(self.surface_continuous_vars, self.surface_categorical_vars, "first", list(e.new or [])),
+            lambda e: self._enforce_split_unique(
+                self.surface_continuous_vars, self.surface_categorical_vars, "first", list(e.new or [])
+            ),
             "value",
         )
         self.surface_categorical_vars.param.watch(
-            lambda e: self._enforce_split_unique(self.surface_continuous_vars, self.surface_categorical_vars, "second", list(e.new or [])),
+            lambda e: self._enforce_split_unique(
+                self.surface_continuous_vars, self.surface_categorical_vars, "second", list(e.new or [])
+            ),
             "value",
         )
 
@@ -718,6 +1140,16 @@ class Multidimensional_Annotation_App:
     def _backend_heading_source(self) -> str:
         return "column" if self.track_direction_source.value == "Use existing heading column" else "compute"
 
+    def _backend_heat_flux_mode(self) -> str:
+        mapping = {
+            "Upward-positive instantaneous flux (W m-2)": "upward_wm2",
+            "Downward-positive instantaneous flux (W m-2)": "downward_wm2",
+            "Downward-positive accumulated energy (J m-2)": "accumulated_downward_jm2",
+            "Upward-positive accumulated energy (J m-2)": "accumulated_upward_jm2",
+        }
+
+        return mapping.get(self.surface_heat_flux_mode.value, "upward_wm2")
+
     def _on_validate(self, event=None) -> None:
         errors, warnings = [], []
 
@@ -742,30 +1174,99 @@ class Multidimensional_Annotation_App:
         if not self._selected_multilevel_vars():
             errors.append("No multilevel annotation variables selected.")
 
-        if self.surface_var_file.value and self._path_exists(self.surface_var_file.value) and not self._selected_surface_vars():
+        if (
+            self.surface_var_file.value
+            and self._path_exists(self.surface_var_file.value)
+            and not self._selected_surface_vars()
+        ):
             errors.append("Surface variable file is set but no surface variable is selected.")
         if self.surface_var_file.value and not self._path_exists(self.surface_var_file.value):
-            warnings.append("Surface variable file is not selected or is not a file; surface variables will be ignored.")
+            warnings.append(
+                "Surface variable file is not selected or is not a file; surface variables will be ignored."
+            )
 
         if not self.id_multiselect.value:
-            warnings.append("No individual IDs selected; backend currently processes all rows unless ID filtering is implemented.")
-        if self.spatial_interpolation_method.value == "Inverse Distance Weighting" and int(self.control_smoothing.value) < 2:
+            warnings.append(
+                "No individual IDs selected; backend currently processes all rows unless ID filtering is implemented."
+            )
+        if (
+            self.spatial_interpolation_method.value == "Inverse Distance Weighting"
+            and int(self.control_smoothing.value) < 2
+        ):
             errors.append("IDW requires at least 2 nearest grid points.")
         if self.use_surface_as_lower_anchor.value and not self.surface_continuous_vars.value:
             warnings.append("Surface anchor is enabled, but no continuous surface variable is selected.")
 
         if self.topography_source.value != "None" and not self._path_exists(self.dem_file.value):
             errors.append("Topography source is selected, but DEM file is missing or does not exist.")
-        if self.height_reference.value == "Height above ground level (requires DEM)" and not self._path_exists(self.dem_file.value):
+        if self.height_reference.value == "Height above ground level (requires DEM)" and not self._path_exists(
+            self.dem_file.value
+        ):
             errors.append("Height reference is AGL, but DEM file is missing or does not exist.")
         if self.height_reference.value == "Already orthometric / MSL-like":
-            warnings.append("Movement height is assumed to be already comparable to ERA5 geopotential height. No geoid correction will be applied.")
+            warnings.append(
+                "Movement height is assumed to be already comparable to ERA5 geopotential height. No geoid correction will be applied."
+            )
         if self.height_reference.value == "WGS84 ellipsoidal height (Movebank GPS height)":
-            warnings.append("Movement height will be converted to MSL/orthometric height using selected geoid correction mode.")
+            warnings.append(
+                "Movement height will be converted to MSL/orthometric height using selected geoid correction mode."
+            )
         if self.geopotential_units.value == "m2 s-2" and not self.convert_geopotential_to_height.value:
             warnings.append("Geopotential units are m2 s-2, but conversion to height is disabled.")
-        if self.derive_wind_support_crosswind.value and self.track_direction_source.value == "Use existing heading column" and not self.heading_column.value:
+        if (
+            self.derive_wind_support_crosswind.value
+            and self.track_direction_source.value == "Use existing heading column"
+            and not self.heading_column.value
+        ):
             errors.append("Heading column is required when using existing heading column.")
+
+        if self.derive_vertical_motion.value:
+            if not (self._path_exists(self.w_file.value) and self.w_variable.value):
+                errors.append("Vertical motion requires a W/omega file and variable.")
+
+            if not (self._path_exists(self.temperature_file.value) and self.temperature_variable.value):
+                warnings.append(
+                    "Vertical motion is enabled without pressure-level "
+                    "temperature. Approximate air density will be used."
+                )
+
+        if self.derive_thermal_uplift.value:
+            thermal_missing = []
+
+            if not (self._path_exists(self.surface_heat_flux_file.value) and self.surface_heat_flux_variable.value):
+                thermal_missing.append("surface sensible heat flux")
+
+            if not (
+                self._path_exists(self.boundary_layer_height_file.value) and self.boundary_layer_height_variable.value
+            ):
+                thermal_missing.append("boundary-layer height")
+
+            if not (self._path_exists(self.temperature_2m_file.value) and self.temperature_2m_variable.value):
+                thermal_missing.append("2 m temperature")
+
+            if thermal_missing:
+                errors.append("Thermal uplift requires: " + ", ".join(thermal_missing) + ".")
+
+            if (
+                "accumulated energy" in str(self.surface_heat_flux_mode.value).lower()
+                and float(self.surface_heat_flux_accumulation_seconds.value or 0.0) <= 0.0
+            ):
+                errors.append("Heat-flux accumulation period must be greater than zero.")
+
+        if self.derive_orographic_uplift.value:
+            orographic_missing = []
+
+            if not (self._path_exists(self.u10_file.value) and self.u10_variable.value):
+                orographic_missing.append("10 m U component")
+
+            if not (self._path_exists(self.v10_file.value) and self.v10_variable.value):
+                orographic_missing.append("10 m V component")
+
+            if not self._path_exists(self.dem_file.value):
+                orographic_missing.append("DEM")
+
+            if orographic_missing:
+                errors.append("Orographic uplift requires: " + ", ".join(orographic_missing) + ".")
 
         if errors:
             lines = ["### Validation", "**Status:** Issues found", "", *[f"- {e}" for e in errors]]
@@ -795,16 +1296,11 @@ class Multidimensional_Annotation_App:
         try:
             output_csv = Path(str(self.output_csv.value)).expanduser()
             output_csv.parent.mkdir(parents=True, exist_ok=True)
-
             multilevel_cont = list(self.multilevel_continuous_vars.value or [])
             multilevel_cat = list(self.multilevel_categorical_vars.value or [])
             surface_cont = list(self.surface_continuous_vars.value or [])
             surface_cat = list(self.surface_categorical_vars.value or [])
-            surface_file = (
-                self._optional_path(self.surface_var_file.value)
-                if (surface_cont or surface_cat)
-                else None
-            )
+            surface_file = self._optional_path(self.surface_var_file.value) if (surface_cont or surface_cat) else None
 
             self._append_log("Starting multidimensional annotation.")
 
@@ -846,7 +1342,33 @@ class Multidimensional_Annotation_App:
                 w_file=self._optional_path(self.w_file.value),
                 w_variable=self.w_variable.value if self._path_exists(self.w_file.value) else None,
                 temperature_file=self._optional_path(self.temperature_file.value),
-                temperature_variable=self.temperature_variable.value if self._path_exists(self.temperature_file.value) else None,
+                temperature_variable=(
+                    self.temperature_variable.value if self._path_exists(self.temperature_file.value) else None
+                ),
+                surface_heat_flux_file=self._optional_path(self.surface_heat_flux_file.value),
+                surface_heat_flux_variable=(
+                    self.surface_heat_flux_variable.value
+                    if self._path_exists(self.surface_heat_flux_file.value)
+                    else None
+                ),
+                surface_heat_flux_mode=self._backend_heat_flux_mode(),
+                surface_heat_flux_accumulation_seconds=float(
+                    self.surface_heat_flux_accumulation_seconds.value or 3600.0
+                ),
+                boundary_layer_height_file=self._optional_path(self.boundary_layer_height_file.value),
+                boundary_layer_height_variable=(
+                    self.boundary_layer_height_variable.value
+                    if self._path_exists(self.boundary_layer_height_file.value)
+                    else None
+                ),
+                temperature_2m_file=self._optional_path(self.temperature_2m_file.value),
+                temperature_2m_variable=(
+                    self.temperature_2m_variable.value if self._path_exists(self.temperature_2m_file.value) else None
+                ),
+                u10_file=self._optional_path(self.u10_file.value),
+                u10_variable=(self.u10_variable.value if self._path_exists(self.u10_file.value) else None),
+                v10_file=self._optional_path(self.v10_file.value),
+                v10_variable=(self.v10_variable.value if self._path_exists(self.v10_file.value) else None),
                 derive_wind_speed_direction=bool(self.derive_wind_speed_direction.value),
                 derive_wind_support_crosswind=bool(self.derive_wind_support_crosswind.value),
                 derive_vertical_motion=bool(self.derive_vertical_motion.value),
@@ -862,15 +1384,17 @@ class Multidimensional_Annotation_App:
             self._append_log(f"Annotation completed: {n_rows} row(s), {n_cols} column(s).")
             self._append_log(f"Output saved to: {output_csv}")
             preview_cols = list(result.columns[:20]) if result is not None else []
-            self.preview.object = "\n".join([
-                "### Preview",
-                f"- **Output CSV:** `{output_csv}`",
-                f"- **Rows:** `{n_rows}`",
-                f"- **Columns:** `{n_cols}`",
-                "",
-                "**First output columns:**",
-                *[f"- `{col}`" for col in preview_cols],
-            ])
+            self.preview.object = "\n".join(
+                [
+                    "### Preview",
+                    f"- **Output CSV:** `{output_csv}`",
+                    f"- **Rows:** `{n_rows}`",
+                    f"- **Columns:** `{n_cols}`",
+                    "",
+                    "**First output columns:**",
+                    *[f"- `{col}`" for col in preview_cols],
+                ]
+            )
         except Exception as exc:
             logger.exception("Multidimensional annotation failed.")
             self._append_log(f"Annotation failed: {exc}")
@@ -941,18 +1465,6 @@ class Multidimensional_Annotation_App:
                 self.surface_categorical_vars,
                 self.env_info,
             ),
-            self._card(
-                "4. Optional atmospheric components",
-                self.u_file,
-                self.u_variable,
-                self.v_file,
-                self.v_variable,
-                self.w_file,
-                self.w_variable,
-                self.temperature_file,
-                self.temperature_variable,
-                self.scan_optional_components_button,
-            ),
             sizing_mode="stretch_width",
             height=COL_H,
             margin=0,
@@ -960,28 +1472,32 @@ class Multidimensional_Annotation_App:
         )
 
         col3 = pn.Column(
-            self._card("5. Boundary data", self.boundary_file, pn.Row(self.load_boundary_button, self.reset_boundary_button), self.boundary_info),
             self._card(
-                "6. Interpolation / vertical matching",
+                "4. Boundary data",
+                self.boundary_file,
+                pn.Row(self.load_boundary_button, self.reset_boundary_button),
+                self.boundary_info,
+            ),
+            self._card(
+                "5. Interpolation / vertical matching",
                 self.spatial_interpolation_method,
                 self.control_smoothing,
                 self.vertical_matching_method,
                 self.use_surface_as_lower_anchor,
                 self.surface_anchor_height_agl_m,
             ),
-            self._card("7. Topography", self.topography_source, self.dem_file, self.dem_units, self.dem_reference),
+            self._card("6. Topography", self.topography_source, self.dem_file, self.dem_units, self.dem_reference),
             self._card(
-                "8. Derived metrics",
-                self.derive_wind_speed_direction,
-                self.derive_wind_support_crosswind,
-                self.track_direction_source,
-                self.heading_column,
-                self.derive_vertical_motion,
-                self.derive_thermal_uplift,
-                self.derive_orographic_uplift,
+                "7. Derived metrics",
+                pn.pane.Markdown(
+                    ("Configure optional atmospheric components and " "select the derived metrics to calculate."),
+                    sizing_mode="stretch_width",
+                ),
+                self.open_derived_metrics_button,
+                self.derived_metrics_status,
             ),
             self._card(
-                "9. Output",
+                "8. Output",
                 self.output_csv,
                 self.save_per_individual,
                 self.keep_diagnostics,
@@ -995,17 +1511,20 @@ class Multidimensional_Annotation_App:
         )
 
         return pn.Column(
-            "# Multidimensional Annotation Engine App (DEMO)",
+            "# Multidimensional Annotation Engine App (ERA5 only)",
             pn.GridBox(col1, col2, col3, ncols=3, sizing_mode="stretch_width", height=COL_H, scroll=True),
             pn.Row(self.preview, self.validation, self.log, sizing_mode="stretch_width"),
             sizing_mode="stretch_width",
         )
 
 
-@register_view(ext_args=["floatpanel"])
+@register_view(ext_args=[])
 def view():
     app = Multidimensional_Annotation_App()
     template = DEFAULT_TEMPLATE(main=[app.view()], sidebar=[])
+    template.modal.append(app.derived_metrics_modal_content)
+    app.template = template
+    
     return template
 
 

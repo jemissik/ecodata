@@ -9,18 +9,15 @@ Provides UI to:
 """
 
 from __future__ import annotations
-
 import datetime as dt
 import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
-
 import panel as pn
 import pandas as pd
 import numpy as np
-
 from ecodata.app.config import DEFAULT_TEMPLATE
 from ecodata.app.models import FileSelector
 from ecodata.panel_utils import register_view
@@ -50,6 +47,7 @@ def _safe_filename(s: str, default: str = "output") -> str:
 @dataclass
 class OutputPaths:
     """Container for output file paths."""
+
     out_dir: str
     agg_counts_csv: str
     agg_presence_csv: str
@@ -78,27 +76,14 @@ class EbirdPrepareApp:
 
         self.source_mode = pn.widgets.RadioButtonGroup(
             name="Data source",
-            options=[
-                "EBD file",
-                "Sampling Event file",
-                "Region polygon ",
-            ],
+            options=["EBD file", "Sampling Event file", "Region polygon "],
             value="EBD file",
             button_type="primary",
         )
 
-        self.ebd_path = make_file_selector(
-            "EBD local path",
-            "*",
-        )
-        self.sampling_path = make_file_selector(
-            "Sampling local path",
-            "*",
-        )
-        self.polygon_path = make_file_selector(
-            "Region polygon local path (shapefile or GeoJSON)",
-            "*",
-        )
+        self.ebd_path = make_file_selector("EBD local path", "*")
+        self.sampling_path = make_file_selector("Sampling local path", "*")
+        self.polygon_path = make_file_selector("Region polygon local path (shapefile or GeoJSON)", "*")
 
         self.spatial_filter_mode = pn.widgets.RadioButtonGroup(
             name="Spatial filter",
@@ -107,26 +92,10 @@ class EbirdPrepareApp:
             button_type="primary",
         )
 
-        self.bbox_west = pn.widgets.FloatInput(
-            name="West / min longitude",
-            value=-88.5,
-            step=0.1,
-        )
-        self.bbox_south = pn.widgets.FloatInput(
-            name="South / min latitude",
-            value=30.1,
-            step=0.1,
-        )
-        self.bbox_east = pn.widgets.FloatInput(
-            name="East / max longitude",
-            value=-84.8,
-            step=0.1,
-        )
-        self.bbox_north = pn.widgets.FloatInput(
-            name="North / max latitude",
-            value=35.1,
-            step=0.1,
-        )
+        self.bbox_west = pn.widgets.FloatInput(name="West / min longitude", value=-88.5, step=0.1)
+        self.bbox_south = pn.widgets.FloatInput(name="South / min latitude", value=30.1, step=0.1)
+        self.bbox_east = pn.widgets.FloatInput(name="East / max longitude", value=-84.8, step=0.1)
+        self.bbox_north = pn.widgets.FloatInput(name="North / max latitude", value=35.1, step=0.1)
 
         self.bbox_help = pn.pane.Markdown(
             "Use geographic coordinates in EPSG:4326.  \n"
@@ -136,149 +105,59 @@ class EbirdPrepareApp:
             sizing_mode="stretch_width",
         )
 
-        
         self.protocols = pn.widgets.MultiChoice(
             name="Allowed protocols (optional)",
             options=["Traveling", "Stationary", "Area", "Incidental", "Historical"],
             value=["Traveling", "Stationary", "Area"],
         )
-        self.chk_exclude_incidental = pn.widgets.Checkbox(
-            name="Exclude incidental/historical",
-            value=True,
-        )
-
-        self.chk_reviewed = pn.widgets.Checkbox(
-            name="REVIEWED",
-            value=False,
-        )
-
-        self.chk_approved = pn.widgets.Checkbox(
-            name="APPROVED",
-            value=False,
-        )
-
-        self.chk_all_species_reported = pn.widgets.Checkbox(
-            name="ALL SPECIES REPORTED",
-            value=False,
-        )
-
-        self.duration_min = pn.widgets.IntInput(
-            name="Min duration (minutes)",
-            value=0,
-            start=0,
-        )
-        self.duration_max = pn.widgets.IntInput(
-            name="Max duration (minutes)",
-            value=600,
-            start=0,
-        )
-        self.distance_min = pn.widgets.FloatInput(
-            name="Min distance (km)",
-            value=0.0,
-            start=0.0,
-            step=0.1,
-        )
-        self.distance_max = pn.widgets.FloatInput(
-            name="Max distance (km)",
-            value=50.0,
-            start=0.0,
-            step=0.1,
-        )
-        self.chk_require_valid_coords = pn.widgets.Checkbox(
-            name="Require valid coordinates",
-            value=True,
-        )
-        self.max_count_clip = pn.widgets.IntInput(
-            name="Clip extreme counts above (0=off)",
-            value=0,
-            start=0,
-        )
-
+        self.chk_exclude_incidental = pn.widgets.Checkbox(name="Exclude incidental/historical", value=True)
+        self.chk_reviewed = pn.widgets.Checkbox(name="REVIEWED", value=False)
+        self.chk_approved = pn.widgets.Checkbox(name="APPROVED", value=False)
+        self.chk_all_species_reported = pn.widgets.Checkbox(name="ALL SPECIES REPORTED", value=False)
+        self.duration_min = pn.widgets.IntInput(name="Min duration (minutes)", value=0, start=0)
+        self.duration_max = pn.widgets.IntInput(name="Max duration (minutes)", value=600, start=0)
+        self.distance_min = pn.widgets.FloatInput(name="Min distance (km)", value=0.0, start=0.0, step=0.1)
+        self.distance_max = pn.widgets.FloatInput(name="Max distance (km)", value=50.0, start=0.0, step=0.1)
+        self.chk_require_valid_coords = pn.widgets.Checkbox(name="Require valid coordinates", value=True)
+        self.max_count_clip = pn.widgets.IntInput(name="Clip extreme counts above (0=off)", value=0, start=0)
         today = dt.date.today()
-        self.date_start = pn.widgets.DatePicker(
-            name="Start date",
-            value=today - dt.timedelta(days=30),
-        )
-        self.date_end = pn.widgets.DatePicker(
-            name="End date",
-            value=today,
-        )
-        self.aggregation_days = pn.widgets.IntInput(
-            name="Aggregation step (days)",
-            value=7,
-            start=1,
-        )
-
+        self.date_start = pn.widgets.DatePicker(name="Start date", value=today - dt.timedelta(days=30))
+        self.date_end = pn.widgets.DatePicker(name="End date", value=today)
+        self.aggregation_days = pn.widgets.IntInput(name="Aggregation step (days)", value=7, start=1)
         self.grid_step_deg = pn.widgets.FloatInput(
-            name="Grid step (degrees, 0 = use original coordinates)",
-            value=0.0,
-            start=0.0,
-            step=0.1,
+            name="Grid step (degrees, 0 = use original coordinates)", value=0.0, start=0.0, step=0.1
         )
-
         self.min_reporting_rate = pn.widgets.FloatInput(
-            name="Min frequency of detection (reporting_rate)",
-            value=0.0,
-            start=0.0,
-            step=0.01,
+            name="Min frequency of detection (reporting_rate)", value=0.0, start=0.0, step=0.01
         )
         self.min_count_per_complete_checklist = pn.widgets.FloatInput(
-            name="Min effort-standardized count",
-            value=0.0,
-            start=0.0,
-            step=0.1,
+            name="Min effort-standardized count", value=0.0, start=0.0, step=0.1
         )
         self.min_sampling_support = pn.widgets.IntInput(
-            name="Min sampling support (n_complete_checklists)",
-            value=0,
-            start=0,
+            name="Min sampling support (n_complete_checklists)", value=0, start=0
         )
-
-        self.output_dir = pn.widgets.TextInput(
-            name="Output folder",
-            value=str(Path.home() / "Downloads"),
-        )
-        self.run_name = pn.widgets.TextInput(
-            name="Run name",
-            value="presence_run",
-        )
+        self.output_dir = pn.widgets.TextInput(name="Output folder", value=str(Path.home() / "Downloads"))
+        self.run_name = pn.widgets.TextInput(name="Run name", value="presence_run")
 
         # output filename for "tracks" export (used only to name the exported file in UI)
         self.output_filename = pn.widgets.TextInput(
-            name="Output filename",
-            value="presence_points.csv",
-            placeholder="presence_points.csv",
+            name="Output filename", value="presence_points.csv", placeholder="presence_points.csv"
         )
-
-        self.btn_aggregate = pn.widgets.Button(
-            name="Aggregate",
-            button_type="primary",
-        )
+        self.btn_aggregate = pn.widgets.Button(name="Aggregate", button_type="primary")
         self.btn_export_tracks = pn.widgets.Button(
-            name="Export file for ECODATA-Animate",
-            button_type="primary",
-            icon="download",
+            name="Export file for ECODATA-Animate", button_type="primary", icon="download"
         )
-
-        self.species_select = pn.widgets.MultiChoice(
-            name="Species in results",
-            options=[],
-            value=[],
-        )
-
+        self.species_select = pn.widgets.MultiChoice(name="Species in results", options=[], value=[])
         self.status = pn.pane.Alert("Ready.", alert_type="success")
         self.log = pn.pane.Markdown("### Log\n", sizing_mode="stretch_both")
         self.outputs_view = pn.pane.Markdown("### Outputs\nNo outputs yet.", sizing_mode="stretch_width")
-
         self.spatial_filter_mode.param.watch(self._on_spatial_mode_changed, "value")
-
         self.btn_aggregate.on_click(self._on_aggregate_clicked)
         self.btn_export_tracks.on_click(self._on_export_tracks_clicked)
 
         # Rebuild layout (controls column vs results column)
         self.sidebar = pn.Spacer(height=0)
         self.main = pn.Column(self._build_main(), sizing_mode="stretch_both")
-
 
     def _append_log(self, msg: str) -> None:
         """Append log line with timestamp."""
@@ -311,12 +190,8 @@ class EbirdPrepareApp:
         s = s.replace("-", "m").replace(".", "p")
         return s
 
-
     def _build_region_id(
-        self,
-        *,
-        bbox: tuple[float, float, float, float] | None,
-        polygon_filename_hint: str = "",
+        self, *, bbox: tuple[float, float, float, float] | None, polygon_filename_hint: str = ""
     ) -> str:
         """
         Build region_id from bbox coordinates or polygon filename.
@@ -379,21 +254,11 @@ class EbirdPrepareApp:
         """Build controls (left column)."""
 
         if self.spatial_filter_mode.value == "Region polygon":
-            spatial_controls = pn.Column(
-                self.spatial_filter_mode,
-                self.polygon_path,
-                sizing_mode="stretch_width",
-            )
+            spatial_controls = pn.Column(self.spatial_filter_mode, self.polygon_path, sizing_mode="stretch_width")
         else:
             spatial_controls = pn.Column(
                 self.spatial_filter_mode,
-                pn.Row(
-                    self.bbox_west,
-                    self.bbox_south,
-                    self.bbox_east,
-                    self.bbox_north,
-                    sizing_mode="stretch_width",
-                ),
+                pn.Row(self.bbox_west, self.bbox_south, self.bbox_east, self.bbox_north, sizing_mode="stretch_width"),
                 self.bbox_help,
                 sizing_mode="stretch_width",
             )
@@ -401,40 +266,21 @@ class EbirdPrepareApp:
         io_box = pn.Column(
             pn.pane.Markdown("#### 1. Inputs"),
             pn.Row(
-                pn.Column(
-                    pn.pane.Markdown("**EBD file**"),
-                    self.ebd_path,
-                    sizing_mode="stretch_width",
-                ),
-
-                pn.Column(
-                    pn.pane.Markdown("**Sampling Event file**"),
-                    self.sampling_path,
-                    sizing_mode="stretch_width",
-                ),
-
+                pn.Column(pn.pane.Markdown("**EBD file**"), self.ebd_path, sizing_mode="stretch_width"),
+                pn.Column(pn.pane.Markdown("**Sampling Event file**"), self.sampling_path, sizing_mode="stretch_width"),
                 sizing_mode="stretch_width",
             ),
-
             pn.layout.Divider(),
-
             pn.pane.Markdown("#### 2. Spatial subset"),
             spatial_controls,
-
             pn.layout.Divider(),
-
             pn.pane.Markdown("#### 3. Outputs"),
-            pn.Row(
-                self.output_dir,
-                self.run_name,
-                sizing_mode="stretch_width",
-            ),
+            pn.Row(self.output_dir, self.run_name, sizing_mode="stretch_width"),
             sizing_mode="stretch_width",
         )
 
         vet_box = pn.Column(
             pn.pane.Markdown("#### 4. Vetting / filtering"),
-
             # 1) all checkboxes in one row
             pn.Row(
                 self.chk_reviewed,
@@ -444,40 +290,19 @@ class EbirdPrepareApp:
                 self.chk_require_valid_coords,
                 sizing_mode="stretch_width",
             ),
-
             # protocols + max count clip
-            pn.Row(
-                self.protocols,
-                self.max_count_clip,
-                sizing_mode="stretch_width",
-            ),
-
+            pn.Row(self.protocols, self.max_count_clip, sizing_mode="stretch_width"),
             # Min / Max duration in one row
-            pn.Row(
-                self.duration_min,
-                self.duration_max,
-                sizing_mode="stretch_width",
-            ),
-
+            pn.Row(self.duration_min, self.duration_max, sizing_mode="stretch_width"),
             # Min / Max distance in next row
-            pn.Row(
-                self.distance_min,
-                self.distance_max,
-                sizing_mode="stretch_width",
-            ),
-
+            pn.Row(self.distance_min, self.distance_max, sizing_mode="stretch_width"),
             sizing_mode="stretch_width",
         )
-
 
         time_box = pn.Column(
             pn.pane.Markdown("#### 5. Time and spatial aggregation"),
             pn.Row(
-                self.date_start,
-                self.date_end,
-                self.aggregation_days,
-                self.grid_step_deg,
-                sizing_mode="stretch_width",
+                self.date_start, self.date_end, self.aggregation_days, self.grid_step_deg, sizing_mode="stretch_width"
             ),
             pn.layout.Divider(),
             pn.pane.Markdown("#### 6. Derived-metric filters"),
@@ -495,17 +320,11 @@ class EbirdPrepareApp:
             pn.Row(self.btn_aggregate, sizing_mode="stretch_width"),
             pn.layout.Divider(),
             # 6) Species before export + add output filename in same row
-            pn.Row(
-                self.species_select,
-                self.output_filename,
-                self.btn_export_tracks,
-                sizing_mode="stretch_width",
-            ),
+            pn.Row(self.species_select, self.output_filename, self.btn_export_tracks, sizing_mode="stretch_width"),
             sizing_mode="stretch_width",
         )
 
         return pn.Column(io_box, vet_box, time_box, actions, sizing_mode="stretch_width")
-
 
     def _build_main(self) -> pn.Row:
         """Build 2-column layout: controls (wider) + outputs/log (narrower)."""
@@ -557,7 +376,7 @@ class EbirdPrepareApp:
 
     def _on_aggregate_clicked(self, _event) -> None:
         """Run backend aggregation and update species list."""
-        
+
         try:
             ebd_source, ebd_name = self._resolve_table_source("ebd")
             sampling_source, sampling_name = self._resolve_table_source("sampling")
@@ -578,21 +397,13 @@ class EbirdPrepareApp:
                 self._append_log(f"Aggregation blocked: {e}")
                 return
         else:
-            bbox_values = [
-                self.bbox_west.value,
-                self.bbox_south.value,
-                self.bbox_east.value,
-                self.bbox_north.value,
-            ]
+            bbox_values = [self.bbox_west.value, self.bbox_south.value, self.bbox_east.value, self.bbox_north.value]
             if any(v is None for v in bbox_values):
                 self._set_status("Fill all four bbox coordinates.", "danger")
                 self._append_log("Aggregation blocked: incomplete bbox.")
                 return
             bbox = tuple(float(v) for v in bbox_values)
-        region_id = self._build_region_id(
-            bbox=bbox,
-            polygon_filename_hint=polygon_filename_hint,
-        )
+        region_id = self._build_region_id(bbox=bbox, polygon_filename_hint=polygon_filename_hint)
         start = self.date_start.value
         end = self.date_end.value
         if not start or not end or end < start:
@@ -627,11 +438,7 @@ class EbirdPrepareApp:
         )
 
         agg = AggregationOptions(
-            start_date=start,
-            end_date=end,
-            step_days=step_days,
-            grid_step_deg=grid_step_deg,
-            treat_x_as_one=True,
+            start_date=start, end_date=end, step_days=step_days, grid_step_deg=grid_step_deg, treat_x_as_one=True
         )
 
         try:
@@ -639,29 +446,25 @@ class EbirdPrepareApp:
             self._append_log("Aggregation started.")
             self._append_log(f"EBD source: local path -> {ebd_source}")
             self._append_log(f"Sampling source: local path -> {sampling_source}")
-            
+
             if bbox is not None:
-                self._append_log(
-                    f"Using bbox: west={bbox[0]}, south={bbox[1]}, east={bbox[2]}, north={bbox[3]}."
-                )
+                self._append_log(f"Using bbox: west={bbox[0]}, south={bbox[1]}, east={bbox[2]}, north={bbox[3]}.")
             else:
-                self._append_log(
-                    f"Using polygon: {polygon_filename_hint or '[unknown name]'}."
-                )
+                self._append_log(f"Using polygon: {polygon_filename_hint or '[unknown name]'}.")
             self._append_log(f"Region ID: {region_id}")
             self._append_log(f"Aggregation step: {step_days} day(s).")
             if grid_step_deg > 0:
                 self._append_log(f"Grid aggregation enabled: {grid_step_deg} degree(s).")
             else:
                 self._append_log("Grid aggregation disabled: using original observation coordinates.")
-            
+
             self._append_log(
                 "Metric filters: "
                 f"reporting_rate >= {float(self.min_reporting_rate.value or 0.0)}, "
                 f"count_per_complete_checklist >= {float(self.min_count_per_complete_checklist.value or 0.0)}, "
                 f"n_complete_checklists >= {int(self.min_sampling_support.value or 0)}."
             )
-            
+
             species_all = aggregate_ebird_to_files(
                 ebd_bytes=ebd_source,
                 sampling_bytes=sampling_source,
@@ -682,11 +485,9 @@ class EbirdPrepareApp:
 
             self.species_select.options = species
             self.species_select.value = []
-
             self._set_status("Aggregation complete.", "success")
             self._append_log(f"Created: {self._paths.agg_counts_csv}")
             self._append_log(f"Created: {self._paths.agg_presence_csv}")
-
             self.outputs_view.object = (
                 "### Outputs\n"
                 f"- **Aggregated counts (A)**: `{self._paths.agg_counts_csv}`\n"
@@ -709,19 +510,11 @@ class EbirdPrepareApp:
             polygon_path = str(self.polygon_path.value or "").strip()
             polygon_filename_hint = os.path.basename(polygon_path) if polygon_path else ""
         else:
-            bbox_values = [
-                self.bbox_west.value,
-                self.bbox_south.value,
-                self.bbox_east.value,
-                self.bbox_north.value,
-            ]
+            bbox_values = [self.bbox_west.value, self.bbox_south.value, self.bbox_east.value, self.bbox_north.value]
             if not any(v is None for v in bbox_values):
                 bbox = tuple(float(v) for v in bbox_values)
 
-        region_id = self._build_region_id(
-            bbox=bbox,
-            polygon_filename_hint=polygon_filename_hint,
-        )
+        region_id = self._build_region_id(bbox=bbox, polygon_filename_hint=polygon_filename_hint)
         self._append_log(f"Export region ID: {region_id}")
         try:
             export_tracks_from_aggregated_counts(
@@ -734,14 +527,11 @@ class EbirdPrepareApp:
 
             sp = read_species_from_agg_counts(self._paths.agg_counts_csv)
             self.species_select.options = sp
-
             self._set_status("Export complete.", "success")
             self._append_log(f"Created: {self._paths.tracks_csv}")
-
             self.outputs_view.object = (
-                (self.outputs_view.object or "### Outputs\n")
-                + f"\n- **presence_points.csv (for Animate)**: `{self._paths.tracks_csv}`\n"
-            )
+                self.outputs_view.object or "### Outputs\n"
+            ) + f"\n- **presence_points.csv (for Animate)**: `{self._paths.tracks_csv}`\n"
 
         except Exception as e:
             self._set_status(f"Export failed: {e}", "danger")
@@ -752,10 +542,7 @@ class EbirdPrepareApp:
 def view():
     """Create a fresh app instance and return a template for ECODATA routing."""
     app = EbirdPrepareApp()
-    template = DEFAULT_TEMPLATE(
-        main=[app.main],
-        sidebar=[],
-    )
+    template = DEFAULT_TEMPLATE(main=[app.main], sidebar=[])
     return template
 
 
