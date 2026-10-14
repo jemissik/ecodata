@@ -4,12 +4,35 @@ sphinx:
   configuration: docs/conf.py
 
 build:
-  os: "ubuntu-20.04"
+  os: "ubuntu-24.04"
   tools:
-    python: "mambaforge-4.10"
+    python: "miniforge3-26.3"
   jobs:
+    pre_create_environment:
+      - conda config --set channel_priority strict
+      - conda config --set solver libmamba
+      - free -h
+      - |
+        for limit in /sys/fs/cgroup/memory.max /sys/fs/cgroup/memory/memory.limit_in_bytes; do
+          if [ -r "$limit" ]; then
+            printf "%s: " "$limit"
+            cat "$limit"
+          fi
+        done
+      # Match the tool versions from the successful GitHub CI build.
+      - >-
+        conda install --yes --name base --override-channels --channel conda-forge
+        --solver libmamba "conda=26.7.2" "mamba=2.9.0" "conda-libmamba-solver=26.7.0"
+      - conda --version
+      - mamba --version
+      - conda list --name base "^(conda|conda-libmamba-solver|mamba|libmamba|libmambapy)$"
+      - conda info
+      - conda config --show channels channel_priority solver
+    create_environment:
+      - mamba env create --yes --name "${READTHEDOCS_VERSION}" --file ecodata-env.yml
     post_install:
-      - conda env update --name ${READTHEDOCS_VERSION} --file ecodata-dev-env.yml
+      - conda env update --name ${READTHEDOCS_VERSION} --file ecodata-dev-env.yml --solver libmamba
+      - python -m pip install --no-deps -e .
       - conda list
 
 conda:

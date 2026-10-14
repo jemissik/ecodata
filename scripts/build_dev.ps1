@@ -1,4 +1,7 @@
 $env:ECODATA_VERSION = python print_ecodata_ver.py
+if ($args.Count -gt 0) {
+    $env:ECODATA_INSTALL_BRANCH = $args[0]
+}
 
 Write-Host "Building with:"
 Write-Host "  ECODATA_VERSION         = $env:ECODATA_VERSION"

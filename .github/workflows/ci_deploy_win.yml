@@ -2,6 +2,7 @@ name: ci_deploy_win
 on:
   pull_request:
     branches:
+      - annotation
       - main
 jobs:
   pre_job:
@@ -23,20 +24,28 @@ jobs:
     needs: pre_job
     if: needs.pre_job.outputs.should_skip != 'true'
     runs-on: windows-latest
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup Miniconda
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v7
         with:
+          fetch-depth: 0
+      - name: Setup Miniforge
+        uses: conda-incubator/setup-miniconda@v4
+        with:
+            miniforge-version: latest
+            channels: conda-forge
+            conda-remove-defaults: true
+            channel-priority: strict
+            conda-solver: libmamba
             auto-update-conda: true
-            activate-environment: eco-dev
+            activate-environment: eco-runtime
             environment-file: ecodata-env.yml
 
       - name: Install package
         shell: pwsh
-        run: |
-          cd ~
-          pwd
-          ls
-          pip install git+https://github.com/jemissik/ecodata.git@${{ github.sha }}
-          python -c 'import ecodata; print(ecodata.available()); import ecodata.app.apps.tracks_explorer_app'
+        run: conda run --no-capture-output -n eco-runtime python -m pip install --no-deps .
+
+      - name: Test installed package
+        shell: pwsh
+        working-directory: ${{ runner.temp }}
+        run: conda run --no-capture-output -n eco-runtime python -c "import ecodata; from ecodata.app.apps import applications; print('Installed ecodata:', getattr(ecodata, '__version__', 'unknown'), ecodata.__file__); print('Registered apps:', ', '.join(sorted(applications))); assert applications"

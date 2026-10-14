@@ -1,5 +1,8 @@
 ecodata_ver=`python print_ecodata_ver.py`
 export ECODATA_VERSION=${ecodata_ver}
+if [ -n "$1" ]; then
+    export ECODATA_INSTALL_BRANCH="$1"
+fi
 
 echo "Building with:"
 echo "  ECODATA_VERSION         = $ECODATA_VERSION"
