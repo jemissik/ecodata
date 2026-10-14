@@ -15,7 +15,7 @@ build:
       - |
         for limit in /sys/fs/cgroup/memory.max /sys/fs/cgroup/memory/memory.limit_in_bytes; do
           if [ -r "$limit" ]; then
-            printf '%s: ' "$limit"
+            printf "%s: " "$limit"
             cat "$limit"
           fi
         done
@@ -25,7 +25,7 @@ build:
         --solver libmamba "conda=26.7.2" "mamba=2.9.0" "conda-libmamba-solver=26.7.0"
       - conda --version
       - mamba --version
-      - conda list --name base '^(conda|conda-libmamba-solver|mamba|libmamba|libmambapy)$'
+      - conda list --name base "^(conda|conda-libmamba-solver|mamba|libmamba|libmambapy)$"
       - conda info
       - conda config --show channels channel_priority solver
     create_environment:
